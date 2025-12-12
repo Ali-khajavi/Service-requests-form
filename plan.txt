@@ -1,0 +1,474 @@
+
+
+## 1. What the plugin will do (high-level)
+
+* Add a **front-end request form** (via shortcode or block) for your services.
+* Allow users to:
+
+  * Choose a **service** (dropdown).
+  * Enter **name, company name, email, phone**.
+  * Auto-fill **shipping address** from WooCommerce customer data (if logged in).
+  * Add a **description**.
+  * **Upload files** (obj, stl, scan formats, etc.).
+  * Check **“no file / not needed”** if they have no file.
+  * Accept **terms & conditions** (required).
+* On submit:
+
+  * **Save the request** in the database (for content management).
+  * **Send an email** to your chosen admin email (using `wp_mail`).
+* Provide **admin tools** to manage these requests + configure settings.
+
+---
+
+## 2. Data / storage design
+
+We’ll create a **custom post type** for submissions, e.g. `service_request`.
+
+Each submission will be stored as a post:
+
+* Post type: `service_request`
+* Post status: `publish` (or `private`)
+* Post title example: `Request - [Service] - [Customer Name]`
+* Post content: the description field (or we store everything in meta)
+
+Meta fields:
+
+* `_sr_service` – selected service
+* `_sr_name` – customer name
+* `_sr_company` – company name
+* `_sr_email` – customer email
+* `_sr_phone` – phone / contact info
+* `_sr_shipping_address` – text version of WooCommerce shipping address
+* `_sr_no_file` – whether user checked “no file / not needed”
+* `_sr_terms_accepted` – confirmation flag
+* `_sr_file_ids` or `_sr_file_url` – attachment IDs or URL for uploaded files
+* `_sr_user_id` – if logged in, which WP user submitted
+
+This gives you a nice way to see all requests in **WP Admin** and possibly filter/sort them later.
+
+---
+
+## 3. Plugin structure
+
+We’ll keep it simple but clean:
+
+* `service-requests-form/`
+
+  * `service-requests-form.php` (main plugin file)
+  * `/includes/`
+
+    * `class-sr-form-handler.php`  (validation, saving, email)
+    * `class-sr-cpt.php`           (custom post type and admin columns)
+    * `class-sr-settings.php`      (settings page)
+  * `/templates/`
+
+    * `form.php`                   (HTML for the form)
+    * `frontend-list.php`          (optional: list of previous submissions for the current user)
+  * `/assets/`
+
+    * `css/frontend.css`
+    * `js/frontend.js` (if needed later; we can start without JS)
+
+We’ll expose the form via a shortcode, e.g.:
+
+```text
+[service_request_form]
+```
+
+You can put this on any page.
+
+---
+
+## 4. Front-end form behavior
+
+### Fields in the form
+
+1. **Service dropdown**
+
+   * For now: hard-coded `Service 1`, `Service 2`, …
+   * Later: we can make this configurable via settings.
+
+2. **Contact fields**
+
+   * Name (required)
+   * Company name (optional or required – we’ll choose required=false for now)
+   * Email (required, email validation)
+   * Phone (required or optional; we can treat as required for now)
+   * Shipping address:
+
+     * If user is logged in and WooCommerce is active:
+
+       * Auto-fill using their WooCommerce shipping fields (`_shipping_*`).
+       * Show as a textarea for them to adjust.
+     * If guest: show empty textarea they can fill manually.
+
+3. **Description**
+
+   * Large textarea, required.
+
+4. **File upload**
+
+   * Single or multiple files (we can support multiple from the start).
+   * Allowed extensions: `obj, stl, zip, rar` or similar (we’ll configure).
+   * Server-side validation for MIME types and size.
+   * If a file is uploaded, store it as a WP attachment and attach to the `service_request` post.
+
+5. **Checkbox: No file / not needed**
+
+   * Label: “I don’t have a file yet, or this service doesn’t require a file”
+   * Logic:
+
+     * If **no file is uploaded** AND this checkbox is **not checked** → validation error.
+     * If checked → file is optional.
+
+6. **Checkbox: Accept terms & conditions**
+
+   * Required.
+   * Label with link to your T&C page:
+
+     * Example: “I accept the [Terms & Conditions](/terms-page)”.
+   * If not checked → validation error.
+
+7. **Submit button**
+
+   * On click: form posts to the same page (`POST`).
+   * Use a **nonce** to prevent CSRF.
+
+### After submit
+
+* Validate all fields.
+* If any error:
+
+  * Re-display the form with errors and previously entered data.
+* If success:
+
+  * Create a `service_request` post.
+  * Upload / attach files.
+  * Send email to admin email address.
+  * Show a success message like: “Thank you, your request has been submitted.”
+
+---
+
+## 5. Email sending strategy
+
+You said you don’t currently have an email system. WordPress already has `wp_mail()` built-in.
+
+Our plan:
+
+* Use `wp_mail()` to send an email to a configurable email address (set in plugin settings).
+* Email content:
+
+  * All fields (service, name, company, email, phone, address, description, no-file flag).
+  * Links to any uploaded files (URLs or attachment links).
+  * Link to view the request in the admin (edit post link).
+
+If your host’s email is unreliable, you can later install an SMTP plugin (like WP Mail SMTP) – we don’t need to code that ourselves.
+
+---
+
+## 6. Admin: Content management
+
+### Custom post type UI
+
+In WP Admin, we’ll have a menu item:
+
+> Service Requests
+
+Inside:
+
+* List table of all requests.
+* Columns:
+
+  * Service
+  * Customer Name
+  * Email
+  * Date
+  * Status (we could use normal post status or a custom meta field if you want to track “processed” later).
+* Clicking a request opens an edit screen that shows all meta details.
+
+### Admin metaboxes
+
+On each request’s edit screen:
+
+* Panel with all submitted data, formatted clearly.
+* Links to download attached files.
+* Option (later) to add internal notes or change status (e.g., “In progress”, “Completed”).
+
+---
+
+## 7. Settings page (configuration)
+
+We’ll add a settings page under **Settings → Service Requests** (or under WooCommerce if you prefer):
+
+Options:
+
+* **Recipient email address**
+  Where the form submissions are emailed.
+
+* **Default services list**
+  For example: a textarea where you put:
+
+  ```text
+  Service 1
+  Service 2
+  Service 3
+  ```
+
+  The plugin converts this into dropdown options.
+
+* **Allowed file types**
+  Comma-separated extensions: `obj, stl, zip, rar`.
+
+* **Maximum file size**
+  E.g. `20MB` (limited also by server settings, but we can enforce our own limit).
+
+* **Terms & Conditions page URL**
+  So we can link to it from the checkbox.
+
+This way you don’t need to edit code to change basic options.
+
+---
+
+## 8. “Content management below the form”
+
+I see two useful options here; I’ll design it to support both:
+
+1. **For the site admin (back-end)**
+   That’s the custom post type listing in the admin panel.
+
+2. **For logged-in customers (front-end)**
+   On the same page as the form, **below it**, we can show:
+
+   * A list of the *current user’s* previous service requests.
+   * Columns like: date, service, status, maybe a link to view details.
+
+Implementation:
+
+* The shortcode `[service_request_form]`:
+
+  * Renders the form.
+  * If user is logged in, queries `service_request` posts with meta `_sr_user_id = current_user_id`.
+  * Displays a small table below the form.
+
+If you prefer we only do admin management and no front-end list, we can easily keep that out – but I’ll include the capability in the plan.
+
+---
+
+## 9. Security, validation & UX
+
+We’ll make sure to:
+
+* Use **nonces** to secure the form.
+* Escape and sanitize all input:
+
+  * `sanitize_text_field`, `sanitize_email`, etc.
+* Validate file types and sizes.
+* Respect WordPress/WooCommerce capabilities and only allow admins to access the post type.
+* Show clear error messages on invalid input.
+* Show a friendly success message on submission.
+
+Later improvements (optional):
+
+* Add Google reCAPTCHA / hCaptcha support to prevent spam.
+* Use AJAX for submission to avoid page reload (but we’ll start with a classic POST for simplicity and reliability).
+
+---
+
+## 10. Implementation phases
+
+When we start coding, I’ll go in this order:
+
+1. **Scaffold plugin + register CPT**
+2. **Shortcode + basic form (no file uploads yet)**
+3. **Validation + saving to CPT**
+4. **Sending admin email**
+5. **File upload support**
+6. **WooCommerce shipping auto-fill**
+7. **Settings page (services list, email, terms URL, file types, size)**
+8. **Front-end list below form (for logged-in users)**
+9. **Polish admin UI (columns, metaboxes)**
+
+---
+
+If this plan matches what you have in mind, next step I’ll start by writing the **basic plugin skeleton** and the **first version of the form shortcode**.
+
+
+
+
+Gotcha—that’s an important detail. Let’s plug that into the plan in a clean way.
+
+We’ll keep everything we already planned, **plus**:
+
+---
+
+## Extra Requirement: Dynamic content (images + text) per service
+
+### What you want
+
+* Under (or beside) the form there will be **content blocks**:
+
+  * Image(s)
+  * Text (description, details, maybe bullet points)
+* When the user changes the **service dropdown**, those blocks must **update immediately** to match the selected service:
+
+  * Select **Service 1** → show **Service 1** image + text
+  * Select **Service 2** → show **Service 2** image + text
+  * etc.
+
+---
+
+## How we’ll design this
+
+### 1. Data structure for service content
+
+We need a way in the admin to define **for each service**:
+
+* Service label (what appears in dropdown)
+* Short title or heading
+* Longer description (HTML or simple text)
+* One main image (and optionally more)
+
+We have two main approaches; I’ll pick the one that is powerful but still simple:
+
+**Option A (settings-based, simple – I suggest this):**
+
+In the plugin **settings page** we add something like a “Services” configuration:
+
+* A repeatable list (rows):
+
+  * Service key / slug: `service1`, `service2`
+  * Service label (dropdown text): `Service 1`, `Service 2`
+  * Info title: e.g. “3D Modeling & Optimization”
+  * Info text: textarea (can hold basic HTML)
+  * Image: media uploader (select from media library)
+
+Internally we store this as an array, for example:
+
+```php
+$services = [
+  'service1' => [
+    'label' => 'Service 1',
+    'title' => 'Service 1 Title',
+    'text'  => 'Some explanation...',
+    'image_id' => 123,
+  ],
+  'service2' => [
+    'label' => 'Service 2',
+    'title' => 'Service 2 Title',
+    'text'  => 'Some explanation...',
+    'image_id' => 456,
+  ],
+];
+```
+
+The dropdown will be automatically built from this list, and the **content block** will read from the same configuration.
+
+(If later you want something more advanced, we could switch to a separate CPT for “Services”, but we don’t have to at first.)
+
+---
+
+### 2. Front-end behavior
+
+**On initial page load:**
+
+* Show the form with the dropdown.
+* Set the dropdown to a default (e.g., first service).
+* Render the **service content area** right below/next to the form with the data of the currently selected service.
+
+Example layout:
+
+```text
+---------------------------------------------------------
+| [FORM]             | [Service image + text for S1]    |
+|                    |                                  |
+| (dropdown etc.)    |                                  |
+---------------------------------------------------------
+| (on mobile: form first, content below)               |
+---------------------------------------------------------
+```
+
+**On change of the dropdown (JavaScript):**
+
+* We add a small JS file (`frontend.js`) that:
+
+  * Listens to `change` event on the service dropdown.
+  * Looks up the selected service’s data in a JS object.
+  * Updates:
+
+    * Image `src` and `alt`
+    * Title `<h3>`
+    * Text `<p>` / `<div>`
+
+We’ll pass the PHP service configuration into JS using `wp_localize_script` or `wp_add_inline_script`, something like:
+
+```js
+window.srServices = {
+  service1: {
+    title: 'Service 1 Title',
+    text: 'Some explanation...',
+    imageUrl: 'https://example.com/image1.jpg'
+  },
+  service2: {
+    title: 'Service 2 Title',
+    text: 'Other explanation...',
+    imageUrl: 'https://example.com/image2.jpg'
+  }
+};
+```
+
+Then JS just reads `srServices[selectedValue]` whenever the dropdown changes.
+
+No page reloads—everything is instant.
+
+---
+
+### 3. How this fits the form submission
+
+The **selected service** is still just the value of the dropdown, so:
+
+* The form submission logic doesn’t change.
+* The backend receives something like `service1` or `service2`.
+* It uses that to:
+
+  * Save the `service_request` post meta `_sr_service`.
+  * Include the readable label in the email (“Service 1 – 3D Printing”).
+
+So the dynamic content is **purely visual** for the customer, driven by the same service key used for the submission.
+
+---
+
+### 4. Responsive design
+
+We’ll structure the HTML so you can choose layout with CSS:
+
+* On desktop:
+
+  * Flex or grid: form on the left, service content on the right.
+* On mobile:
+
+  * Form on top, service content below.
+
+We’ll keep the markup simple so your theme can style it nicely.
+
+---
+
+### 5. Admin workflow for you
+
+You will be able to:
+
+1. Go to the plugin **Settings**.
+2. Add or edit services:
+
+   * Service label (dropdown)
+   * Service content (text + image)
+3. Save.
+
+Done—no code changes needed when you add a new service. The dropdown and the dynamic content will update automatically.
+
+---
+
+If you’re happy with this addition to the plan, next step is to start coding:
+
+* The plugin skeleton
+* The CPT for `service_request`
+* The shortcode `[service_request_form]` with the dropdown + basic dynamic content area (even with dummy services first)

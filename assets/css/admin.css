@@ -1,0 +1,6 @@
+#sr-service-gallery-preview .sr-service-gallery-item {
+    width: 80px;
+    height: 80px;
+    overflow: hidden;
+    border-radius: 3px;
+}

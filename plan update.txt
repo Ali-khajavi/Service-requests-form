@@ -1,0 +1,458 @@
+# Service Requests Form Plugin - Master Plan (Updated with Service Content Dashboard)
+
+## 0. Goal
+
+Build a custom WordPress plugin to handle service requests from a front-end form and a powerful admin dashboard:
+
+- Front-end:
+  - User fills a request form.
+  - Selects a service.
+  - Sees dynamic service info: header, text, and an image slider per service.
+- Back-end:
+  - Service requests are stored and manageable via a custom post type.
+  - Separate "Services" dashboard where you manage the content for each service:
+    - Header/title
+    - Description text
+    - Slider/gallery of photos
+  - Easy to add new services and more content in the future.
+
+------------------------------------------------------------
+1. HIGH-LEVEL FEATURES
+------------------------------------------------------------
+
+1. Front-end form via shortcode [service_request_form]:
+   - Service dropdown (choices from “Services” custom post type).
+   - Contact fields: name, company, email, phone.
+   - Shipping address auto-filled from WooCommerce (if logged-in).
+   - Description textarea.
+   - File upload (single/multiple) for CAD/3D/scan formats.
+   - Checkbox: "I don't have a file / not needed".
+   - Checkbox: "I accept the Terms & Conditions" (required).
+   - Nonce & validation.
+
+2. Dynamic service information area (next to or below the form):
+   - For the selected service:
+     - Header/title.
+     - Text description.
+     - Image slider (multiple photos).
+   - Updates instantly when the user changes the service dropdown (via JS).
+
+3. Storage:
+   - Custom post type `service_request` for submitted requests.
+   - Custom post type `sr_service` (or similar) for services & their content (the “Services” dashboard).
+
+4. Email notifications:
+   - Send email to configurable admin email on new request.
+   - Email contains all submitted data and file links.
+
+5. Admin management:
+   - “Service Requests” post type: list of all requests.
+   - Metabox showing submitted data per request.
+   - “Services” post type: full control over services:
+     - Title, description, gallery/slider images.
+   - Optional status/notes for requests.
+
+6. Settings page:
+   - Admin email for notifications.
+   - Allowed file types.
+   - Max file size.
+   - Terms & Conditions URL.
+   - (Services are NOT in settings anymore; they live as their own posts.)
+
+7. Optional front-end "My requests" list:
+   - Logged-in users see their previous requests below the form.
+
+------------------------------------------------------------
+2. DATA MODEL
+------------------------------------------------------------
+
+### A. Service Requests (submissions)
+
+Custom post type: `service_request`
+
+- Post title example:
+  - "Request - [Service title] - [Customer Name]"
+
+- Useful meta:
+  - _sr_service_id         (int, ID of related sr_service post)
+  - _sr_service_title      (string, snapshot of service title)
+  - _sr_name               (string)
+  - _sr_company            (string)
+  - _sr_email              (string)
+  - _sr_phone              (string)
+  - _sr_shipping_address   (string)
+  - _sr_description        (string)
+  - _sr_no_file            (bool)
+  - _sr_terms_accepted     (bool)
+  - _sr_file_ids           (array of attachment IDs)
+  - _sr_user_id            (int, 0 for guest)
+  - _sr_status             (optional: "new", "in_progress", "done")
+
+### B. Services (content for each service)
+
+Custom post type: `sr_service`
+
+- Title:
+  - Service name/heading (also used in dropdown and header)
+
+- Content (post_content):
+  - Main description text (flexible, can be rich editor)
+
+- Meta for slider/gallery:
+  - _sr_service_gallery_ids (array of attachment IDs for slider images)
+
+- Optional meta:
+  - _sr_service_short_label  (string, if you want a shorter label for dropdown)
+
+The front-end dropdown will list published `sr_service` posts.
+
+### C. Options (settings)
+
+Stored via settings page:
+
+- srf_admin_email         (string)
+- srf_allowed_file_types  (comma-separated string or array)
+- srf_max_file_size_mb    (int)
+- srf_terms_url           (string)
+
+------------------------------------------------------------
+3. PLUGIN FILE STRUCTURE
+------------------------------------------------------------
+
+Plugin folder: /wp-content/plugins/service-requests-form/
+
+- service-requests-form.php
+  - Main plugin bootstrap file.
+  - Defines constants.
+  - Includes class files.
+  - Registers core hooks and initializes plugin.
+
+- uninstall.php (optional, later)
+  - Cleanup on uninstall.
+
+- /includes/
+  - class-sr-cpt.php
+    - Registers custom post type "service_request".
+    - Adds custom admin columns (service, customer, email, date, status).
+    - Adds metaboxes for displaying request data.
+  
+  - class-sr-services-cpt.php
+    - Registers custom post type "sr_service".
+    - Handles admin columns for the Services dashboard:
+      - Thumbnail, service title, number of images, active/inactive.
+    - Adds metabox for gallery management (or uses the media modal).
+
+  - class-sr-form-handler.php
+    - Registers [service_request_form] shortcode.
+    - Loads templates for form, service info block, and user list.
+    - Handles POST submissions:
+      - Nonce check.
+      - Validation.
+      - File upload handling.
+      - Creating `service_request` posts and linking to `sr_service`.
+      - Email notification.
+      - Showing success/error messages.
+
+  - class-sr-settings.php
+    - Settings page under Settings → Service Requests.
+    - Fields:
+      - Admin email.
+      - Allowed file types.
+      - Max file size.
+      - Terms URL.
+    - Helper methods (e.g., get_admin_email()).
+
+  - class-sr-service-data.php (helper)
+    - Helper methods for working with `sr_service` posts:
+      - Get all active services for dropdown.
+      - Get service data (title, description, gallery images).
+      - Prepare data for front-end and JS (slider images).
+
+  - (optional) class-sr-admin-ui.php
+    - If needed, centralized place for admin columns, statuses, notes for `service_request`.
+
+- /templates/
+  - form.php
+    - Main HTML form.
+    - Uses service list from sr_service CPT.
+    - Shows fields: service select, name, company, email, phone, shipping address, description, file upload, checkboxes, submit.
+    - Shows validation errors and old input.
+
+  - service-info.php
+    - Markup for the dynamic service info block.
+    - Shows:
+      - Service title (header).
+      - Description text.
+      - Slider container for images (HTML structure for JS slider).
+
+  - frontend-list.php
+    - Optional: table of previous requests for logged-in users:
+      - Date, service, short description, status.
+
+- /assets/
+  - /css/
+    - frontend.css
+      - Styles for form, messages, service-info layout.
+      - Styles for image slider (wrapper, slides, nav buttons/dots).
+      - Responsive layout: form + service info side-by-side on desktop, stacked on mobile.
+
+    - (optional) admin.css
+      - Styles for Services CPT list and metabox if needed.
+
+  - /js/
+    - frontend.js
+      - Listens to change on service dropdown.
+      - Has access to a JS object with service data, including slider image URLs.
+      - Updates:
+        - Header text.
+        - Description text.
+        - Slider images (re-render slider or swap data).
+      - Basic slider functionality (next/prev).
+
+    - (optional) admin.js
+      - Enhancements for gallery selection in sr_service (e.g., selecting multiple images via media modal).
+
+- /languages/
+  - service-requests-form.pot (later for translations)
+
+- plan.txt
+  - This file.
+
+------------------------------------------------------------
+4. FRONT-END FORM AND DYNAMIC SERVICE AREA
+------------------------------------------------------------
+
+Shortcode: [service_request_form]
+
+Output order:
+1. Form (templates/form.php)
+2. Dynamic service info area (templates/service-info.php)
+3. Optional: logged-in user’s previous requests (templates/frontend-list.php)
+
+Form:
+- Service (select, required):
+  - Options from all published `sr_service` posts.
+  - Value = service post ID.
+  - Label = service title or short label.
+
+- Name, Company, Email, Phone, Shipping Address, Description.
+- File upload (single/multiple).
+- Checkbox "No file / not needed".
+- Checkbox "Accept Terms & Conditions" (required).
+- Nonce and submit button.
+
+Dynamic service info:
+- On load:
+  - Show the first available service or currently selected service.
+- Data for each service:
+  - Header = `sr_service` post title.
+  - Text = excerpt or full content.
+  - Slider = images from _sr_service_gallery_ids meta.
+- JS (frontend.js):
+  - Global object (via wp_localize_script), e.g.:
+    - window.srServiceData = {
+        12: {
+          title: "3D Printing",
+          text: "Description here...",
+          images: [
+            { url: "...", alt: "..." },
+            { url: "...", alt: "..." }
+          ]
+        },
+        15: { ... }
+      };
+  - On dropdown change:
+    - Read service ID.
+    - Update DOM:
+      - Title element innerHTML.
+      - Text element innerHTML.
+      - Slider images (rebuild slide list).
+  - Simple slider controls (e.g. next/prev buttons).
+
+------------------------------------------------------------
+5. EMAIL SENDING
+------------------------------------------------------------
+
+- Use wp_mail().
+- Recipient:
+  - srf_admin_email or WordPress admin email fallback.
+- Subject:
+  - "New Service Request: [Service Title] - [Customer Name]"
+- Body:
+  - All submitted fields.
+  - Link to `service_request` edit screen in admin.
+  - Links to uploaded files.
+
+------------------------------------------------------------
+6. ADMIN INTERFACE - SERVICE REQUESTS
+------------------------------------------------------------
+
+`service_request` CPT admin list:
+- Columns:
+  - Checkbox
+  - Title (includes customer name)
+  - Service (from linked sr_service)
+  - Customer name
+  - Email (mail-to link)
+  - Date
+  - Status (meta _sr_status, default "New")
+
+Edit screen for each request:
+- Metabox "Request Details":
+  - Service (with a link to the corresponding `sr_service` edit screen).
+  - Name, company, email, phone.
+  - Shipping address.
+  - Description.
+  - Files (download links).
+  - No-file flag.
+  - Terms accepted.
+
+- Metabox "Status & Notes" (optional):
+  - Dropdown for status: New / In progress / Done.
+  - Textarea for internal notes.
+
+------------------------------------------------------------
+7. ADMIN INTERFACE - SERVICES DASHBOARD (CONTENT)
+------------------------------------------------------------
+
+`sr_service` CPT serves as the **Service Content Dashboard**.
+
+Admin menu:
+- "Services" (or "Service Profiles") with its own menu entry.
+
+List table:
+- Columns:
+  - Thumbnail (first image from gallery).
+  - Title (service name).
+  - Short description (excerpt).
+  - Images count (number of gallery images).
+  - Date.
+
+Edit screen for each service:
+- Default title field = service name (header).
+- Default content editor = main service text.
+- Metabox "Service Gallery / Slider":
+  - Button to "Select images" (uses media modal).
+  - Shows selected images as thumbnails.
+  - Stores IDs in _sr_service_gallery_ids.
+- Optionally:
+  - Meta field "Short label" for dropdown text.
+
+This gives you a **perfect dashboard**:
+- You can **add new services** any time.
+- For each service you can:
+  - Edit the header.
+  - Edit the description text.
+  - Manage a gallery of images (used as slider on the front-end).
+
+The front-end automatically picks up all published services.
+
+------------------------------------------------------------
+8. SETTINGS PAGE
+------------------------------------------------------------
+
+Settings page under:
+- Settings → Service Requests
+
+Fields:
+- Admin email.
+- Terms URL.
+- Allowed file extensions.
+- Max file size (MB).
+
+Services are not configured here; they are managed via the `sr_service` custom post type.
+
+------------------------------------------------------------
+9. WOO COMMERCE INTEGRATION
+------------------------------------------------------------
+
+If WooCommerce is active and user is logged in:
+- Auto-fill shipping address from their WooCommerce shipping address.
+- User can edit this address before submitting.
+
+If not logged in or no WooCommerce:
+- Shipping address is empty and must be filled manually (depending on your rules).
+
+------------------------------------------------------------
+10. FRONT-END USER REQUEST LIST (OPTIONAL)
+------------------------------------------------------------
+
+Below the form:
+- If user is logged in:
+  - Query `service_request` posts with _sr_user_id = current user ID.
+  - Show table of:
+    - Date
+    - Service title
+    - Short description (excerpt)
+    - Status
+
+------------------------------------------------------------
+11. SECURITY & UX
+------------------------------------------------------------
+
+Security:
+- Nonce checks.
+- Sanitize all input.
+- Validate file types and sizes.
+- Use WordPress media APIs for uploads.
+- Restrict admin screens by capability (e.g. manage_options / edit_posts).
+
+UX:
+- Clear errors near fields.
+- Keep data on validation errors.
+- Friendly success message.
+- Responsive layout:
+  - Desktop: form and service info (with slider) side-by-side.
+  - Mobile: stacked vertically.
+
+------------------------------------------------------------
+12. IMPLEMENTATION PHASES
+------------------------------------------------------------
+
+Phase 1: Skeleton (DONE)
+- Main plugin file, includes.
+- CPT `service_request`.
+- Shortcode placeholder.
+- Basic settings page placeholder.
+
+Phase 2: Services CPT (Dashboard)
+- Add `sr_service` CPT.
+- Admin UI for services.
+- Gallery/slider meta per service.
+
+Phase 3: Front-end form (HTML only)
+- Build templates/form.php and service-info.php.
+- Hook shortcode to render real form and initial service info.
+
+Phase 4: Form validation & saving
+- Implement submission in SR_Form_Handler.
+- Validation, creating `service_request` post, saving meta.
+
+Phase 5: File uploads
+- Implement file upload handling; enforce types and size.
+- Save attachments to `service_request`.
+
+Phase 6: Email notifications
+- Implement wp_mail based on settings.
+
+Phase 7: Dynamic service content + slider
+- Provide JS service data (title, text, images).
+- Implement frontend.js for dynamic updates and image slider.
+
+Phase 8: WooCommerce address auto-fill
+- Detect Woo & logged-in user.
+- Populate shipping address from Woo.
+
+Phase 9: Admin UI polish
+- Custom columns and sorting for `service_request`.
+- Metabox with nicely formatted request data.
+- Optional status/notes handling.
+
+Phase 10: Optional extras
+- Front-end “My requests” list.
+- uninstall.php.
+- readme.txt.
+- i18n (.pot file).
+- Visual/styling improvements.
+
+# END OF PLAN

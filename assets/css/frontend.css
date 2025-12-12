@@ -1,0 +1,257 @@
+/* Wrapper and layout */
+.srf-wrapper {
+    margin: 2rem 0;
+    font-family: inherit;
+}
+
+.srf-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+    .srf-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Form */
+.srf-form {
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.srf-form__field {
+    margin-bottom: 1rem;
+}
+
+.srf-form__field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.srf-form__field input[type="text"],
+.srf-form__field input[type="email"],
+.srf-form__field select,
+.srf-form__field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.srf-form__field textarea {
+    resize: vertical;
+}
+
+.srf-form__field--checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+}
+
+.srf-field__help {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.srf-required {
+    color: #d63638;
+    margin-left: 0.15rem;
+}
+
+.srf-form__actions {
+    margin-top: 1.5rem;
+}
+
+.srf-button {
+    display: inline-block;
+    padding: 0.6rem 1.4rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    background: #2271b1;
+    color: #fff;
+}
+
+.srf-button:hover {
+    background: #135e96;
+}
+
+/* Service info block */
+.srf-service-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e1e1e1;
+}
+
+.srf-service-info__title {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.2rem;
+}
+
+.srf-service-info__text p:last-child {
+    margin-bottom: 0;
+}
+
+
+
+
+/* Slider (image switcher – always shows exactly one image) */
+.srf-service-slider {
+    margin-top: 1rem;
+    position: relative;
+}
+
+.srf-service-slider__viewport {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.srf-service-slider__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    object-fit: contain; /* prevents crop; use cover if you prefer */
+}
+
+.srf-service-slider__nav {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.srf-service-slider__prev,
+.srf-service-slider__next {
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 3px;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+
+
+
+
+
+/* User requests placeholder */
+.srf-user-requests {
+    margin-top: 2rem;
+}
+
+.srf-user-requests__title {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.srf-user-requests__placeholder {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+
+/* Popup for business account requirement */
+.srf-popup-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.srf-popup {
+    background: #ffffff;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 90%;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    text-align: left;
+}
+
+.srf-popup__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.srf-popup__message {
+    margin: 0 0 1.25rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.srf-popup__button {
+    display: inline-block;
+    padding: 0.5rem 1.2rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: #2271b1;
+    color: #ffffff;
+}
+
+.srf-popup__button:hover {
+    background: #135e96;
+}
+
+
+/* Shipping address display */
+.srf-shipping-box {
+    border: 1px solid #e1e1e1;
+    background: #fff;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: normal;
+}
+
+.srf-shipping-missing {
+    border: 1px solid #f0b849;
+    background: #fff8e5;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.srf-form__errors {
+	padding: 12px 14px;
+	border: 1px solid #d63638;
+	background: #fff5f5;
+	border-radius: 8px;
+	margin-bottom: 14px;
+}
+.srf-form__errors ul { margin: 0; padding-left: 18px; }
+.srf-form__success {
+	padding: 12px 14px;
+	border: 1px solid #46b450;
+	background: #f0fff4;
+	border-radius: 8px;
+	margin-bottom: 14px;
+}
