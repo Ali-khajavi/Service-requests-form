@@ -154,8 +154,6 @@ function initializeServiceInfo() {
 
   if (!rawServices || (Array.isArray(rawServices) && rawServices.length === 0) || (!Array.isArray(rawServices) && !Object.keys(rawServices).length)) {
     console.warn('SRF: services data not found. Check enqueue/inline ordering.');
-    console.log('SRF: window.srfServices =', window.srfServices);
-    console.log('SRF: srfServices =', (typeof srfServices !== 'undefined' ? srfServices : undefined));
     return;
   }
 
@@ -232,20 +230,6 @@ function initializeServiceInfo() {
   select.addEventListener('change', function () {
     console.log('[SRF] change:', this.value);
     updateServiceInfo(this.value);
-  });
-
-
-  document.addEventListener('click', function (e) {
-    var item = e.target.closest('.srf-service-item');
-    if (!item) return;
-
-    e.preventDefault();
-
-    var serviceId = item.dataset.serviceId;
-    if (!serviceId) return;
-
-    select.value = String(serviceId);
-    select.dispatchEvent(new Event('change', { bubbles: true }));
   });
 }
 

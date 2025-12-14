@@ -284,16 +284,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
             </div>
             <?php
             return ob_get_clean();
-
-
-            // In the render_form_shortcode method, add debug:
-            error_log('Template path: ' . SRF_PLUGIN_DIR . 'templates/form.php');
-            error_log('Template exists: ' . (file_exists(SRF_PLUGIN_DIR . 'templates/form.php') ? 'Yes' : 'No'));
-
-            // Also check if services exist:
-            error_log('Number of services: ' . count($services));
-            error_log('Selected service ID: ' . $selected_service_id);
-
         }
 
 

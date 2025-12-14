@@ -51,13 +51,6 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
     <!-- Service quick picker (clickable items) -->
     <div class="srf-service-picker">
         <h2 class="srf-service-picker__title"><?php esc_html_e( 'Semlinger Dental Services', 'service-requests-form' ); ?></h2>
-
-        <!-- Service Details Area (optional legacy layout; used if your JS updates these selectors) -->
-        <div class="srf-service-details hidden">
-            <h3 class="srf-service-title"></h3>
-            <div class="srf-service-content"></div>
-            <div class="srf-service-images"></div>
-        </div>
     </div>
 
 <div class="srf-form__field">
