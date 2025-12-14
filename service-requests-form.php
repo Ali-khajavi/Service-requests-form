@@ -96,6 +96,10 @@ final class Service_Requests_Form {
 	}
 }
 
+require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
+SRF_Admin_Menu::init();
+
+
 /**
  * Returns the main instance.
  *
