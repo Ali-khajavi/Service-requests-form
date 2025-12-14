@@ -33,17 +33,17 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
                 'not_found_in_trash'    => __( 'No services found in Trash.', 'service-requests-form' ),
             );
 
+            $parent_slug = ( class_exists( 'SRF_Admin_Menu' ) ? SRF_Admin_Menu::PARENT_SLUG : true );
+
             $args = array(
-                'labels'             => $labels,
-                'public'             => false, // not directly visible on front
-                'show_ui'            => true,
-                'show_in_menu'       => true,
-                'menu_position'      => 25,
-                'menu_icon'          => 'dashicons-hammer', // Change icon if you like
-                'supports'           => array( 'title', 'editor', 'thumbnail' ),
-                'has_archive'        => false,
-                'rewrite'            => false,
-                'capability_type'    => 'post',
+                'labels'          => $labels,
+                'public'          => false,
+                'show_ui'         => true,
+                'show_in_menu'    => $parent_slug,   // ✅ this is the key
+                'supports'        => array( 'title', 'editor', 'thumbnail' ),
+                'has_archive'     => false,
+                'rewrite'         => false,
+                'capability_type' => 'post',
             );
 
             register_post_type( 'sr_service', $args );
