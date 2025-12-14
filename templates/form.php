@@ -47,7 +47,20 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
 ?>
 
 <form class="srf-form" method="post" enctype="multipart/form-data">
-    <div class="srf-form__field">
+    
+    <!-- Service quick picker (clickable items) -->
+    <div class="srf-service-picker">
+        <h2 class="srf-service-picker__title"><?php esc_html_e( 'Semlinger Dental Services', 'service-requests-form' ); ?></h2>
+
+        <!-- Service Details Area (optional legacy layout; used if your JS updates these selectors) -->
+        <div class="srf-service-details hidden">
+            <h3 class="srf-service-title"></h3>
+            <div class="srf-service-content"></div>
+            <div class="srf-service-images"></div>
+        </div>
+    </div>
+
+<div class="srf-form__field">
         <label for="srf-service">
             <?php esc_html_e( 'Service', 'service-requests-form' ); ?> <span class="srf-required">*</span>
         </label>
@@ -86,6 +99,7 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
             id="srf-company"
             name="srf_company"
             value="<?php echo esc_attr( $old( 'company' ) ); ?>"
+            required
         />
     </div>
 
@@ -111,8 +125,10 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
             id="srf-phone"
             name="srf_phone"
             value="<?php echo esc_attr( $old( 'phone' ) ); ?>"
+            required
         />
     </div>
+
 
 
     <div class="srf-form__field">
@@ -122,16 +138,17 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
         </label>
 
         <?php
-        $shipping_display = '';
-        $shipping_ok      = false;
+        $shipping_display     = '';
+        $shipping_single_line = '';
+        $shipping_ok          = false;
 
-        // Build My Account link (WooCommerce if available)
+        // My Account URL (WooCommerce if available)
         $my_account_url = site_url( '/my-account/' );
         if ( function_exists( 'wc_get_page_permalink' ) ) {
             $my_account_url = wc_get_page_permalink( 'myaccount' );
         }
 
-        // Link directly to Shipping Address page if possible
+        // Shipping edit URL (WooCommerce endpoint if available)
         $shipping_edit_url = $my_account_url;
         if ( function_exists( 'wc_get_endpoint_url' ) && function_exists( 'wc_get_page_permalink' ) ) {
             $shipping_edit_url = wc_get_endpoint_url( 'edit-address', 'shipping', wc_get_page_permalink( 'myaccount' ) );
@@ -140,67 +157,79 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
         if ( is_user_logged_in() && function_exists( 'WC' ) && WC() && WC()->customer ) {
 
             $address = array(
-                'first_name' => WC()->customer->get_shipping_first_name(),
-                'last_name'  => WC()->customer->get_shipping_last_name(),
-                'company'    => WC()->customer->get_shipping_company(),
-                'address_1'  => WC()->customer->get_shipping_address_1(),
-                'address_2'  => WC()->customer->get_shipping_address_2(),
-                'city'       => WC()->customer->get_shipping_city(),
-                'state'      => WC()->customer->get_shipping_state(),
-                'postcode'   => WC()->customer->get_shipping_postcode(),
-                'country'    => WC()->customer->get_shipping_country(),
+            'first_name' => WC()->customer->get_shipping_first_name(),
+            'last_name'  => WC()->customer->get_shipping_last_name(),
+            'company'    => WC()->customer->get_shipping_company(),
+            'address_1'  => WC()->customer->get_shipping_address_1(),
+            'address_2'  => WC()->customer->get_shipping_address_2(),
+            'city'       => WC()->customer->get_shipping_city(),
+            'state'      => WC()->customer->get_shipping_state(),
+            'postcode'   => WC()->customer->get_shipping_postcode(),
+            'country'    => WC()->customer->get_shipping_country(),
             );
 
-            // Basic check: address_1 + city + postcode are usually minimum
+            // Minimum needed
             if ( ! empty( $address['address_1'] ) && ! empty( $address['city'] ) && ! empty( $address['postcode'] ) ) {
-                $shipping_ok = true;
+            $shipping_ok = true;
 
-                if ( isset( WC()->countries ) && is_object( WC()->countries ) ) {
-                    $shipping_display = WC()->countries->get_formatted_address( $address );
-                }
+            // Try Woo formatter first
+            if ( isset( WC()->countries ) && is_object( WC()->countries ) ) {
+                $shipping_display = WC()->countries->get_formatted_address( $address );
+            }
 
-                // Fallback formatting if WC formatter returns empty
-                if ( empty( $shipping_display ) ) {
-                    $shipping_display = implode( "\n", array_filter( array(
-                        trim( $address['first_name'] . ' ' . $address['last_name'] ),
-                        $address['company'],
-                        $address['address_1'],
-                        $address['address_2'],
-                        trim( $address['postcode'] . ' ' . $address['city'] ),
-                        $address['state'],
-                        $address['country'],
-                    ) ) );
-                }
+            // Fallback formatter
+            if ( empty( $shipping_display ) ) {
+                $shipping_display = implode( "\n", array_filter( array(
+                trim( $address['first_name'] . ' ' . $address['last_name'] ),
+                $address['company'],
+                $address['address_1'],
+                $address['address_2'],
+                trim( $address['postcode'] . ' ' . $address['city'] ),
+                $address['state'],
+                $address['country'],
+                ) ) );
+            }
+
+            // Make a clean single-line version (no <br>, no newlines)
+            $shipping_single_line = (string) $shipping_display;
+            $shipping_single_line = str_replace( array( '<br>', '<br/>', '<br />' ), ', ', $shipping_single_line );
+            $shipping_single_line = str_replace( array( "\r\n", "\n", "\r" ), ', ', $shipping_single_line );
+            $shipping_single_line = wp_strip_all_tags( $shipping_single_line );
+            $shipping_single_line = preg_replace( '/\s+/', ' ', $shipping_single_line );
+            $shipping_single_line = preg_replace( '/\s*,\s*/', ', ', $shipping_single_line );
+            $shipping_single_line = trim( $shipping_single_line, " ,\t\n\r\0\x0B" );
             }
         }
+        ?>
 
-        if ( $shipping_ok ) :
-            ?>
+        <?php if ( $shipping_ok ) : ?>
             <div class="srf-shipping-box">
-                <?php echo nl2br( esc_html( $shipping_display ) ); ?>
+            <?php echo esc_html( $shipping_single_line ); ?>
             </div>
 
-            <!-- Hidden field so Phase 4 can store it easily -->
-            <input type="hidden" name="srf_shipping_address" value="<?php echo esc_attr( $shipping_display ); ?>" />
+            <!-- Hidden field so your handler saves it -->
+            <input type="hidden" name="srf_shipping_address" value="<?php echo esc_attr( $shipping_single_line ); ?>" />
 
             <p class="srf-field__help">
-                <a href="<?php echo esc_url( $shipping_edit_url ); ?>">
-                    <?php esc_html_e( 'Edit shipping address', 'service-requests-form' ); ?>
-                </a>
+            <a href="<?php echo esc_url( $shipping_edit_url ); ?>">
+                <?php esc_html_e( 'Edit shipping address', 'service-requests-form' ); ?>
+            </a>
             </p>
         <?php else : ?>
             <div class="srf-shipping-missing">
-                <?php esc_html_e( 'Please first set up your shipping address in your account before submitting a request.', 'service-requests-form' ); ?>
-                <br>
-                <a href="<?php echo esc_url( $shipping_edit_url ); ?>">
-                    <?php esc_html_e( 'Go to My Account', 'service-requests-form' ); ?>
-                </a>
+            <?php esc_html_e( 'Please first set up your shipping address in your account before submitting a request.', 'service-requests-form' ); ?>
+            <br>
+            <a href="<?php echo esc_url( $shipping_edit_url ); ?>">
+                <?php esc_html_e( 'Go to My Account', 'service-requests-form' ); ?>
+            </a>
             </div>
 
-            <!-- Keep hidden field empty -->
             <input type="hidden" name="srf_shipping_address" value="" />
         <?php endif; ?>
     </div>
+
+
+
 
 
     <div class="srf-form__field">
