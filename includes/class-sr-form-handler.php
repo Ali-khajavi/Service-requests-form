@@ -7,6 +7,14 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 	class SR_Form_Handler {
 
+		// ===== Phase 5 constants =====
+		const USER_QUOTA_BYTES = 1073741824; // 1GB
+
+		// Exact hard whitelist requested
+		public static function hard_allowed_extensions() {
+			return array( 'stl','obj','step','stp','iges','igs','zip','rar','7z','pdf','jpg','jpeg','png' );
+		}
+
 		public static function init() {
 			add_shortcode( 'service_request_form', array( __CLASS__, 'render_form_shortcode' ) );
 			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
@@ -72,8 +80,147 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			);
 		}
 
+		// ===== Storage tracking =====
+
+		protected static function get_user_used_bytes( $user_id ) {
+			$used = (int) get_user_meta( $user_id, '_srf_storage_used_bytes', true );
+			return max( 0, $used );
+		}
+
+		protected static function add_user_used_bytes( $user_id, $bytes ) {
+			$used = self::get_user_used_bytes( $user_id );
+			update_user_meta( $user_id, '_srf_storage_used_bytes', $used + (int) $bytes );
+		}
+
+		protected static function subtract_user_used_bytes( $user_id, $bytes ) {
+			$used = self::get_user_used_bytes( $user_id );
+			$new  = max( 0, $used - (int) $bytes );
+			update_user_meta( $user_id, '_srf_storage_used_bytes', $new );
+		}
+
+		protected static function normalize_files_array( $files ) {
+			$normalized = array();
+
+			if ( empty( $files ) || empty( $files['name'] ) ) {
+				return $normalized;
+			}
+
+			if ( is_array( $files['name'] ) ) {
+				$count = count( $files['name'] );
+				for ( $i = 0; $i < $count; $i++ ) {
+					if ( empty( $files['name'][ $i ] ) ) {
+						continue;
+					}
+					$normalized[] = array(
+						'name'     => $files['name'][ $i ],
+						'type'     => $files['type'][ $i ],
+						'tmp_name' => $files['tmp_name'][ $i ],
+						'error'    => $files['error'][ $i ],
+						'size'     => $files['size'][ $i ],
+					);
+				}
+			} else {
+				$normalized[] = $files;
+			}
+
+			return $normalized;
+		}
+
+		/**
+		 * Phase 5: Upload attachments safely (whitelist + 1GB quota).
+		 * Returns [attachment_ids, total_bytes]
+		 *
+		 * @throws Exception
+		 */
+		protected static function handle_request_uploads( $post_id, $user_id ) {
+			if ( ! function_exists( 'wp_handle_upload' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+			}
+			if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/image.php';
+			}
+
+			$allowed_ext = self::hard_allowed_extensions();
+
+			$files = isset( $_FILES['srf_files'] ) ? $_FILES['srf_files'] : null;
+			$items = self::normalize_files_array( $files );
+
+			$attachment_ids = array();
+			$total_bytes    = 0;
+
+			foreach ( $items as $file ) {
+
+				if ( ! empty( $file['error'] ) ) {
+					if ( (int) $file['error'] === UPLOAD_ERR_NO_FILE ) {
+						continue;
+					}
+					throw new Exception( __( 'One of the uploaded files failed. Please try again.', 'service-requests-form' ) );
+				}
+
+				$size = isset( $file['size'] ) ? (int) $file['size'] : 0;
+				if ( $size <= 0 ) {
+					throw new Exception( __( 'Invalid file upload.', 'service-requests-form' ) );
+				}
+
+				// Enforce 1GB total per user
+				$used  = self::get_user_used_bytes( $user_id );
+				if ( ( $used + $size ) > self::USER_QUOTA_BYTES ) {
+					throw new Exception( __( 'Upload limit reached (1GB total). Please wait until your previous request is completed.', 'service-requests-form' ) );
+				}
+
+				// Extension whitelist
+				$ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
+				if ( empty( $ext ) || ! in_array( $ext, $allowed_ext, true ) ) {
+					throw new Exception(
+						sprintf(
+							__( 'File type not allowed: %s', 'service-requests-form' ),
+							sanitize_file_name( $file['name'] )
+						)
+					);
+				}
+
+				// Strong type check (prevents fake extensions)
+				$check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
+				if ( empty( $check['ext'] ) || strtolower( $check['ext'] ) !== $ext ) {
+					throw new Exception( __( 'File type verification failed.', 'service-requests-form' ) );
+				}
+
+				$overrides = array( 'test_form' => false );
+				$movefile  = wp_handle_upload( $file, $overrides );
+
+				if ( ! $movefile || isset( $movefile['error'] ) ) {
+					throw new Exception( __( 'Upload failed. Please try again.', 'service-requests-form' ) );
+				}
+
+				$attachment = array(
+					'post_mime_type' => isset( $movefile['type'] ) ? $movefile['type'] : '',
+					'post_title'     => sanitize_file_name( $file['name'] ),
+					'post_content'   => '',
+					'post_status'    => 'inherit',
+				);
+
+				$attach_id = wp_insert_attachment( $attachment, $movefile['file'], $post_id );
+				if ( is_wp_error( $attach_id ) || ! $attach_id ) {
+					throw new Exception( __( 'Could not attach uploaded file to the request.', 'service-requests-form' ) );
+				}
+
+				$attach_data = wp_generate_attachment_metadata( $attach_id, $movefile['file'] );
+				if ( is_array( $attach_data ) ) {
+					wp_update_attachment_metadata( $attach_id, $attach_data );
+				}
+
+				// Save size to attachment + add to user usage
+				update_post_meta( $attach_id, '_srf_file_size', $size );
+				self::add_user_used_bytes( $user_id, $size );
+
+				$attachment_ids[] = (int) $attach_id;
+				$total_bytes     += $size;
+			}
+
+			return array( $attachment_ids, $total_bytes );
+		}
+
 		public static function render_form_shortcode( $atts = array(), $content = '' ) {
-			$atts = shortcode_atts( array(), $atts, 'service_request_form' );
 
 			$errors   = array();
 			$old_data = array();
@@ -152,12 +299,22 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					$errors[] = __( 'Please set up your shipping address in My Account before submitting a request.', 'service-requests-form' );
 				}
 
+				// Phase 5 rule: must upload OR check "no file"
+				$no_file_checked = ! empty( $_POST['srf_no_file'] );
+				$names = isset( $_FILES['srf_files']['name'] ) ? $_FILES['srf_files']['name'] : array();
+				$has_any = is_array( $names ) ? ( count( array_filter( $names ) ) > 0 ) : ! empty( $names );
+
+				if ( ! $no_file_checked && ! $has_any ) {
+					$errors[] = __( 'Please upload at least one file, or check "I don’t have a file yet / not needed".', 'service-requests-form' );
+				}
+
 				if ( empty( $errors ) ) {
 					$service_id    = (int) $old_data['service'];
 					$service_title = get_the_title( $service_id );
 
 					$user_id = get_current_user_id();
-					$title   = sprintf(
+
+					$title = sprintf(
 						'Request - %s - %s',
 						$service_title ? $service_title : '#' . $service_id,
 						$old_data['name']
@@ -177,6 +334,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					if ( is_wp_error( $post_id ) ) {
 						$errors[] = __( 'Could not save your request. Please try again.', 'service-requests-form' );
 					} else {
+
 						update_post_meta( $post_id, '_sr_service_id', $service_id );
 						update_post_meta( $post_id, '_sr_service_title', $service_title );
 						update_post_meta( $post_id, '_sr_name', $old_data['name'] );
@@ -188,10 +346,34 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_no_file', $old_data['no_file'] === '1' ? 1 : 0 );
 						update_post_meta( $post_id, '_sr_terms_accepted', 1 );
 						update_post_meta( $post_id, '_sr_user_id', $user_id );
+						update_post_meta( $post_id, '_sr_status', 'new' );
 
-						$redirect_url = add_query_arg( 'srf_submitted', '1', get_permalink() );
-						wp_safe_redirect( $redirect_url );
-						exit;
+						// Phase 5 upload
+						$attachment_ids = array();
+						$uploaded_bytes = 0;
+
+						try {
+							list( $attachment_ids, $uploaded_bytes ) = self::handle_request_uploads( $post_id, $user_id );
+							update_post_meta( $post_id, '_sr_file_ids', $attachment_ids );
+						} catch ( Exception $e ) {
+							// Roll back: delete attachments + restore quota + delete request post
+							if ( ! empty( $attachment_ids ) ) {
+								foreach ( $attachment_ids as $aid ) {
+									wp_delete_attachment( (int) $aid, true );
+								}
+							}
+							if ( $uploaded_bytes > 0 ) {
+								self::subtract_user_used_bytes( $user_id, $uploaded_bytes );
+							}
+							wp_delete_post( $post_id, true );
+							$errors[] = $e->getMessage();
+						}
+
+						if ( empty( $errors ) ) {
+							$redirect_url = add_query_arg( 'srf_submitted', '1', get_permalink() );
+							wp_safe_redirect( $redirect_url );
+							exit;
+						}
 					}
 				}
 			}
@@ -240,182 +422,19 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( ! is_user_logged_in() ) {
 				return false;
 			}
-
 			$user  = wp_get_current_user();
 			$roles = (array) $user->roles;
-
 			return in_array( 'business_user', $roles, true );
 		}
 
-        /**
-         * Get allowed extensions from settings (comma-separated).
-         * Example stored option: "stl,obj,zip,rar,pdf"
-         */
-        protected static function get_allowed_extensions() {
-            $raw = get_option( 'srf_allowed_file_types', '' );
-
-            if ( is_array( $raw ) ) {
-                $raw = implode( ',', $raw );
-            }
-
-            $raw = strtolower( (string) $raw );
-            $raw = preg_replace( '/[^a-z0-9,\s]/', '', $raw );
-
-            $parts = array_filter( array_map( 'trim', explode( ',', $raw ) ) );
-
-            // Safe fallback if admin hasn't set it yet
-            if ( empty( $parts ) ) {
-                $parts = array( 'stl', 'obj', 'zip', 'rar', '7z', 'pdf', 'jpg', 'jpeg', 'png' );
-            }
-
-            return array_values( array_unique( $parts ) );
-        }
-
-        /**
-         * Get max file size in bytes from settings (MB).
-         */
-        protected static function get_max_file_size_bytes() {
-            $mb = (int) get_option( 'srf_max_file_size_mb', 20 );
-            if ( $mb <= 0 ) $mb = 20;
-            return $mb * 1024 * 1024;
-        }
-
-        /**
-         * Normalize the $_FILES array for multiple uploads.
-         */
-        protected static function normalize_files_array( $files ) {
-            $normalized = array();
-
-            if ( empty( $files ) || empty( $files['name'] ) ) {
-                return $normalized;
-            }
-
-            // If multiple="multiple"
-            if ( is_array( $files['name'] ) ) {
-                $count = count( $files['name'] );
-                for ( $i = 0; $i < $count; $i++ ) {
-                    if ( empty( $files['name'][ $i ] ) ) continue;
-
-                    $normalized[] = array(
-                        'name'     => $files['name'][ $i ],
-                        'type'     => $files['type'][ $i ],
-                        'tmp_name' => $files['tmp_name'][ $i ],
-                        'error'    => $files['error'][ $i ],
-                        'size'     => $files['size'][ $i ],
-                    );
-                }
-            } else {
-                // Single file
-                if ( ! empty( $files['name'] ) ) {
-                    $normalized[] = $files;
-                }
-            }
-
-            return $normalized;
-        }
-
-        /**
-         * Upload files and attach them to the request post. Returns attachment IDs.
-         *
-         * @throws Exception on failure
-         */
-        protected static function handle_request_uploads( $post_id ) {
-            if ( ! function_exists( 'wp_handle_upload' ) ) {
-                require_once ABSPATH . 'wp-admin/includes/file.php';
-            }
-            if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-                require_once ABSPATH . 'wp-admin/includes/image.php';
-            }
-
-            $allowed_ext = self::get_allowed_extensions();
-            $max_bytes   = self::get_max_file_size_bytes();
-
-            $files = isset( $_FILES['srf_files'] ) ? $_FILES['srf_files'] : null;
-            $items = self::normalize_files_array( $files );
-
-            $attachment_ids = array();
-
-            foreach ( $items as $file ) {
-
-                // Handle PHP upload errors
-                if ( ! empty( $file['error'] ) ) {
-                    if ( (int) $file['error'] === UPLOAD_ERR_NO_FILE ) {
-                        continue;
-                    }
-                    throw new Exception( __( 'One of the uploaded files failed to upload. Please try again.', 'service-requests-form' ) );
-                }
-
-                // Size check
-                if ( ! empty( $file['size'] ) && (int) $file['size'] > $max_bytes ) {
-                    throw new Exception(
-                        sprintf(
-                            __( 'File "%s" is too large. Maximum allowed size is %d MB.', 'service-requests-form' ),
-                            sanitize_file_name( $file['name'] ),
-                            (int) ( $max_bytes / 1024 / 1024 )
-                        )
-                    );
-                }
-
-                // Extension check
-                $ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
-                if ( empty( $ext ) || ! in_array( $ext, $allowed_ext, true ) ) {
-                    throw new Exception(
-                        sprintf(
-                            __( 'File type not allowed: "%s". Allowed: %s', 'service-requests-form' ),
-                            sanitize_file_name( $file['name'] ),
-                            implode( ', ', $allowed_ext )
-                        )
-                    );
-                }
-
-                // Upload to WP uploads directory
-                $overrides = array(
-                    'test_form' => false,
-                );
-
-                $movefile = wp_handle_upload( $file, $overrides );
-
-                if ( ! $movefile || isset( $movefile['error'] ) ) {
-                    throw new Exception( __( 'Upload failed. Please try again.', 'service-requests-form' ) );
-                }
-
-                // Create attachment post
-                $attachment = array(
-                    'post_mime_type' => isset( $movefile['type'] ) ? $movefile['type'] : '',
-                    'post_title'     => sanitize_file_name( $file['name'] ),
-                    'post_content'   => '',
-                    'post_status'    => 'inherit',
-                );
-
-                $attach_id = wp_insert_attachment( $attachment, $movefile['file'], $post_id );
-                if ( is_wp_error( $attach_id ) || ! $attach_id ) {
-                    throw new Exception( __( 'Could not attach uploaded file to the request.', 'service-requests-form' ) );
-                }
-
-                // Generate metadata (works for images; safe for other types too)
-                $attach_data = wp_generate_attachment_metadata( $attach_id, $movefile['file'] );
-                if ( is_array( $attach_data ) ) {
-                    wp_update_attachment_metadata( $attach_id, $attach_data );
-                }
-
-                $attachment_ids[] = (int) $attach_id;
-            }
-
-            return $attachment_ids;
-        }
-
-
 		protected static function load_template( $template_name, $vars = array() ) {
 			$template_path = SRF_PLUGIN_DIR . 'templates/' . $template_name;
-
 			if ( ! file_exists( $template_path ) ) {
 				return;
 			}
-
 			if ( ! empty( $vars ) && is_array( $vars ) ) {
 				extract( $vars, EXTR_SKIP );
 			}
-
 			include $template_path;
 		}
 	}
