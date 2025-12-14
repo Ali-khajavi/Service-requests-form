@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.6.1
+ * Version:     0.6.2
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Service_Requests_Form {
 
 	private static $instance = null;
-	public  $version = '0.6.1';
+	public  $version = '0.6.2';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -34,54 +34,72 @@ final class Service_Requests_Form {
 	}
 
 	private function define_constants() {
-		if ( ! defined( 'SRF_VERSION' ) ) {
-			define( 'SRF_VERSION', $this->version );
-		}
-		if ( ! defined( 'SRF_PLUGIN_FILE' ) ) {
-			define( 'SRF_PLUGIN_FILE', __FILE__ );
-		}
-		if ( ! defined( 'SRF_PLUGIN_BASENAME' ) ) {
-			define( 'SRF_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-		}
-		if ( ! defined( 'SRF_PLUGIN_DIR' ) ) {
-			define( 'SRF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-		}
-		if ( ! defined( 'SRF_PLUGIN_URL' ) ) {
-			define( 'SRF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-		}
+		define( 'SRF_VERSION', $this->version );
+		define( 'SRF_PLUGIN_FILE', __FILE__ );
+		define( 'SRF_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+		define( 'SRF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+		define( 'SRF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 	}
 
+	/**
+	 * Load files
+	 * IMPORTANT: Admin Menu FIRST
+	 */
 	private function includes() {
+
+		// Admin menu (parent menu)
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
+
+		// Admin features
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-status.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-storage.php';
+
+		// Core
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-cpt.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-services-cpt.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-service-data.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-settings.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-form-handler.php';
 
-		// NEW: My Account integration (WooCommerce)
+		// WooCommerce My Account
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-myaccount.php';
 	}
 
 	private function init_hooks() {
+
 		add_action( 'init', array( $this, 'load_textdomain' ) );
+
+		// Admin Menu
+		if ( class_exists( 'SRF_Admin_Menu' ) ) {
+			SRF_Admin_Menu::init();
+		}
 
 		// CPTs
 		add_action( 'init', array( 'SR_CPT', 'register_cpt' ) );
 		add_action( 'init', array( 'SR_Services_CPT', 'register_cpt' ) );
 
+		// Service CPT admin UI
 		add_action( 'add_meta_boxes', array( 'SR_Services_CPT', 'add_meta_boxes' ) );
 		add_action( 'save_post_sr_service', array( 'SR_Services_CPT', 'save_service_meta' ), 10, 2 );
 		add_action( 'admin_enqueue_scripts', array( 'SR_Services_CPT', 'enqueue_admin_assets' ) );
-
 		add_filter( 'manage_sr_service_posts_columns', array( 'SR_Services_CPT', 'add_admin_columns' ) );
 		add_action( 'manage_sr_service_posts_custom_column', array( 'SR_Services_CPT', 'render_admin_columns' ), 10, 2 );
 
-		// Form handler
+		// Admin tools
+		if ( class_exists( 'SRF_Admin_Status' ) ) {
+			SRF_Admin_Status::init();
+		}
+
+		if ( class_exists( 'SRF_Admin_Storage' ) ) {
+			SRF_Admin_Storage::init();
+		}
+
+		// Frontend form
 		if ( class_exists( 'SR_Form_Handler' ) ) {
 			SR_Form_Handler::init();
 		}
 
-		// My Account (only if WooCommerce)
+		// Woo My Account
 		if ( class_exists( 'WooCommerce' ) && class_exists( 'SRF_MyAccount' ) ) {
 			SRF_MyAccount::init();
 		}
@@ -96,27 +114,18 @@ final class Service_Requests_Form {
 	}
 }
 
-require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
-SRF_Admin_Menu::init();
-
-
 /**
- * Returns the main instance.
- *
- * @return Service_Requests_Form
+ * Bootstrap
  */
 function SRF() {
 	return Service_Requests_Form::instance();
 }
-
-// Start plugin.
 SRF();
 
 /**
- * Activation: flush rewrite rules (needed for My Account endpoint).
+ * Activation
  */
 function srf_activate_plugin() {
-	// Ensure endpoint is registered before flush
 	if ( class_exists( 'SRF_MyAccount' ) ) {
 		SRF_MyAccount::add_endpoint();
 	}
@@ -125,7 +134,7 @@ function srf_activate_plugin() {
 register_activation_hook( __FILE__, 'srf_activate_plugin' );
 
 /**
- * Deactivation: flush rewrite rules.
+ * Deactivation
  */
 function srf_deactivate_plugin() {
 	flush_rewrite_rules();

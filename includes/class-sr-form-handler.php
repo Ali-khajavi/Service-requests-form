@@ -10,6 +10,63 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// ===== Phase 5 constants =====
 		const USER_QUOTA_BYTES = 1073741824; // 1GB
 
+		public static function get_user_quota_bytes_public() {
+			return self::get_user_quota_bytes();
+		}
+
+		public static function cleanup_request_files_public( $post_id, $user_id = 0 ) {
+			self::cleanup_request_files( $post_id, $user_id );
+		}
+
+		public static function on_request_done( $post_id, $user_id = 0 ) {
+			self::cleanup_request_files( (int) $post_id, (int) $user_id );
+		}
+
+		protected static function cleanup_request_files( $post_id, $user_id = 0 ) {
+			$file_ids = get_post_meta( $post_id, '_sr_file_ids', true );
+			if ( ! is_array( $file_ids ) ) {
+				$file_ids = array();
+			}
+
+			if ( ! $user_id ) {
+				$user_id = (int) get_post_meta( $post_id, '_sr_user_id', true );
+				if ( ! $user_id ) {
+					$user_id = (int) get_post_field( 'post_author', $post_id );
+				}
+			}
+
+			$bytes_to_subtract = 0;
+
+			foreach ( $file_ids as $aid ) {
+				$aid = (int) $aid;
+				if ( ! $aid ) continue;
+
+				$bytes = (int) get_post_meta( $aid, '_srf_file_bytes', true );
+				if ( $bytes <= 0 ) {
+					$path = get_attached_file( $aid );
+					if ( $path && file_exists( $path ) ) {
+						$bytes = (int) filesize( $path );
+					}
+				}
+				$bytes_to_subtract += max( 0, $bytes );
+
+				wp_delete_attachment( $aid, true );
+			}
+
+			// Reset request meta
+			delete_post_meta( $post_id, '_sr_file_ids' );
+
+			// Free user storage
+			if ( $user_id && $bytes_to_subtract > 0 ) {
+				self::subtract_user_used_bytes( $user_id, $bytes_to_subtract );
+			}
+
+			// If request is done, you wanted storage empty for next request
+			if ( $user_id ) {
+				update_user_meta( $user_id, '_srf_storage_used_bytes', 0 );
+			}
+		}
+
 		// Exact hard whitelist requested
 		public static function hard_allowed_extensions() {
 			return array( 'stl','obj','step','stp','iges','igs','zip','rar','7z','pdf','jpg','jpeg','png' );
@@ -18,6 +75,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		public static function init() {
 			add_shortcode( 'service_request_form', array( __CLASS__, 'render_form_shortcode' ) );
 			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+			add_action( 'srf_request_marked_done', array( __CLASS__, 'on_request_done' ), 10, 2 );
 		}
 
 		public static function enqueue_assets() {
@@ -132,57 +190,67 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		 *
 		 * @throws Exception
 		 */
-		protected static function handle_request_uploads( $post_id, $user_id ) {
-			if ( ! function_exists( 'wp_handle_upload' ) ) {
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-			}
-			if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-				require_once ABSPATH . 'wp-admin/includes/image.php';
-			}
+		protected static function handle_request_uploads( $post_id ) {
 
-			$allowed_ext = self::hard_allowed_extensions();
+			$allowed_ext = self::get_allowed_extensions();
+			$max_bytes   = self::get_max_file_size_bytes();
 
 			$files = isset( $_FILES['srf_files'] ) ? $_FILES['srf_files'] : null;
 			$items = self::normalize_files_array( $files );
 
 			$attachment_ids = array();
-			$total_bytes    = 0;
 
+			$user_id = (int) get_post_field( 'post_author', $post_id );
+			if ( ! $user_id ) {
+				$user_id = get_current_user_id();
+			}
+
+			// 1) Enforce 1GB TOTAL per user (sum this request first)
+			$quota = self::get_user_quota_bytes();
+			$used  = self::get_user_used_bytes( $user_id );
+
+			$new_total = 0;
+			foreach ( $items as $f ) {
+				if ( empty( $f['error'] ) && ! empty( $f['size'] ) ) {
+					$new_total += (int) $f['size'];
+				}
+			}
+
+			if ( $new_total > 0 && ( $used + $new_total ) > $quota ) {
+				throw new Exception(
+					__( 'Upload limit reached (1GB total). Please wait until your previous request is completed.', 'service-requests-form' )
+				);
+			}
+
+			// 2) Per-file validation + upload
 			foreach ( $items as $file ) {
 
 				if ( ! empty( $file['error'] ) ) {
 					if ( (int) $file['error'] === UPLOAD_ERR_NO_FILE ) {
 						continue;
 					}
-					throw new Exception( __( 'One of the uploaded files failed. Please try again.', 'service-requests-form' ) );
+					throw new Exception( __( 'One of the uploaded files failed to upload. Please try again.', 'service-requests-form' ) );
 				}
 
-				$size = isset( $file['size'] ) ? (int) $file['size'] : 0;
-				if ( $size <= 0 ) {
-					throw new Exception( __( 'Invalid file upload.', 'service-requests-form' ) );
-				}
-
-				// Enforce 1GB total per user
-				$used  = self::get_user_used_bytes( $user_id );
-				if ( ( $used + $size ) > self::USER_QUOTA_BYTES ) {
-					throw new Exception( __( 'Upload limit reached (1GB total). Please wait until your previous request is completed.', 'service-requests-form' ) );
-				}
-
-				// Extension whitelist
-				$ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
-				if ( empty( $ext ) || ! in_array( $ext, $allowed_ext, true ) ) {
+				if ( ! empty( $file['size'] ) && (int) $file['size'] > $max_bytes ) {
 					throw new Exception(
 						sprintf(
-							__( 'File type not allowed: %s', 'service-requests-form' ),
-							sanitize_file_name( $file['name'] )
+							__( 'File "%s" is too large. Maximum allowed size is %d MB.', 'service-requests-form' ),
+							sanitize_file_name( $file['name'] ),
+							(int) ( $max_bytes / 1024 / 1024 )
 						)
 					);
 				}
 
-				// Strong type check (prevents fake extensions)
-				$check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
-				if ( empty( $check['ext'] ) || strtolower( $check['ext'] ) !== $ext ) {
-					throw new Exception( __( 'File type verification failed.', 'service-requests-form' ) );
+				$ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
+				if ( empty( $ext ) || ! in_array( $ext, $allowed_ext, true ) ) {
+					throw new Exception(
+						sprintf(
+							__( 'File type not allowed: "%s". Allowed: %s', 'service-requests-form' ),
+							sanitize_file_name( $file['name'] ),
+							implode( ', ', $allowed_ext )
+						)
+					);
 				}
 
 				$overrides = array( 'test_form' => false );
@@ -209,15 +277,19 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					wp_update_attachment_metadata( $attach_id, $attach_data );
 				}
 
-				// Save size to attachment + add to user usage
-				update_post_meta( $attach_id, '_srf_file_size', $size );
-				self::add_user_used_bytes( $user_id, $size );
+				// ✅ Store bytes for clean subtraction later
+				$file_bytes = ! empty( $file['size'] ) ? (int) $file['size'] : 0;
+				update_post_meta( $attach_id, '_srf_file_bytes', $file_bytes );
 
 				$attachment_ids[] = (int) $attach_id;
-				$total_bytes     += $size;
+
+				// ✅ Increase user used bytes as uploads succeed
+				if ( $file_bytes > 0 ) {
+					self::add_user_used_bytes( $user_id, $file_bytes );
+				}
 			}
 
-			return array( $attachment_ids, $total_bytes );
+			return $attachment_ids;
 		}
 
 		public static function render_form_shortcode( $atts = array(), $content = '' ) {
