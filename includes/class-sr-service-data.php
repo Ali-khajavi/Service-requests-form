@@ -56,7 +56,16 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
             }
 
             $title   = get_the_title( $post );
-            $content = apply_filters( 'the_content', $post->post_content );
+            
+
+            $raw = $post->post_content;
+
+            // Prevent shortcodes (or Elementor blocks) from rendering a second form
+            $raw = strip_shortcodes( $raw );
+
+            // Keep simple formatting only
+            $content = wp_kses_post( wpautop( $raw ) );
+
 
             // Gallery images
             if ( ! class_exists( 'SR_Services_CPT' ) ) {
