@@ -6,7 +6,9 @@ function SRF_onReady(fn) {
   }
 }
 
-// Slider (simple image switcher)
+/* =========================================================
+   Slider (simple image switcher)
+========================================================= */
 (function () {
   'use strict';
 
@@ -17,6 +19,7 @@ function SRF_onReady(fn) {
       var parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
+      console.error('Error parsing slider images:', e);
       return [];
     }
   }
@@ -35,48 +38,51 @@ function SRF_onReady(fn) {
       index = i;
       var item = images[index];
       if (!item || !item.url) return;
+
       imgEl.src = item.url;
       imgEl.alt = item.alt || '';
+      imgEl.style.display = 'block';
     }
 
+    var nav = slider.querySelector('.srf-service-slider__nav');
     if (images.length <= 1) {
+      if (nav) nav.style.display = 'none';
       if (prev) prev.style.display = 'none';
       if (next) next.style.display = 'none';
-    } else {
-      if (prev) prev.style.display = '';
-      if (next) next.style.display = '';
     }
 
-    if (prev) prev.onclick = null;
-    if (next) next.onclick = null;
+    if (prev) {
+      prev.onclick = function (e) {
+        e.preventDefault();
+        show((index - 1 + images.length) % images.length);
+      };
+    }
 
-    if (prev) prev.onclick = function (e) {
-      e.preventDefault();
-      show((index - 1 + images.length) % images.length);
-    };
-
-    if (next) next.onclick = function (e) {
-      e.preventDefault();
-      show((index + 1) % images.length);
-    };
+    if (next) {
+      next.onclick = function (e) {
+        e.preventDefault();
+        show((index + 1) % images.length);
+      };
+    }
 
     show(0);
   }
 
   function initAll(scope) {
-    var sliders = (scope || document).querySelectorAll('.srf-service-slider[data-srf-slider="switcher"]');
-    for (var i = 0; i < sliders.length; i++) initSlider(sliders[i]);
+    var sliders = (scope || document).querySelectorAll(
+      '.srf-service-slider[data-srf-slider="switcher"]'
+    );
+    for (var i = 0; i < sliders.length; i++) {
+      initSlider(sliders[i]);
+    }
   }
 
   window.SRF_initSliders = initAll;
-
-  SRF_onReady(function () {
-    initAll(document);
-  });
 })();
 
-
-// Phase 4: Dynamic service info switching (title + text + images)
+/* =========================================================
+   Phase 4: Dynamic service info switching
+========================================================= */
 (function () {
   'use strict';
 
@@ -94,27 +100,33 @@ function SRF_onReady(fn) {
   }
 
   function buildServiceInfoHTML(service) {
-    var title   = service && service.title ? service.title : '';
-    var content = service && service.content ? service.content : '';
-    var images  = (service && Array.isArray(service.images)) ? service.images : [];
+    var title   = service.title || '';
+    var content = service.content || '';
+    var images  = Array.isArray(service.images) ? service.images : [];
 
     var sliderHtml = '';
     if (images.length) {
       var first = images[0];
       sliderHtml =
-        '<div class="srf-service-slider" data-srf-slider="switcher" data-images="' + escapeAttr(JSON.stringify(images)) + '">' +
+        '<div class="srf-service-slider" data-srf-slider="switcher" data-images="' +
+        escapeAttr(JSON.stringify(images)) +
+        '">' +
           '<div class="srf-service-slider__viewport">' +
-            '<img class="srf-service-slider__image" src="' + escapeAttr(first.url) + '" alt="' + escapeAttr(first.alt || "") + '" loading="lazy" />' +
+            '<img class="srf-service-slider__image" src="' +
+            escapeAttr(first.url) +
+            '" alt="' +
+            escapeAttr(first.alt || '') +
+            '" loading="lazy" />' +
           '</div>' +
           '<div class="srf-service-slider__nav">' +
-            '<button type="button" class="srf-service-slider__prev" aria-label="Previous image">&#10094;</button>' +
-            '<button type="button" class="srf-service-slider__next" aria-label="Next image">&#10095;</button>' +
+            '<button type="button" class="srf-service-slider__prev">&#10094;</button>' +
+            '<button type="button" class="srf-service-slider__next">&#10095;</button>' +
           '</div>' +
         '</div>';
     }
 
     return (
-      '<div class="srf-service-info" data-service-id="' + escapeAttr(String(service.id || '')) + '">' +
+      '<div class="srf-service-info" data-service-id="' + escapeAttr(service.id) + '">' +
         '<h2 class="srf-service-info__title">' + escapeHtml(title) + '</h2>' +
         '<div class="srf-service-info__text">' + content + '</div>' +
         sliderHtml +
@@ -122,94 +134,171 @@ function SRF_onReady(fn) {
     );
   }
 
-  function findService(services, id) {
-    if (!services) return null;
-    if (services[id]) return services[id];
 
-    var n = parseInt(id, 10);
-    if (!isNaN(n) && services[n]) return services[n];
 
-    for (var k in services) {
-      if (!Object.prototype.hasOwnProperty.call(services, k)) continue;
-      var s = services[k];
-      if (s && String(s.id) === String(id)) return s;
-    }
-    return null;
+function initializeServiceInfo() {
+  var select =
+    document.getElementById('srf-service') ||
+    document.querySelector('select[name="srf_service"]');
+
+  if (!select) {
+    console.warn('SRF: #srf-service select not found');
+    return;
   }
 
-  SRF_onReady(function () {
-    var select = document.getElementById('srf-service');
+  var rawServices =
+    window.srfServiceData ||                // NEW (preferred)
+    window.srfServices ||                   // old fallback
+    (typeof srfServices !== 'undefined' ? srfServices : null);
 
-    // wp_localize_script outputs: var srfServices = {...}
-    var services = (typeof window.srfServices !== 'undefined' && window.srfServices) ||
-                   (typeof srfServices !== 'undefined' ? srfServices : null);
 
-    if (!select || !services) return;
+  if (!rawServices || (Array.isArray(rawServices) && rawServices.length === 0) || (!Array.isArray(rawServices) && !Object.keys(rawServices).length)) {
+    console.warn('SRF: services data not found. Check enqueue/inline ordering.');
+    console.log('SRF: window.srfServices =', window.srfServices);
+    console.log('SRF: srfServices =', (typeof srfServices !== 'undefined' ? srfServices : undefined));
+    return;
+  }
 
-    var host = document.querySelector('.srf-layout__service-info');
-    if (!host) return;
+  // Build a stable lookup by string ID (works whether rawServices is array OR object)
+  var servicesById = {};
+  if (Array.isArray(rawServices)) {
+    for (var i = 0; i < rawServices.length; i++) {
+      var s = rawServices[i];
+      if (s && s.id != null) servicesById[String(s.id)] = s;
+    }
+  } else {
+    for (var k in rawServices) {
+      if (!rawServices.hasOwnProperty(k)) continue;
+      var sv = rawServices[k];
+      // prefer explicit sv.id, fallback to key
+      var id = (sv && sv.id != null) ? sv.id : k;
+      servicesById[String(id)] = sv;
+    }
+  }
 
-    select.addEventListener('change', function () {
-      var id = String(select.value || '');
-      var service = findService(services, id);
-      if (!service) return;
 
-      host.innerHTML = buildServiceInfoHTML(service);
+  var host = document.querySelector('.srf-layout__service-info');
 
-      if (window.SRF_initSliders) {
+
+  if (!host) {
+    console.warn('SRF: host container missing (.srf-layout__service-info). Creating fallback host.');
+    host = document.createElement('div');
+    host.className = 'srf-layout__service-info';
+    select.parentNode.appendChild(host);
+  }
+
+  function setActiveServiceItem(serviceId) {
+    var items = document.querySelectorAll('.srf-service-item[data-service-id]');
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.toggle('active', String(items[i].dataset.serviceId) === String(serviceId));
+    }
+  }
+
+  function updateServiceInfo(serviceId) {
+    if (!serviceId) {
+      host.innerHTML =
+        '<div class="srf-service-info"><h2 class="srf-service-info__title">Please select a service</h2></div>';
+      setActiveServiceItem('');
+      return;
+    }
+
+    var sid = String(serviceId);
+    var service = servicesById[sid];
+
+    if (!service) {
+      console.warn('SRF: service not found for id:', serviceId);
+      return;
+    }
+
+    host.innerHTML = buildServiceInfoHTML(service);
+    setActiveServiceItem(serviceId);
+
+    if (window.SRF_initSliders) {
+      setTimeout(function () {
         window.SRF_initSliders(host);
-      }
-    });
+      }, 50);
+    }
+  }
+
+  // Init with selected or first service
+  if (!select.value && select.options.length > 1) {
+    select.value = select.options[1].value;
+  }
+  updateServiceInfo(select.value);
+
+  console.log('[SRF] init: select found, current value =', select.value);
+  console.log('[SRF] init: service dataset keys =', Object.keys(servicesById || {}));
+
+  select.addEventListener('change', function () {
+    console.log('[SRF] change:', this.value);
+    updateServiceInfo(this.value);
+  });
+
+
+  document.addEventListener('click', function (e) {
+    var item = e.target.closest('.srf-service-item');
+    if (!item) return;
+
+    e.preventDefault();
+
+    var serviceId = item.dataset.serviceId;
+    if (!serviceId) return;
+
+    select.value = String(serviceId);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
+
+  SRF_onReady(function () {
+    initializeServiceInfo();
+    if (window.SRF_initSliders) {
+      window.SRF_initSliders(document);
+    }
   });
 })();
 
-
-// Gate form submission to business_user only
+/* =========================================================
+   Gate form submission to business_user only
+========================================================= */
 (function () {
   'use strict';
 
   function createPopup() {
-    var existing = document.querySelector('.srf-popup-backdrop');
-    if (existing) {
-      existing.style.display = 'flex';
-      return existing;
+    var backdrop = document.querySelector('.srf-popup-backdrop');
+    if (backdrop) {
+      backdrop.style.display = 'flex';
+      return;
     }
 
-    var backdrop = document.createElement('div');
+    backdrop = document.createElement('div');
     backdrop.className = 'srf-popup-backdrop';
 
     var box = document.createElement('div');
     box.className = 'srf-popup';
 
-    var title = document.createElement('h3');
-    title.className = 'srf-popup__title';
-    title.textContent = (window.srfFrontend && window.srfFrontend.popup_title) || 'Business account required';
+    box.innerHTML =
+      '<h3 class="srf-popup__title">' +
+      ((window.srfFrontend && srfFrontend.popup_title) || 'Business account required') +
+      '</h3>' +
+      '<p class="srf-popup__message">' +
+      ((window.srfFrontend && srfFrontend.popup_message) ||
+        'To submit a service request you must have a Business account.') +
+      '</p>' +
+      '<button type="button" class="srf-popup__button">' +
+      ((window.srfFrontend && srfFrontend.popup_button) || 'OK') +
+      '</button>';
 
-    var msg = document.createElement('p');
-    msg.className = 'srf-popup__message';
-    msg.textContent = (window.srfFrontend && window.srfFrontend.popup_message) ||
-      'To submit a service request you must have a Business account. Please contact our IT team.';
-
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'srf-popup__button';
-    btn.textContent = (window.srfFrontend && window.srfFrontend.popup_button) || 'OK';
-
-    btn.addEventListener('click', function () {
+    box.querySelector('button').onclick = function () {
       backdrop.style.display = 'none';
-    });
+    };
 
-    backdrop.addEventListener('click', function (e) {
+    backdrop.onclick = function (e) {
       if (e.target === backdrop) backdrop.style.display = 'none';
-    });
+    };
 
-    box.appendChild(title);
-    box.appendChild(msg);
-    box.appendChild(btn);
     backdrop.appendChild(box);
-
     document.body.appendChild(backdrop);
-    return backdrop;
   }
 
   SRF_onReady(function () {
@@ -219,7 +308,6 @@ function SRF_onReady(fn) {
     for (var i = 0; i < forms.length; i++) {
       forms[i].addEventListener('submit', function (e) {
         e.preventDefault();
-        e.stopPropagation();
         createPopup();
       });
     }
