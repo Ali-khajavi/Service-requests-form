@@ -62,17 +62,32 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
                 )
             );
 
-            // Service data for dynamic switching
+            // Provide all service data for dynamic front-end switching
             $services_data = array();
             if ( class_exists( 'SR_Service_Data' ) ) {
                 $services_data = SR_Service_Data::get_all_services_data();
             }
 
-            wp_localize_script(
+            // Build an OBJECT keyed by string service ID (stable, no array index assumptions)
+            $js_service_map = array();
+            foreach ( $services_data as $service_id => $service ) {
+                $js_service_map[ (string) $service_id ] = array(
+                    'id'      => (string) $service_id,
+                    'title'   => isset( $service['title'] ) ? $service['title'] : '',
+                    'content' => isset( $service['content'] ) ? $service['content'] : '',
+                    'images'  => isset( $service['images'] ) ? $service['images'] : array(),
+                );
+            }
+
+            // Inject BEFORE the script (more robust with minify/cache) and use a unique global
+            wp_add_inline_script(
                 'srf-frontend-js',
-                'srfServices',
-                $services_data
+                'window.srfServiceData = window.srfServiceData || {};'
+                . 'Object.assign(window.srfServiceData, ' . wp_json_encode( $js_service_map ) . ');',
+                'before'
             );
+
+
         }
 
 
@@ -161,6 +176,19 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
                 if ( empty( $old_data['terms'] ) || $old_data['terms'] !== '1' ) {
                     $errors[] = __( 'You must accept the Terms & Conditions.', 'service-requests-form' );
                 }
+
+
+                $company = isset($_POST['srf_company']) ? sanitize_text_field($_POST['srf_company']) : '';
+                $phone   = isset($_POST['srf_phone']) ? sanitize_text_field($_POST['srf_phone']) : '';
+
+                if (empty($company)) {
+                $errors[] = 'Company is required.';
+                }
+
+                if (empty($phone)) {
+                $errors[] = 'Phone is required.';
+                }
+
 
                 // Shipping address must be present (it is posted as hidden input from your template)
                 $shipping_address = isset( $_POST['srf_shipping_address'] )
@@ -253,13 +281,19 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
                         ?>
                     </div>
                 </div>
-
-                <div class="srf-layout__user-requests">
-                    <?php self::load_template( 'frontend-list.php' ); ?>
-                </div>
             </div>
             <?php
             return ob_get_clean();
+
+
+            // In the render_form_shortcode method, add debug:
+            error_log('Template path: ' . SRF_PLUGIN_DIR . 'templates/form.php');
+            error_log('Template exists: ' . (file_exists(SRF_PLUGIN_DIR . 'templates/form.php') ? 'Yes' : 'No'));
+
+            // Also check if services exist:
+            error_log('Number of services: ' . count($services));
+            error_log('Selected service ID: ' . $selected_service_id);
+
         }
 
 
