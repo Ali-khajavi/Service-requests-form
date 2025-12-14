@@ -25,9 +25,9 @@ function SRF_onReady(fn) {
   }
 
   function initSlider(slider) {
-    var imgEl = slider.querySelector('.srf-service-slider__image');
-    var prev  = slider.querySelector('.srf-service-slider__prev');
-    var next  = slider.querySelector('.srf-service-slider__next');
+    var imgEl  = slider.querySelector('.srf-service-slider__image');
+    var prev   = slider.querySelector('.srf-service-slider__prev');
+    var next   = slider.querySelector('.srf-service-slider__next');
     var images = parseImages(slider);
 
     if (!imgEl || !images.length) return;
@@ -81,7 +81,7 @@ function SRF_onReady(fn) {
 })();
 
 /* =========================================================
-   Phase 4: Dynamic service info switching
+   Dynamic service info switching (dropdown only)
 ========================================================= */
 (function () {
   'use strict';
@@ -134,111 +134,77 @@ function SRF_onReady(fn) {
     );
   }
 
+  function initializeServiceInfo() {
+    var select =
+      document.getElementById('srf-service') ||
+      document.querySelector('select[name="srf_service"]');
 
+    if (!select) return;
 
-function initializeServiceInfo() {
-  var select =
-    document.getElementById('srf-service') ||
-    document.querySelector('select[name="srf_service"]');
+    var rawServices =
+      window.srfServiceData ||
+      window.srfServices ||
+      (typeof srfServices !== 'undefined' ? srfServices : null);
 
-  if (!select) {
-    console.warn('SRF: #srf-service select not found');
-    return;
-  }
-
-  var rawServices =
-    window.srfServiceData ||                // NEW (preferred)
-    window.srfServices ||                   // old fallback
-    (typeof srfServices !== 'undefined' ? srfServices : null);
-
-
-  if (!rawServices || (Array.isArray(rawServices) && rawServices.length === 0) || (!Array.isArray(rawServices) && !Object.keys(rawServices).length)) {
-    console.warn('SRF: services data not found. Check enqueue/inline ordering.');
-    return;
-  }
-
-  // Build a stable lookup by string ID (works whether rawServices is array OR object)
-  var servicesById = {};
-  if (Array.isArray(rawServices)) {
-    for (var i = 0; i < rawServices.length; i++) {
-      var s = rawServices[i];
-      if (s && s.id != null) servicesById[String(s.id)] = s;
-    }
-  } else {
-    for (var k in rawServices) {
-      if (!rawServices.hasOwnProperty(k)) continue;
-      var sv = rawServices[k];
-      // prefer explicit sv.id, fallback to key
-      var id = (sv && sv.id != null) ? sv.id : k;
-      servicesById[String(id)] = sv;
-    }
-  }
-
-
-  var host = document.querySelector('.srf-layout__service-info');
-
-
-  if (!host) {
-    console.warn('SRF: host container missing (.srf-layout__service-info). Creating fallback host.');
-    host = document.createElement('div');
-    host.className = 'srf-layout__service-info';
-    select.parentNode.appendChild(host);
-  }
-
-  function setActiveServiceItem(serviceId) {
-    var items = document.querySelectorAll('.srf-service-item[data-service-id]');
-    for (var i = 0; i < items.length; i++) {
-      items[i].classList.toggle('active', String(items[i].dataset.serviceId) === String(serviceId));
-    }
-  }
-
-  function updateServiceInfo(serviceId) {
-    if (!serviceId) {
-      host.innerHTML =
-        '<div class="srf-service-info"><h2 class="srf-service-info__title">Please select a service</h2></div>';
-      setActiveServiceItem('');
+    if (!rawServices) {
+      console.warn('SRF: services data not found (window.srfServiceData missing).');
       return;
     }
 
-    var sid = String(serviceId);
-    var service = servicesById[sid];
-
-    if (!service) {
-      console.warn('SRF: service not found for id:', serviceId);
-      return;
+    // Stable lookup by string ID (supports object or array)
+    var servicesById = {};
+    if (Array.isArray(rawServices)) {
+      for (var i = 0; i < rawServices.length; i++) {
+        var s = rawServices[i];
+        if (s && s.id != null) servicesById[String(s.id)] = s;
+      }
+    } else {
+      for (var k in rawServices) {
+        if (!Object.prototype.hasOwnProperty.call(rawServices, k)) continue;
+        var sv = rawServices[k];
+        var id = (sv && sv.id != null) ? sv.id : k;
+        servicesById[String(id)] = sv;
+      }
     }
 
-    host.innerHTML = buildServiceInfoHTML(service);
-    setActiveServiceItem(serviceId);
-
-    if (window.SRF_initSliders) {
-      setTimeout(function () {
-        window.SRF_initSliders(host);
-      }, 50);
+    var host = document.querySelector('.srf-layout__service-info');
+    if (!host) {
+      host = document.createElement('div');
+      host.className = 'srf-layout__service-info';
+      select.parentNode.appendChild(host);
     }
+
+    function updateServiceInfo(serviceId) {
+      if (!serviceId) {
+        host.innerHTML =
+          '<div class="srf-service-info"><h2 class="srf-service-info__title">Please select a service</h2></div>';
+        return;
+      }
+
+      var sid = String(serviceId);
+      var service = servicesById[sid];
+      if (!service) return;
+
+      host.innerHTML = buildServiceInfoHTML(service);
+
+      if (window.SRF_initSliders) {
+        setTimeout(function () {
+          window.SRF_initSliders(host);
+        }, 30);
+      }
+    }
+
+    // Init: if no selection, keep placeholder option selected
+    updateServiceInfo(select.value);
+
+    select.addEventListener('change', function () {
+      updateServiceInfo(this.value);
+    });
   }
-
-  // Init with selected or first service
-  if (!select.value && select.options.length > 1) {
-    select.value = select.options[1].value;
-  }
-  updateServiceInfo(select.value);
-
-  console.log('[SRF] init: select found, current value =', select.value);
-  console.log('[SRF] init: service dataset keys =', Object.keys(servicesById || {}));
-
-  select.addEventListener('change', function () {
-    console.log('[SRF] change:', this.value);
-    updateServiceInfo(this.value);
-  });
-}
-
 
   SRF_onReady(function () {
     initializeServiceInfo();
-    if (window.SRF_initSliders) {
-      window.SRF_initSliders(document);
-    }
+    if (window.SRF_initSliders) window.SRF_initSliders(document);
   });
 })();
 
