@@ -32,7 +32,18 @@ class SRF_Admin_Status {
 			'side',
 			'high'
 		);
+	
+
+		add_meta_box(
+			'srf-request-files',
+			__( 'Request Files', 'service-requests-form' ),
+			array( __CLASS__, 'render_files_meta_box' ),
+			'service_request',
+			'side',
+			'default'
+		);
 	}
+
 
 	/**
 	 * Render the meta box UI
@@ -67,6 +78,66 @@ class SRF_Admin_Status {
 		</select>
 		<?php
 	}
+
+
+	/**
+	 * Render the uploaded files meta box (download/view links + sizes).
+	 *
+	 * @param WP_Post $post
+	 */
+	public static function render_files_meta_box( $post ) {
+
+		$file_ids = get_post_meta( $post->ID, '_sr_file_ids', true );
+		if ( ! is_array( $file_ids ) ) {
+			$file_ids = array();
+		}
+
+		$file_ids = array_filter( array_map( 'absint', $file_ids ) );
+
+		if ( empty( $file_ids ) ) {
+			echo '<p>' . esc_html__( 'No files uploaded for this request.', 'service-requests-form' ) . '</p>';
+			return;
+		}
+
+		$total = 0;
+
+		echo '<ul style="margin:0; padding-left:18px;">';
+
+		foreach ( $file_ids as $aid ) {
+			$url  = wp_get_attachment_url( $aid );
+			$path = get_attached_file( $aid );
+			$name = get_the_title( $aid );
+			if ( ! $name ) {
+				$name = basename( (string) $path );
+			}
+
+			$size = 0;
+			if ( $path && file_exists( $path ) ) {
+				$fs = @filesize( $path );
+				if ( false !== $fs ) {
+					$size = (int) $fs;
+				}
+			}
+
+			$total += $size;
+
+			echo '<li style="margin: 0 0 6px;">';
+			if ( $url ) {
+				echo '<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $name ) . '</a>';
+			} else {
+				echo esc_html( $name );
+			}
+			if ( $size > 0 ) {
+				echo ' <span style="color:#666;">(' . esc_html( size_format( $size ) ) . ')</span>';
+			}
+			echo '</li>';
+		}
+
+		echo '</ul>';
+
+		echo '<p style="margin-top:10px;"><strong>' . esc_html__( 'Total:', 'service-requests-form' ) . '</strong> ' . esc_html( size_format( $total ) ) . '</p>';
+	}
+
 
 	/**
 	 * Save status and trigger cleanup when DONE

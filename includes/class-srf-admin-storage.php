@@ -54,9 +54,17 @@ class SRF_Admin_Storage {
 		if ( empty( $users ) ) {
 			echo '<tr><td colspan="4">' . esc_html__( 'No users found.', 'service-requests-form' ) . '</td></tr>';
 		} else {
+			$shown = 0;
 			foreach ( $users as $u ) {
 				$used = (int) get_user_meta( $u->ID, '_srf_storage_used_bytes', true );
 				$used = max( 0, $used );
+
+				// Only show users that actually used storage
+				if ( $used <= 0 ) {
+					continue;
+				}
+
+				$shown++;
 
 				echo '<tr>';
 				echo '<td>' . esc_html( $u->display_name ) . '<br><small>' . esc_html( $u->user_email ) . '</small></td>';
@@ -75,6 +83,10 @@ class SRF_Admin_Storage {
 
 				echo '</td>';
 				echo '</tr>';
+			}
+
+			if ( 0 === (int) $shown ) {
+				echo '<tr><td colspan="4">' . esc_html__( 'No users have used storage yet.', 'service-requests-form' ) . '</td></tr>';
 			}
 		}
 

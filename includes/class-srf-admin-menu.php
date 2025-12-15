@@ -25,7 +25,7 @@ class SRF_Admin_Menu {
 			26
 		);
 
-		// Dashboard (keep)
+		// Submenus that point to CPT screens
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'Dashboard', 'service-requests-form' ),
@@ -34,23 +34,28 @@ class SRF_Admin_Menu {
 			self::PARENT_SLUG
 		);
 
-		/**
-		 * ✅ Do NOT add "Requests" and "Services" listing pages manually.
-		 * WordPress will add them automatically because your CPTs have:
-		 * show_in_menu => self::PARENT_SLUG
-		 *
-		 * This avoids duplicates like:
-		 * - Service Requests vs All Requests
-		 * - Services vs All Services
-		 */
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Service Requests', 'service-requests-form' ),
+			__( 'Service Requests', 'service-requests-form' ),
+			'edit_posts',
+			'edit.php?post_type=service_request'
+		);
 
-		// ✅ Keep only "Add New" shortcuts if you want them
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'Add New Request', 'service-requests-form' ),
 			__( 'Add New Request', 'service-requests-form' ),
 			'edit_posts',
 			'post-new.php?post_type=service_request'
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Services', 'service-requests-form' ),
+			__( 'Services', 'service-requests-form' ),
+			'edit_posts',
+			'edit.php?post_type=sr_service'
 		);
 
 		add_submenu_page(
@@ -62,8 +67,8 @@ class SRF_Admin_Menu {
 		);
 
 		// NOTE: Storage submenu is registered by SRF_Admin_Storage under this parent slug.
+		// Settings submenu can be added similarly if you have a settings page.
 	}
-
 
 	public static function enqueue_admin_assets( $hook ) {
 		// Only load on our dashboard page
@@ -141,6 +146,40 @@ class SRF_Admin_Menu {
 			'total_storage'  => max( 0, (int) $total_storage ),
 		);
 	}
+
+
+	/**
+	 * Get total uploaded bytes for a specific request (sum attachment file sizes).
+	 *
+	 * @param int $request_id
+	 * @return int
+	 */
+	protected static function get_request_upload_bytes( $request_id ) {
+		$request_id = (int) $request_id;
+		if ( $request_id <= 0 ) {
+			return 0;
+		}
+
+		$file_ids = get_post_meta( $request_id, '_sr_file_ids', true );
+		if ( ! is_array( $file_ids ) || empty( $file_ids ) ) {
+			return 0;
+		}
+
+		$total = 0;
+		foreach ( $file_ids as $aid ) {
+			$aid  = (int) $aid;
+			$path = $aid ? get_attached_file( $aid ) : '';
+			if ( $path && file_exists( $path ) ) {
+				$size = @filesize( $path );
+				if ( false !== $size ) {
+					$total += (int) $size;
+				}
+			}
+		}
+
+		return max( 0, (int) $total );
+	}
+
 
 	protected static function badge_html( $status ) {
 		$status = (string) $status;
@@ -362,13 +401,14 @@ class SRF_Admin_Menu {
 								<th><?php esc_html_e( 'Service', 'service-requests-form' ); ?></th>
 								<th><?php esc_html_e( 'Status', 'service-requests-form' ); ?></th>
 								<th><?php esc_html_e( 'Date', 'service-requests-form' ); ?></th>
+								<th><?php esc_html_e( 'Uploads', 'service-requests-form' ); ?></th>
 								<th><?php esc_html_e( 'Open', 'service-requests-form' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
 							<?php if ( empty( $recent ) ) : ?>
 								<tr>
-									<td colspan="5" class="srf-muted"><?php esc_html_e( 'No requests yet.', 'service-requests-form' ); ?></td>
+									<td colspan="6" class="srf-muted"><?php esc_html_e( 'No requests yet.', 'service-requests-form' ); ?></td>
 								</tr>
 							<?php else : ?>
 								<?php foreach ( $recent as $p ) :
@@ -386,6 +426,12 @@ class SRF_Admin_Menu {
 										<td><?php echo esc_html( $service ); ?></td>
 										<td><?php echo self::badge_html( $status ); ?></td>
 										<td><?php echo esc_html( get_date_from_gmt( $p->post_date_gmt, 'Y-m-d H:i' ) ); ?></td>
+										<td>
+											<?php
+											$uploads_bytes = self::get_request_upload_bytes( $rid );
+											echo $uploads_bytes > 0 ? esc_html( size_format( $uploads_bytes ) ) : '&mdash;';
+											?>
+										</td>
 										<td>
 											<?php if ( $edit_url ) : ?>
 												<a class="button button-small" href="<?php echo esc_url( $edit_url ); ?>">
