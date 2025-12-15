@@ -22,7 +22,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			self::cleanup_request_files( (int) $post_id, (int) $user_id );
 		}
 
-
 		/**
 		 * Send admin notification email for a new request.
 		 */
@@ -124,8 +123,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			wp_mail( $to, $subject, $message, $headers );
 		}
 
-
-
 		protected static function cleanup_request_files( $post_id, $user_id = 0 ) {
 			$file_ids = get_post_meta( $post_id, '_sr_file_ids', true );
 			if ( ! is_array( $file_ids ) ) {
@@ -180,6 +177,107 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			add_shortcode( 'service_request_form', array( __CLASS__, 'render_form_shortcode' ) );
 			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 			add_action( 'srf_request_marked_done', array( __CLASS__, 'on_request_done' ), 10, 2 );
+		}
+
+		// ===============================
+		// Phase 5 helpers (quota + settings)
+		// ===============================
+		/**
+		 * 1GB quota per user by default.
+		 * You can later make this editable via settings.
+		 */
+		protected static function get_user_quota_bytes() {
+			// 1GB
+			$default = 1024 * 1024 * 1024;
+
+			// Optional: if you have settings, read from there (keep default if not set)
+			$quota = (int) get_option( 'srf_user_quota_bytes', $default );
+
+			return $quota > 0 ? $quota : $default;
+		}
+
+		/**
+		 * Public wrapper used by admin storage page.
+		 */
+		public static function get_user_quota_bytes_public() {
+			return self::get_user_quota_bytes();
+		}
+
+		/**
+		 * Allowed file extensions whitelist (from plan).
+		 */
+		protected static function get_allowed_extensions() {
+
+			$default = array(
+				'stl', 'obj', 'step', 'stp', 'iges', 'igs',
+				'zip', 'rar', '7z',
+				'pdf',
+				'jpg', 'jpeg', 'png',
+			);
+
+			// Optional: load from settings if you already have one
+			// Example: stored as comma-separated string "pdf,jpg,png"
+			$opt = get_option( 'srf_allowed_extensions', '' );
+			if ( is_string( $opt ) && trim( $opt ) !== '' ) {
+				$list = array_map( 'trim', explode( ',', strtolower( $opt ) ) );
+				$list = array_values( array_filter( $list ) );
+				if ( ! empty( $list ) ) {
+					return $list;
+				}
+			}
+
+			return $default;
+		}
+
+		/**
+		 * Max size per single file (default 100MB).
+		 * (Quota is total 1GB/user — this is per-file safety.)
+		 */
+		protected static function get_max_file_size_bytes() {
+			$default = 100 * 1024 * 1024; // 100MB
+
+			$opt = (int) get_option( 'srf_max_file_bytes', $default );
+			return $opt > 0 ? $opt : $default;
+		}
+
+		/**
+		 * User storage used bytes (total of all uploaded files still "active").
+		 */
+		protected static function get_user_used_bytes( $user_id ) {
+			$user_id = (int) $user_id;
+			if ( $user_id <= 0 ) {
+				return 0;
+			}
+
+			$used = (int) get_user_meta( $user_id, '_srf_storage_used_bytes', true );
+			return $used > 0 ? $used : 0;
+		}
+
+		protected static function add_user_used_bytes( $user_id, $bytes ) {
+			$user_id = (int) $user_id;
+			$bytes   = (int) $bytes;
+			if ( $user_id <= 0 || $bytes <= 0 ) {
+				return;
+			}
+
+			$current = self::get_user_used_bytes( $user_id );
+			update_user_meta( $user_id, '_srf_storage_used_bytes', $current + $bytes );
+		}
+
+		protected static function subtract_user_used_bytes( $user_id, $bytes ) {
+			$user_id = (int) $user_id;
+			$bytes   = (int) $bytes;
+			if ( $user_id <= 0 || $bytes <= 0 ) {
+				return;
+			}
+
+			$current = self::get_user_used_bytes( $user_id );
+			$new     = $current - $bytes;
+			if ( $new < 0 ) {
+				$new = 0;
+			}
+
+			update_user_meta( $user_id, '_srf_storage_used_bytes', $new );
 		}
 
 		public static function enqueue_assets() {
@@ -357,14 +455,15 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					throw new Exception( __( 'One of the uploaded files failed to upload. Please try again.', 'service-requests-form' ) );
 				}
 
-				$file_name  = isset( $file['name'] ) ? sanitize_file_name( wp_unslash( $file['name'] ) ) : '';
-				$file_bytes = isset( $file['size'] ) ? (int) $file['size'] : 0;
+				$file_name = isset( $file['name'] ) ? sanitize_file_name( wp_unslash( $file['name'] ) ) : '';
 
 				if ( $file_name === '' ) {
 					throw new Exception( __( 'Uploaded file is missing a name.', 'service-requests-form' ) );
 				}
 
-				if ( $file_bytes > 0 && $file_bytes > $max_bytes ) {
+				// Per-file size check (use provided size here just for validation)
+				$declared_bytes = isset( $file['size'] ) ? (int) $file['size'] : 0;
+				if ( $declared_bytes > 0 && $declared_bytes > $max_bytes ) {
 					throw new Exception(
 						sprintf(
 							__( 'File "%s" is too large. Maximum allowed size is %d MB.', 'service-requests-form' ),
@@ -420,26 +519,46 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				);
 
 				$attach_id = wp_insert_attachment( $attachment, $movefile['file'], $post_id );
+
 				if ( is_wp_error( $attach_id ) || ! $attach_id ) {
 					throw new Exception( __( 'Could not attach uploaded file to the request.', 'service-requests-form' ) );
 				}
+
+				// ✅ Force correct parent relation (so it shows in the request)
+				wp_update_post(
+					array(
+						'ID'          => (int) $attach_id,
+						'post_parent' => (int) $post_id,
+					)
+				);
 
 				$attach_data = wp_generate_attachment_metadata( $attach_id, $movefile['file'] );
 				if ( is_array( $attach_data ) ) {
 					wp_update_attachment_metadata( $attach_id, $attach_data );
 				}
 
-				// Store bytes for cleanup + storage management
+				// ✅ FIX #2: bytes must be reliable (fallback to filesize)
+				$file_bytes = 0;
+
+				if ( isset( $file['size'] ) && is_numeric( $file['size'] ) ) {
+					$file_bytes = (int) $file['size'];
+				}
+
+				if ( $file_bytes <= 0 && ! empty( $movefile['file'] ) && file_exists( $movefile['file'] ) ) {
+					$file_bytes = (int) filesize( $movefile['file'] );
+				}
+
 				update_post_meta( $attach_id, '_srf_file_bytes', $file_bytes );
 
 				$attachment_ids[] = (int) $attach_id;
 
-				// Increase user used bytes as uploads succeed
+				// ✅ Increase user used bytes as uploads succeed
 				if ( $file_bytes > 0 ) {
 					self::add_user_used_bytes( $user_id, $file_bytes );
 					$total_bytes += $file_bytes;
 				}
 			}
+
 
 			return array( $attachment_ids, $total_bytes );
 		}
