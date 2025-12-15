@@ -123,12 +123,38 @@ function SRF() {
 SRF();
 
 /**
+ * Create Business User role (used to allow submitting requests + uploading files)
+ */
+function srf_add_business_user_role() {
+
+	// Do not recreate if it already exists
+	if ( get_role( 'business_user' ) ) {
+		return;
+	}
+
+	add_role(
+		'business_user',
+		__( 'Business User', 'service-requests-form' ),
+		array(
+			'read'         => true,
+			'upload_files' => true,
+		)
+	);
+}
+
+/**
  * Activation
  */
 function srf_activate_plugin() {
+
+	// ✅ Ensure Business role exists
+	srf_add_business_user_role();
+
+	// Ensure endpoint is registered before flushing rewrite rules
 	if ( class_exists( 'SRF_MyAccount' ) ) {
 		SRF_MyAccount::add_endpoint();
 	}
+
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'srf_activate_plugin' );
