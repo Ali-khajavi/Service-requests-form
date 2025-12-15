@@ -39,12 +39,13 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
                 'labels'          => $labels,
                 'public'          => false,
                 'show_ui'         => true,
-                'show_in_menu'    => $parent_slug,   // ✅ this is the key
+                'show_in_menu'    => ( class_exists( 'SRF_Admin_Menu' ) ? SRF_Admin_Menu::PARENT_SLUG : true ),
                 'supports'        => array( 'title', 'editor', 'thumbnail' ),
                 'has_archive'     => false,
                 'rewrite'         => false,
                 'capability_type' => 'post',
             );
+
 
             register_post_type( 'sr_service', $args );
         }
