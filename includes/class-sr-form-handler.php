@@ -339,7 +339,47 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		 *
 		 * @throws Exception
 		 */
-		protected static function handle_request_uploads( $post_id ) {
+		
+		/**
+		 * Normalize $_FILES array into a flat list of file items.
+		 * Supports both single and multiple uploads (name="srf_files" or "srf_files[]").
+		 *
+		 * @param array|null $files
+		 * @return array<int, array>
+		 */
+		protected static function normalize_files_array( $files ) {
+
+			if ( empty( $files ) || ! is_array( $files ) ) {
+				return array();
+			}
+
+			// Multiple files: each key contains an array of values.
+			if ( isset( $files['name'] ) && is_array( $files['name'] ) ) {
+				$out   = array();
+				$count = count( $files['name'] );
+
+				for ( $i = 0; $i < $count; $i++ ) {
+					$out[] = array(
+						'name'     => isset( $files['name'][ $i ] ) ? $files['name'][ $i ] : '',
+						'type'     => isset( $files['type'][ $i ] ) ? $files['type'][ $i ] : '',
+						'tmp_name' => isset( $files['tmp_name'][ $i ] ) ? $files['tmp_name'][ $i ] : '',
+						'error'    => isset( $files['error'][ $i ] ) ? $files['error'][ $i ] : UPLOAD_ERR_NO_FILE,
+						'size'     => isset( $files['size'][ $i ] ) ? $files['size'][ $i ] : 0,
+					);
+				}
+
+				return $out;
+			}
+
+			// Single file: already in the correct shape.
+			if ( isset( $files['name'] ) ) {
+				return array( $files );
+			}
+
+			return array();
+		}
+
+protected static function handle_request_uploads( $post_id ) {
 
 			// Make sure WP upload helpers exist
 			if ( ! function_exists( 'wp_handle_upload' ) ) {
