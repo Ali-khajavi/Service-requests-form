@@ -197,13 +197,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		}
 
 		/**
-		 * Public wrapper used by admin storage page.
-		 */
-		public static function get_user_quota_bytes_public() {
-			return self::get_user_quota_bytes();
-		}
-
-		/**
 		 * Allowed file extensions whitelist (from plan).
 		 */
 		protected static function get_allowed_extensions() {
@@ -338,52 +331,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				. 'Object.assign(window.srfServiceData, ' . wp_json_encode( $js_service_map ) . ');',
 				'before'
 			);
-		}
-
-		// ===== Storage tracking =====
-
-		protected static function get_user_used_bytes( $user_id ) {
-			$used = (int) get_user_meta( $user_id, '_srf_storage_used_bytes', true );
-			return max( 0, $used );
-		}
-
-		protected static function add_user_used_bytes( $user_id, $bytes ) {
-			$used = self::get_user_used_bytes( $user_id );
-			update_user_meta( $user_id, '_srf_storage_used_bytes', $used + (int) $bytes );
-		}
-
-		protected static function subtract_user_used_bytes( $user_id, $bytes ) {
-			$used = self::get_user_used_bytes( $user_id );
-			$new  = max( 0, $used - (int) $bytes );
-			update_user_meta( $user_id, '_srf_storage_used_bytes', $new );
-		}
-
-		protected static function normalize_files_array( $files ) {
-			$normalized = array();
-
-			if ( empty( $files ) || empty( $files['name'] ) ) {
-				return $normalized;
-			}
-
-			if ( is_array( $files['name'] ) ) {
-				$count = count( $files['name'] );
-				for ( $i = 0; $i < $count; $i++ ) {
-					if ( empty( $files['name'][ $i ] ) ) {
-						continue;
-					}
-					$normalized[] = array(
-						'name'     => $files['name'][ $i ],
-						'type'     => $files['type'][ $i ],
-						'tmp_name' => $files['tmp_name'][ $i ],
-						'error'    => $files['error'][ $i ],
-						'size'     => $files['size'][ $i ],
-					);
-				}
-			} else {
-				$normalized[] = $files;
-			}
-
-			return $normalized;
 		}
 
 		/**
