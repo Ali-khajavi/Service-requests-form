@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.6.5
+ * Version:     0.6.6
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Service_Requests_Form {
 
 	private static $instance = null;
-	public  $version = '0.6.5';
+	public  $version = '0.6.6';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -166,3 +166,11 @@ function srf_deactivate_plugin() {
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'srf_deactivate_plugin' );
+
+
+register_activation_hook( __FILE__, function() {
+	if ( class_exists( 'SRF_MyAccount' ) ) {
+		SRF_MyAccount::add_endpoints();
+	}
+	flush_rewrite_rules();
+});
