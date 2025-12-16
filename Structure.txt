@@ -1,0 +1,34 @@
+service-requests-form/
+│
+├─ service-requests-form.php
+├─ uninstall.php
+│
+├─ includes/
+│  ├─ class-sr-cpt.php                 (service_request CPT)
+│  ├─ class-sr-services-cpt.php        (sr_service CPT)
+│  ├─ class-sr-form-handler.php        (shortcode + submission + uploads + quota)
+│  ├─ class-sr-settings.php            (settings page)
+│  ├─ class-sr-service-data.php        (service data helpers)
+│  ├─ class-sr-myaccount.php           (Woo My Account tab: Service Requests + single view + secure downloads)
+│  ├─ class-srf-admin-menu.php         (NEW: parent WP admin menu: "Service and Subscription")
+│  ├─ class-srf-admin-status.php       (NEW: status metabox + triggers DONE cleanup)
+│  └─ class-srf-admin-storage.php      (NEW: admin storage dashboard + reset/cleanup tools)
+│
+├─ templates/
+│  ├─ form.php                         (frontend form)
+│  ├─ service-info.php                 (dynamic service content)
+│  ├─ frontend-list.php                (optional user request list)
+│  │
+│  └─ myaccount/
+│     ├─ service-requests.php          (NEW: My Account requests list template)
+│     └─ service-request.php           (NEW: My Account single request template)
+│
+├─ assets/
+│  ├─ css/
+│  │  ├─ frontend.css
+│  │  └─ admin.css
+│  └─ js/
+│     ├─ frontend.js                   (service switching + slider)
+│     └─ admin.js                      (gallery selector)
+│
+└─ plan.txt
