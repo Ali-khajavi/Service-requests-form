@@ -38,6 +38,8 @@ class SRF_MyAccount {
 		add_filter( 'woocommerce_get_query_vars', array( __CLASS__, 'register_query_vars' ) );
 		add_filter( 'woocommerce_account_menu_items', array( __CLASS__, 'add_menu_item' ) );
 
+		add_action( 'template_redirect', array( __CLASS__, 'handle_post_actions' ) );
+
 		add_action( 'woocommerce_account_' . self::ENDPOINT_LIST . '_endpoint', array( __CLASS__, 'render_list_page' ) );
 		add_action( 'woocommerce_account_' . self::ENDPOINT_VIEW . '_endpoint', array( __CLASS__, 'render_single_page' ) );
 
@@ -98,12 +100,8 @@ class SRF_MyAccount {
 		}
 
 		
-		// Reliable single-view (works even if rewrite rules are not flushed)
-		if ( ! empty( $_GET['srf_view'] ) ) {
-			$request_id = absint( $_GET['srf_view'] );
-			self::render_single_by_id( $request_id );
-			return;
-		}
+		$view_id = ! empty( $_GET['srf_view'] ) ? absint( $_GET['srf_view'] ) : 0;
+
 
 $user_id  = get_current_user_id();
 		$page     = isset( $_GET['srpage'] ) ? max( 1, absint( $_GET['srpage'] ) ) : 1;
@@ -129,6 +127,7 @@ $user_id  = get_current_user_id();
 				'page'       => $page,
 				'per_page'   => $per_page,
 				'create_url' => $create_url,
+				'view_id'    => $view_id,
 			)
 		);
 
@@ -350,6 +349,124 @@ public static function render_single_page() {
 
 		include $path;
 	}
+
+
+/**
+ * Handle POST actions on My Account service-requests endpoint (edit request in modal).
+ */
+public static function handle_post_actions() {
+
+	if ( ! is_user_logged_in() ) {
+		return;
+	}
+
+	// Only handle on the Service Requests endpoint
+	if ( function_exists( 'is_wc_endpoint_url' ) && ! is_wc_endpoint_url( self::ENDPOINT_LIST ) ) {
+		return;
+	}
+
+	if ( $_SERVER['REQUEST_METHOD'] !== 'POST' ) {
+		return;
+	}
+
+	$action = isset( $_POST['srf_action'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_action'] ) ) : '';
+	if ( $action !== 'update_request' ) {
+		return;
+	}
+
+	if ( empty( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'srf_edit_request' ) ) {
+		wc_add_notice( __( 'Security check failed. Please try again.', 'service-requests-form' ), 'error' );
+		wp_safe_redirect( self::url_list() );
+		exit;
+	}
+
+	$old_id = isset( $_POST['request_id'] ) ? absint( $_POST['request_id'] ) : 0;
+	if ( ! $old_id ) {
+		wc_add_notice( __( 'Invalid request.', 'service-requests-form' ), 'error' );
+		wp_safe_redirect( self::url_list() );
+		exit;
+	}
+
+	$user_id = get_current_user_id();
+	$owner   = (int) get_post_meta( $old_id, '_sr_user_id', true );
+
+	if ( $owner !== $user_id ) {
+		wc_add_notice( __( 'You are not allowed to edit this request.', 'service-requests-form' ), 'error' );
+		wp_safe_redirect( self::url_list() );
+		exit;
+	}
+
+	// New description/content
+	$new_desc = isset( $_POST['description'] ) ? wp_kses_post( wp_unslash( $_POST['description'] ) ) : '';
+
+	// Copy basic post fields
+	$old_post = get_post( $old_id );
+	if ( ! $old_post ) {
+		wc_add_notice( __( 'Request not found.', 'service-requests-form' ), 'error' );
+		wp_safe_redirect( self::url_list() );
+		exit;
+	}
+
+	$new_id = wp_insert_post( array(
+		'post_type'    => $old_post->post_type,
+		'post_status'  => $old_post->post_status,
+		'post_title'   => $old_post->post_title,
+		'post_content' => $new_desc,
+	), true );
+
+	if ( is_wp_error( $new_id ) ) {
+		wc_add_notice( __( 'Could not save your changes.', 'service-requests-form' ), 'error' );
+		wp_safe_redirect( self::url_list( array( 'srf_view' => $old_id ) ) );
+		exit;
+	}
+
+	// Copy metas
+	$meta_keys = array(
+		'_sr_user_id',
+		'_sr_name',
+		'_sr_company',
+		'_sr_email',
+		'_sr_phone',
+		'_sr_shipping_address',
+		'_sr_service_title',
+		'_sr_status',
+	);
+
+	foreach ( $meta_keys as $k ) {
+		$val = get_post_meta( $old_id, $k, true );
+		if ( $val !== '' && $val !== null ) {
+			update_post_meta( $new_id, $k, $val );
+		}
+	}
+
+	// Store new description meta
+	update_post_meta( $new_id, '_sr_description', wp_strip_all_tags( $new_desc ) );
+
+	// Remove old uploaded files to free storage
+	$old_files = (array) get_post_meta( $old_id, '_sr_file_ids', true );
+	if ( ! empty( $old_files ) ) {
+		foreach ( $old_files as $fid ) {
+			$fid = absint( $fid );
+			if ( $fid ) {
+				wp_delete_attachment( $fid, true );
+			}
+		}
+	}
+	delete_post_meta( $old_id, '_sr_file_ids' );
+
+	// Handle new uploads (reuse plugin uploader if available)
+	if ( class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'handle_request_uploads' ) ) {
+		SR_Form_Handler::handle_request_uploads( $new_id );
+	}
+
+	// Delete old request completely
+	wp_delete_post( $old_id, true );
+
+	wc_add_notice( __( 'Request updated successfully.', 'service-requests-form' ), 'success' );
+	wp_safe_redirect( self::url_list() );
+	exit;
+}
+
 
 	public static function url_list( $args = array() ) {
 

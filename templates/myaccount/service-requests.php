@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** @var int $page */
 /** @var int $per_page */
 /** @var string $create_url */
+/** @var int $view_id */
 
 echo '<div class="srf-myaccount srf-myaccount--list">';
 
@@ -15,6 +16,55 @@ if ( ! empty( $create_url ) ) {
 	echo '<a class="button srf-myaccount__create" href="' . esc_url( $create_url ) . '">' . esc_html__( 'Create new request', 'service-requests-form' ) . '</a>';
 }
 echo '</div>';
+
+
+/**
+ * Modal (opened when ?srf_view=ID is present)
+ */
+if ( ! empty( $view_id ) ) {
+
+	$view_post = get_post( $view_id );
+	$owner_id  = (int) get_post_meta( $view_id, '_sr_user_id', true );
+
+	if ( $view_post && $owner_id === get_current_user_id() ) {
+
+		$desc = $view_post->post_content;
+
+		echo '<div class="srf-modal is-open" id="srf-request-modal" role="dialog" aria-modal="true">';
+		echo '<div class="srf-modal__overlay" data-srf-close></div>';
+		echo '<div class="srf-modal__panel">';
+		echo '<button type="button" class="srf-modal__close" data-srf-close aria-label="Close">&times;</button>';
+		echo '<h3 class="srf-modal__title">' . esc_html__( 'Edit Request', 'service-requests-form' ) . ' #' . esc_html( $view_id ) . '</h3>';
+
+		echo '<form method="post" enctype="multipart/form-data" class="srf-modal__form">';
+		echo '<input type="hidden" name="srf_action" value="update_request" />';
+		echo '<input type="hidden" name="request_id" value="' . esc_attr( $view_id ) . '" />';
+		wp_nonce_field( 'srf_edit_request' );
+
+		echo '<p><label><strong>' . esc_html__( 'Description', 'service-requests-form' ) . '</strong></label><br />';
+		echo '<textarea name="description" rows="6" style="width:100%;">' . esc_textarea( $desc ) . '</textarea></p>';
+
+		echo '<p><label><strong>' . esc_html__( 'Upload new file(s)', 'service-requests-form' ) . '</strong></label><br />';
+		echo '<input type="file" name="srf_files[]" multiple /></p>';
+
+		echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Save changes', 'service-requests-form' ) . '</button> ';
+		echo '<a class="button" href="' . esc_url( SRF_MyAccount::url_list() ) . '">' . esc_html__( 'Cancel', 'service-requests-form' ) . '</a></p>';
+
+		echo '</form>';
+		echo '</div></div>';
+
+		// Minimal inline script to close modal
+		echo '<script>(function(){var m=document.getElementById("srf-request-modal");if(!m)return;function close(){window.location.href="' . esc_js( SRF_MyAccount::url_list() ) . '";}m.addEventListener("click",function(e){if(e.target&&e.target.hasAttribute("data-srf-close"))close();});document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});})();</script>';
+
+		// Minimal styles (so modal works even without theme CSS)
+		echo '<style>
+		.srf-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;}
+		.srf-modal__overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);}
+		.srf-modal__panel{position:relative;max-width:720px;width:92%;background:#fff;border-radius:12px;padding:18px;z-index:2;box-shadow:0 10px 40px rgba(0,0,0,.35);}
+		.srf-modal__close{position:absolute;right:12px;top:10px;border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer;}
+		</style>';
+	}
+}
 
 if ( ! $query->have_posts() ) {
 	echo '<p>' . esc_html__( 'You have no requests yet.', 'service-requests-form' ) . '</p>';
