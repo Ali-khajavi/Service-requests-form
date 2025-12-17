@@ -14,13 +14,28 @@ class SRF_MyAccount {
 	const ENDPOINT_VIEW = 'service-request';
 
 	public static function init() {
+		srf_log( 'SRF_MyAccount::init() called' );
+
+
+		/**
+		 * Always register rewrite endpoints + public query vars.
+		 * This must NOT depend on WooCommerce load order.
+		 */
+		add_action( 'init', array( __CLASS__, 'add_endpoints' ) );
+
+		// Make WP recognize endpoint vars
+		add_filter( 'query_vars', function( $vars ) {
+			$vars[] = self::ENDPOINT_LIST;
+			$vars[] = self::ENDPOINT_VIEW;
+			return $vars;
+		}, 0 );
+
+		// Only add WooCommerce-specific UI/hooks if WooCommerce is active
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			return;
 		}
 
-		add_action( 'init', array( __CLASS__, 'add_endpoints' ) );
 		add_filter( 'woocommerce_get_query_vars', array( __CLASS__, 'register_query_vars' ) );
-
 		add_filter( 'woocommerce_account_menu_items', array( __CLASS__, 'add_menu_item' ) );
 
 		add_action( 'woocommerce_account_' . self::ENDPOINT_LIST . '_endpoint', array( __CLASS__, 'render_list_page' ) );
@@ -28,9 +43,23 @@ class SRF_MyAccount {
 
 		// Secure download handler
 		add_action( 'template_redirect', array( __CLASS__, 'maybe_handle_download' ), 9 );
+
+		add_action( 'wp', function() {
+			if ( ! function_exists('is_account_page') || ! is_account_page() ) return;
+
+			global $wp;
+			srf_log( 'WP matched_rule: ' . ( isset($wp->matched_rule) ? $wp->matched_rule : '(none)' ) );
+			srf_log( 'WP matched_query: ' . ( isset($wp->matched_query) ? $wp->matched_query : '(none)' ) );
+			srf_log( 'Query var service-requests: ' . var_export( get_query_var( self::ENDPOINT_LIST, null ), true ) );
+			srf_log( 'Query var service-request: ' . var_export( get_query_var( self::ENDPOINT_VIEW, null ), true ) );
+		}, 20 );
+
 	}
 
+
 	public static function add_endpoints() {
+		srf_log( 'add_endpoints(): registering rewrite endpoints (' . self::ENDPOINT_LIST . ', ' . self::ENDPOINT_VIEW . ')' );
+
 		add_rewrite_endpoint( self::ENDPOINT_LIST, EP_ROOT | EP_PAGES );
 		add_rewrite_endpoint( self::ENDPOINT_VIEW, EP_ROOT | EP_PAGES );
 	}

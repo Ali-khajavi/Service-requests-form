@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.6.6.1
+ * Version:     0.6.6.2
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Service_Requests_Form {
 
 	private static $instance = null;
-	public  $version = '0.6.6.1';
+	public  $version = '0.6.6.2';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -99,10 +99,6 @@ final class Service_Requests_Form {
 			SR_Form_Handler::init();
 		}
 
-		// Woo My Account
-		if ( class_exists( 'WooCommerce' ) && class_exists( 'SRF_MyAccount' ) ) {
-			SRF_MyAccount::init();
-		}
 	}
 
 	public function load_textdomain() {
@@ -121,6 +117,34 @@ function SRF() {
 	return Service_Requests_Form::instance();
 }
 SRF();
+
+// ======================================================
+// Debug logging helper (safe)
+// ======================================================
+if ( ! function_exists( 'srf_log' ) ) {
+	function srf_log( $msg ) {
+		if ( defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG ) {
+			error_log( '[SRF] ' . $msg );
+		}
+	}
+}
+
+// ======================================================
+// Load-order-safe My Account init + logs
+// ======================================================
+add_action( 'plugins_loaded', function () {
+
+	srf_log( 'plugins_loaded fired' );
+	srf_log( 'WooCommerce class exists? ' . ( class_exists('WooCommerce') ? 'YES' : 'NO' ) );
+	srf_log( 'SRF_MyAccount class exists? ' . ( class_exists('SRF_MyAccount') ? 'YES' : 'NO' ) );
+
+	if ( class_exists( 'SRF_MyAccount' ) ) {
+		srf_log( 'Calling SRF_MyAccount::init()' );
+		SRF_MyAccount::init();
+	}
+
+}, 20 );
+
 
 /**
  * Create Business User role (used to allow submitting requests + uploading files)
