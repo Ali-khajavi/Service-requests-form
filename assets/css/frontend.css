@@ -97,6 +97,7 @@
     border-radius: 8px;
     padding: 1.5rem;
     border: 1px solid #e1e1e1;
+    min-height: 200px; /* Ensure minimum height */
 }
 
 .srf-service-info__title {
@@ -111,44 +112,77 @@
 
 
 
+/* Replace the entire slider section with this: */
 
-/* Slider (image switcher – always shows exactly one image) */
+/* Slider styles - FIXED for better browser compatibility */
 .srf-service-slider {
     margin-top: 1rem;
     position: relative;
+    width: 100%;
 }
 
 .srf-service-slider__viewport {
+    position: relative;
     width: 100%;
+    height: 300px; /* Increased height */
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .srf-service-slider__image {
-    display: block;
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
     height: auto;
-    border-radius: 4px;
-    object-fit: contain; /* prevents crop; use cover if you prefer */
+    display: block !important; /* Force display block */
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ensure only one image is visible */
+.srf-service-slider__viewport img:not(:first-of-type) {
+    display: none !important;
 }
 
 .srf-service-slider__nav {
-    margin-top: 0.5rem;
     display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 15px;
+    z-index: 2;
+    position: relative;
 }
 
 .srf-service-slider__prev,
 .srf-service-slider__next {
-    border: 1px solid #ccc;
-    background: #fff;
-    border-radius: 3px;
-    padding: 0.2rem 0.5rem;
+    background: #2271b1;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
 }
 
+.srf-service-slider__prev:hover,
+.srf-service-slider__next:hover {
+    background: #135e96;
+}
+
+/* Hide nav when only one image */
+.srf-service-slider__nav.hidden {
+    display: none;
+}
 
 
 
@@ -173,7 +207,10 @@
 /* Popup for business account requirement */
 .srf-popup-backdrop {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
@@ -241,17 +278,92 @@
 }
 
 .srf-form__errors {
-	padding: 12px 14px;
-	border: 1px solid #d63638;
-	background: #fff5f5;
-	border-radius: 8px;
-	margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid #d63638;
+    background: #fff5f5;
+    border-radius: 8px;
+    margin-bottom: 14px;
 }
-.srf-form__errors ul { margin: 0; padding-left: 18px; }
+
+.srf-form__errors ul { 
+    margin: 0; 
+    padding-left: 18px; 
+}
+
 .srf-form__success {
-	padding: 12px 14px;
-	border: 1px solid #46b450;
-	background: #f0fff4;
-	border-radius: 8px;
-	margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid #46b450;
+    background: #f0fff4;
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+
+
+/* =========================================================
+   Service Item → Phase 4 Integration Styles
+   (ADD ONLY – does not replace existing CSS)
+========================================================= */
+
+/* Improve service item grouping */
+.srf-service-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+/* Make service items visually consistent with SRF UI */
+.srf-service-item {
+    background: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e1e1e;
+    user-select: none;
+}
+
+/* Hover refinement */
+.srf-service-item:hover {
+    background: #eef2f6;
+    border-color: #cfd8e3;
+}
+
+/* Active service item (synced with selection) */
+.srf-service-item.active {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #ffffff;
+}
+
+/* Ensure Phase-4 service info visually connects */
+.srf-layout__service-info {
+    animation: srfFadeIn 0.25s ease-out;
+}
+
+/* Smooth reveal animation */
+@keyframes srfFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Optional: tighten spacing when service info updates */
+.srf-service-info {
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+/* Optional fallback if .srf-service-details is still used somewhere */
+.srf-service-details.hidden {
+    display: none !important;
+}
+
+.srf-service-details.visible {
+    display: block !important;
 }

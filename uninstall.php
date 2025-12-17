@@ -70,10 +70,10 @@ srf_delete_cpt_posts_and_attachments( 'service_request' );
 /**
  * 2) Delete all services
  * IMPORTANT:
- * - This also deletes gallery images stored in _sr_service_gallery_ids
- * - If you reuse those images elsewhere on your site, comment this out or remove the meta key below.
+ * - We do NOT delete service images/attachments from the Media Library on uninstall.
+ * - Many sites reuse those images elsewhere, so deleting them would remove the original files.
  */
-srf_delete_cpt_posts_and_attachments( 'sr_service', array( '_sr_service_gallery_ids' ) );
+srf_delete_cpt_posts_and_attachments( 'sr_service' );
 
 /**
  * 3) Delete plugin options (settings)

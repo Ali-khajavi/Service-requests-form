@@ -34,13 +34,6 @@ class SRF_Admin_Menu {
 			self::PARENT_SLUG
 		);
 
-		add_submenu_page(
-			self::PARENT_SLUG,
-			__( 'Service Requests', 'service-requests-form' ),
-			__( 'Service Requests', 'service-requests-form' ),
-			'edit_posts',
-			'edit.php?post_type=service_request'
-		);
 
 		add_submenu_page(
 			self::PARENT_SLUG,
@@ -50,13 +43,6 @@ class SRF_Admin_Menu {
 			'post-new.php?post_type=service_request'
 		);
 
-		add_submenu_page(
-			self::PARENT_SLUG,
-			__( 'Services', 'service-requests-form' ),
-			__( 'Services', 'service-requests-form' ),
-			'edit_posts',
-			'edit.php?post_type=sr_service'
-		);
 
 		add_submenu_page(
 			self::PARENT_SLUG,

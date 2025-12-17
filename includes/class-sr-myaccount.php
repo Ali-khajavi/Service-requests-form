@@ -97,7 +97,15 @@ class SRF_MyAccount {
 			return;
 		}
 
-		$user_id  = get_current_user_id();
+		
+		// Reliable single-view (works even if rewrite rules are not flushed)
+		if ( ! empty( $_GET['srf_view'] ) ) {
+			$request_id = absint( $_GET['srf_view'] );
+			self::render_single_by_id( $request_id );
+			return;
+		}
+
+$user_id  = get_current_user_id();
 		$page     = isset( $_GET['srpage'] ) ? max( 1, absint( $_GET['srpage'] ) ) : 1;
 		$per_page = (int) apply_filters( 'srf_myaccount_requests_per_page', 15 );
 
@@ -130,14 +138,19 @@ class SRF_MyAccount {
 	/**
 	 * Single request page
 	 */
-	public static function render_single_page() {
+	
+	/**
+	 * Render a single request by ID (used from list page query arg fallback).
+	 */
+	protected static function render_single_by_id( $request_id ) {
+
 		if ( ! is_user_logged_in() ) {
 			echo '<p>' . esc_html__( 'Please log in to view your request.', 'service-requests-form' ) . '</p>';
 			return;
 		}
 
 		$user_id    = get_current_user_id();
-		$request_id = absint( get_query_var( self::ENDPOINT_VIEW ) );
+		$request_id = absint( $request_id );
 
 		if ( ! $request_id ) {
 			echo '<p>' . esc_html__( 'Request not found.', 'service-requests-form' ) . '</p>';
@@ -184,6 +197,11 @@ class SRF_MyAccount {
 			)
 		);
 	}
+
+public static function render_single_page() {
+		self::render_single_by_id( absint( get_query_var( self::ENDPOINT_VIEW ) ) );
+	}
+
 
 	/**
 	 * Secure download handler:
@@ -339,6 +357,7 @@ class SRF_MyAccount {
 	}
 
 	public static function url_view( $request_id ) {
-		return wc_get_account_endpoint_url( self::ENDPOINT_VIEW ) . trailingslashit( (string) absint( $request_id ) );
+		// Use list endpoint + query arg for maximum reliability (no rewrite rules needed).
+		return add_query_arg( array( 'srf_view' => absint( $request_id ) ), wc_get_account_endpoint_url( self::ENDPOINT_LIST ) );
 	}
 }
