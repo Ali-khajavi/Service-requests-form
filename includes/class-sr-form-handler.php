@@ -494,7 +494,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					$file_bytes = $declared_bytes;
 				}
 
-				update_post_meta( (int) $attach_id, '_srf_file_bytes', (int (int) $file_bytes ) );
+				update_post_meta( (int) $attach_id, '_srf_file_bytes', (int) $file_bytes );
 
 				$attachment_ids[] = (int) $attach_id;
 
