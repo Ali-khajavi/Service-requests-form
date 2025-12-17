@@ -11,7 +11,7 @@ class SRF_MyAccount {
 	 * - /my-account/service-request/{id}/     => single
 	 */
 	const ENDPOINT_LIST = 'service-requests';
-	const ENDPOINT_VIEW = 'service-request';
+	//const ENDPOINT_VIEW = 'service-request';
 
 	public static function init() {
 		srf_log( 'SRF_MyAccount::init() called' );
@@ -41,7 +41,6 @@ class SRF_MyAccount {
 		add_action( 'template_redirect', array( __CLASS__, 'handle_post_actions' ) );
 
 		add_action( 'woocommerce_account_' . self::ENDPOINT_LIST . '_endpoint', array( __CLASS__, 'render_list_page' ) );
-		add_action( 'woocommerce_account_' . self::ENDPOINT_VIEW . '_endpoint', array( __CLASS__, 'render_single_page' ) );
 
 		// Secure download handler
 		add_action( 'template_redirect', array( __CLASS__, 'maybe_handle_download' ), 9 );
@@ -131,73 +130,6 @@ class SRF_MyAccount {
 		);
 
 		wp_reset_postdata();
-	}
-
-	/**
-	 * Single request page
-	 */
-	
-	/**
-	 * Render a single request by ID (used from list page query arg fallback).
-	 */
-	protected static function render_single_by_id( $request_id ) {
-
-		if ( ! is_user_logged_in() ) {
-			echo '<p>' . esc_html__( 'Please log in to view your request.', 'service-requests-form' ) . '</p>';
-			return;
-		}
-
-		$user_id    = get_current_user_id();
-		$request_id = absint( $request_id );
-
-		if ( ! $request_id ) {
-			echo '<p>' . esc_html__( 'Request not found.', 'service-requests-form' ) . '</p>';
-			return;
-		}
-
-		$post = get_post( $request_id );
-		if ( ! $post || 'service_request' !== $post->post_type ) {
-			echo '<p>' . esc_html__( 'Request not found.', 'service-requests-form' ) . '</p>';
-			return;
-		}
-
-		$owner = (int) get_post_meta( $request_id, '_sr_user_id', true );
-		if ( $owner !== (int) $user_id ) {
-			echo '<p>' . esc_html__( 'You do not have permission to view this request.', 'service-requests-form' ) . '</p>';
-			return;
-		}
-
-		$data = array(
-			'request_id' => $request_id,
-			'date'       => get_the_date( '', $request_id ),
-			'service'    => (string) get_post_meta( $request_id, '_sr_service_title', true ),
-			'status'     => (string) get_post_meta( $request_id, '_sr_status', true ),
-			'name'       => (string) get_post_meta( $request_id, '_sr_name', true ),
-			'company'    => (string) get_post_meta( $request_id, '_sr_company', true ),
-			'email'      => (string) get_post_meta( $request_id, '_sr_email', true ),
-			'phone'      => (string) get_post_meta( $request_id, '_sr_phone', true ),
-			'shipping'   => (string) get_post_meta( $request_id, '_sr_shipping_address', true ),
-			'message'    => (string) get_post_meta( $request_id, '_sr_description', true ),
-			'file_ids'   => get_post_meta( $request_id, '_sr_file_ids', true ),
-		);
-
-		if ( empty( $data['status'] ) ) {
-			$data['status'] = 'new';
-		}
-		if ( ! is_array( $data['file_ids'] ) ) {
-			$data['file_ids'] = array();
-		}
-
-		self::load_template(
-			'myaccount/service-request.php',
-			array(
-				'data' => $data,
-			)
-		);
-	}
-
-	public static function render_single_page() {
-			self::render_single_by_id( absint( get_query_var( self::ENDPOINT_VIEW ) ) );
 	}
 
 	/**
