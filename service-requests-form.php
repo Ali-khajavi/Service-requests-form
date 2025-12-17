@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.7.2
+ * Version:     0.7.3
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Service_Requests_Form {
 
 	private static $instance = null;
-	public  $version = '0.7.2';
+	public  $version = '0.7.3';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -25,12 +25,6 @@ final class Service_Requests_Form {
 			self::$instance->setup();
 		}
 		return self::$instance;
-	}
-
-	private function setup() {
-		$this->define_constants();
-		$this->includes();
-		$this->init_hooks();
 	}
 
 	private function define_constants() {
@@ -41,29 +35,36 @@ final class Service_Requests_Form {
 		define( 'SRF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 	}
 
-	/**
-	 * Load files
-	 * IMPORTANT: Admin Menu FIRST
-	 */
+	private function setup() {
+		$this->define_constants();
+		$this->includes();
+		$this->init_hooks();
+	}
+
+	// Move class loading to a proper initialization sequence
+	private function setup() {
+		$this->define_constants();
+		$this->includes();
+		$this->init_hooks();
+	}
+
 	private function includes() {
-
-		// Admin menu (parent menu)
-		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
-
-		// Admin features
-		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-status.php';
-		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-storage.php';
-
-		// Core
+		// Load core classes first
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-cpt.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-services-cpt.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-service-data.php';
-		require_once SRF_PLUGIN_DIR . 'includes/class-sr-settings.php';
+		
+		// Then admin classes
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-status.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-storage.php';
+		
+		// Then main classes
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-form-handler.php';
-
-		// WooCommerce My Account
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-myaccount.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-sr-settings.php';
 	}
+
 
 	private function init_hooks() {
 
