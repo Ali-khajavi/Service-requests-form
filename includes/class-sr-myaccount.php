@@ -352,12 +352,26 @@ public static function render_single_page() {
 	}
 
 	public static function url_list( $args = array() ) {
-		$base = wc_get_account_endpoint_url( self::ENDPOINT_LIST );
+
+		$endpoint = self::ENDPOINT_LIST; // e.g. 'service-requests'
+		$myacc    = wc_get_page_permalink( 'myaccount' );
+
+		// If pretty permalinks enabled, use normal endpoint URL.
+		if ( get_option( 'permalink_structure' ) ) {
+			$base = wc_get_account_endpoint_url( $endpoint );
+		} else {
+			// No rewrites: use query-arg endpoints (Woo supports ?endpoint=1).
+			$base = add_query_arg( array( $endpoint => 1 ), $myacc );
+		}
+
 		return ! empty( $args ) ? add_query_arg( $args, $base ) : $base;
 	}
 
 	public static function url_view( $request_id ) {
-		// Use list endpoint + query arg for maximum reliability (no rewrite rules needed).
-		return add_query_arg( array( 'srf_view' => absint( $request_id ) ), wc_get_account_endpoint_url( self::ENDPOINT_LIST ) );
+
+		// Always build from url_list() so it works with or without rewrites.
+		return self::url_list( array(
+			'srf_view' => absint( $request_id ),
+		) );
 	}
 }
