@@ -20,7 +20,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.7.5';
+	public $version = '0.7.6';
 
 	private function __construct() {}
 	private function __clone() {}
