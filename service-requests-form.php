@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.7.5
+ * Version:     0.7.6
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -114,6 +114,35 @@ final class Service_Requests_Form {
 
 		// My Account
 		add_action( 'plugins_loaded', array( $this, 'init_myaccount' ), 20 );
+
+		// One-time rewrite flush after plugin updates (prevents legacy endpoint rules like EP_ROOT).
+		add_action( 'admin_init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
+	}
+
+	/**
+	 * Flush rewrite rules once after version changes.
+	 *
+	 * Why: earlier versions registered the endpoint with broader flags, which can leave
+	 * legacy rewrite rules behind until a flush happens. This forces a single flush
+	 * after updates so the My Account URLs stay under /my-account/.
+	 */
+	public function maybe_flush_rewrite_rules() {
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		$stored = (string) get_option( 'srf_rewrite_version', '' );
+		if ( $stored === (string) $this->version ) {
+			return;
+		}
+
+		// Ensure endpoint rules are registered before flushing.
+		if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'add_endpoints' ) ) {
+			SRF_MyAccount::add_endpoints();
+		}
+
+		flush_rewrite_rules();
+		update_option( 'srf_rewrite_version', (string) $this->version, false );
 	}
 
 	public function init_myaccount() {
