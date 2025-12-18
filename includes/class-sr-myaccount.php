@@ -469,6 +469,14 @@ class SRF_MyAccount {
 
 		$path = file_exists( $theme_path ) ? $theme_path : $plugin_path;
 
+		// Debug which template is actually being used (theme override vs plugin).
+		if ( function_exists( 'srf_log' ) && ! empty( $_GET['srf_debug'] ) ) {
+			srf_log( 'Template requested: ' . $relative_path );
+			srf_log( 'Theme candidate: ' . $theme_path . ( file_exists( $theme_path ) ? ' (exists)' : ' (missing)' ) );
+			srf_log( 'Plugin candidate: ' . $plugin_path . ( file_exists( $plugin_path ) ? ' (exists)' : ' (missing)' ) );
+			srf_log( 'Template chosen: ' . $path );
+		}
+
 		if ( ! file_exists( $path ) ) {
 			echo '<p>' . esc_html__( 'Template not found.', 'service-requests-form' ) . '</p>';
 			return;

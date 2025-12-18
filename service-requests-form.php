@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.7.6
+ * Version:     0.7.5.0.1
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -20,7 +20,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.7.6';
+	public $version = '0.7.5.0.1';
 
 	private function __construct() {}
 	private function __clone() {}
@@ -175,7 +175,9 @@ function srf_log( $msg ) {
 	if ( ! ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) ) {
 		return;
 	}
-	if ( ! current_user_can( 'manage_options' ) ) {
+	// Allow debugging for any logged-in user when explicitly requested.
+	// (Previously limited to manage_options, which prevented customer-side debug.)
+	if ( ! is_user_logged_in() ) {
 		return;
 	}
 	if ( empty( $_GET['srf_debug'] ) ) {
