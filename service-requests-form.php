@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.7.4
+ * Version:     0.7.5
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -16,9 +16,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Service_Requests_Form {
 
+	/** @var Service_Requests_Form|null */
 	private static $instance = null;
-	public  $version = '0.7.4';
 
+	/** @var string */
+	public $version = '0.7.5';
+
+	private function __construct() {}
+	private function __clone() {}
+	public function __wakeup() {}
+
+/** @return Service_Requests_Form */
 	public static function instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -34,6 +42,7 @@ final class Service_Requests_Form {
 	}
 
 	private function define_constants() {
+
 		if ( ! defined( 'SRF_VERSION' ) ) {
 			define( 'SRF_VERSION', $this->version );
 		}
@@ -72,12 +81,7 @@ final class Service_Requests_Form {
 	private function init_hooks() {
 
 		// Translations
-		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
-
-		// Admin Menu
-		if ( class_exists( 'SRF_Admin_Menu' ) ) {
-			SRF_Admin_Menu::init();
-		}
+		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ), 0 );
 
 		// CPTs
 		add_action( 'init', array( 'SR_CPT', 'register_cpt' ) );
@@ -89,6 +93,11 @@ final class Service_Requests_Form {
 		add_action( 'admin_enqueue_scripts', array( 'SR_Services_CPT', 'enqueue_admin_assets' ) );
 		add_filter( 'manage_sr_service_posts_columns', array( 'SR_Services_CPT', 'add_admin_columns' ) );
 		add_action( 'manage_sr_service_posts_custom_column', array( 'SR_Services_CPT', 'render_admin_columns' ), 10, 2 );
+
+		// Admin Menu
+		if ( class_exists( 'SRF_Admin_Menu' ) ) {
+			SRF_Admin_Menu::init();
+		}
 
 		// Admin tools
 		if ( class_exists( 'SRF_Admin_Status' ) ) {
@@ -104,11 +113,13 @@ final class Service_Requests_Form {
 		}
 
 		// My Account
-		add_action( 'plugins_loaded', function() {
-			if ( class_exists( 'SRF_MyAccount' ) ) {
-				SRF_MyAccount::init();
-			}
-		}, 20 );
+		add_action( 'plugins_loaded', array( $this, 'init_myaccount' ), 20 );
+	}
+
+	public function init_myaccount() {
+		if ( class_exists( 'SRF_MyAccount' ) ) {
+			SRF_MyAccount::init();
+		}
 	}
 
 	public function load_textdomain() {
@@ -171,11 +182,9 @@ function srf_activate_plugin( $network_wide = false ) {
 	srf_add_business_user_role();
 
 	// Ensure endpoints are registered before flushing rewrite rules
-	if ( ! class_exists( 'SRF_MyAccount' ) ) {
-		$myacc_file = trailingslashit( plugin_dir_path( __FILE__ ) ) . 'includes/class-sr-myaccount.php';
-		if ( file_exists( $myacc_file ) ) {
-			require_once $myacc_file;
-		}
+	$myacc_file = SRF_PLUGIN_DIR . 'includes/class-sr-myaccount.php';
+	if ( ! class_exists( 'SRF_MyAccount' ) && file_exists( $myacc_file ) ) {
+		require_once $myacc_file;
 	}
 
 	if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'add_endpoints' ) ) {

@@ -12,16 +12,32 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		const DEFAULT_MAX_FILE_BYTES   = 104857600;  // 100MB
 
 		/**
-		 * Public wrappers (keep for backwards compatibility with other plugin classes)
+		 * Public wrappers
+		 * - Keep upload logic protected, expose wrappers for other classes (SRF_MyAccount).
+		 * - Keep old wrappers for backward compatibility.
 		 */
+
+		// (existing)
 		public static function get_user_quota_bytes_public() {
 			return self::get_user_quota_bytes();
 		}
 
+		// ✅ NEW: wrapper required by SRF_MyAccount (keep uploader protected internally)
+		public static function handle_request_uploads_public( $post_id ) {
+			return self::handle_request_uploads( (int) $post_id );
+		}
+
+		// ✅ NEW: wrapper required by SRF_MyAccount (adjust quota)
+		public static function subtract_user_used_bytes_public( $user_id, $bytes ) {
+			self::subtract_user_used_bytes( (int) $user_id, (int) $bytes );
+		}
+
+		// (existing)
 		public static function cleanup_request_files_public( $post_id, $user_id = 0 ) {
 			self::cleanup_request_files( (int) $post_id, (int) $user_id );
 		}
 
+		// (existing)
 		public static function on_request_done( $post_id, $user_id = 0 ) {
 			self::cleanup_request_files( (int) $post_id, (int) $user_id );
 		}
@@ -235,7 +251,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					if ( ! $aid ) {
 						continue;
 					}
-					$url  = wp_get_attachment_url( $aid );
+					$url   = wp_get_attachment_url( $aid );
 					$name2 = get_the_title( $aid );
 					if ( $url ) {
 						$lines[] = '- ' . ( $name2 ? $name2 : ( 'File #' . $aid ) ) . ': ' . $url;
@@ -294,7 +310,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				$bytes_to_subtract += max( 0, $bytes );
 
-				// Delete ONLY request-uploaded files (these are attachments created by this plugin)
 				wp_delete_attachment( $aid, true );
 			}
 
@@ -321,9 +336,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				for ( $i = 0; $i < $count; $i++ ) {
 					$out[] = array(
-						'name'     => isset( $files['name'][ $i ] ) ? $files['name'][ $i ] : '',
-						'type'     => isset( $files['type'][ $i ] ) ? $files['type'][ $i ] : '',
-						'tmp_name' => isset( $files['tmp_name'][ $i ] ) ? $files['tmp_name'][ $i ] : '',
+						'name'     => isset( $files['name'][ $i ] ) ? (string) $files['name'][ $i ] : '',
+						'type'     => isset( $files['type'][ $i ] ) ? (string) $files['type'][ $i ] : '',
+						'tmp_name' => isset( $files['tmp_name'][ $i ] ) ? (string) $files['tmp_name'][ $i ] : '',
 						'error'    => isset( $files['error'][ $i ] ) ? (int) $files['error'][ $i ] : UPLOAD_ERR_NO_FILE,
 						'size'     => isset( $files['size'][ $i ] ) ? (int) $files['size'][ $i ] : 0,
 					);
@@ -348,7 +363,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		 * - This method DOES NOT redirect.
 		 * - It throws Exception on any validation/upload failure.
 		 */
-		public static function handle_request_uploads( $post_id ) {
+		protected static function handle_request_uploads( $post_id ) {
 
 			$post_id = (int) $post_id;
 			if ( $post_id <= 0 ) {
@@ -382,8 +397,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			}
 
 			// 1) Pre-check quota using declared sizes (fast fail)
-			$quota    = (int) self::get_user_quota_bytes();
-			$used     = (int) self::get_user_used_bytes( $user_id );
+			$quota     = (int) self::get_user_quota_bytes();
+			$used      = (int) self::get_user_used_bytes( $user_id );
 			$new_total = 0;
 
 			foreach ( $items as $f ) {
@@ -461,7 +476,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				}
 
 				$attachment = array(
-					'post_mime_type' => isset( $movefile['type'] ) ? $movefile['type'] : '',
+					'post_mime_type' => isset( $movefile['type'] ) ? (string) $movefile['type'] : '',
 					'post_title'     => $file_name,
 					'post_content'   => '',
 					'post_status'    => 'inherit',
@@ -672,7 +687,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 							self::send_admin_new_request_email( $post_id );
 
-							// ✅ IMPORTANT: redirect to /my-account/service-requests/ (your requirement)
+							// ✅ IMPORTANT: redirect to /my-account/service-requests/
 							if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
 								$redirect_url = SRF_MyAccount::url_list( array( 'srf_submitted' => '1' ) );
 							} else {

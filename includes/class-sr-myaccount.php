@@ -16,7 +16,7 @@ class SRF_MyAccount {
 		// Register rewrite endpoint (must be early and not depend on Woo load order).
 		add_action( 'init', array( __CLASS__, 'add_endpoints' ) );
 
-		// Public query vars we use (popup + download).
+		// Public query vars we use (popup + download + pagination).
 		add_filter( 'query_vars', array( __CLASS__, 'register_public_query_vars' ), 0 );
 
 		// Only add WooCommerce hooks if WooCommerce is active.
@@ -36,11 +36,11 @@ class SRF_MyAccount {
 			array( __CLASS__, 'render_list_page' )
 		);
 
-		// Handle POST actions (edit/update in modal).
-		add_action( 'template_redirect', array( __CLASS__, 'handle_post_actions' ) );
+		// Secure download handler (EARLY so no output breaks headers).
+		add_action( 'template_redirect', array( __CLASS__, 'maybe_handle_download' ), 1 );
 
-		// Secure download handler.
-		add_action( 'template_redirect', array( __CLASS__, 'maybe_handle_download' ), 9 );
+		// Handle POST actions (edit/update in modal).
+		add_action( 'template_redirect', array( __CLASS__, 'handle_post_actions' ), 9 );
 
 		// Optional debug logs (safe to leave, but you can remove).
 		add_action( 'wp', array( __CLASS__, 'debug_account_routing' ), 20 );
@@ -50,11 +50,17 @@ class SRF_MyAccount {
 		if ( function_exists( 'srf_log' ) ) {
 			srf_log( 'add_endpoints(): registering rewrite endpoint (' . self::ENDPOINT_LIST . ')' );
 		}
-		add_rewrite_endpoint( self::ENDPOINT_LIST, EP_ROOT | EP_PAGES );
+
+		// ✅ EP_PAGES only (clean + reliable for My Account page).
+		add_rewrite_endpoint( self::ENDPOINT_LIST, EP_PAGES );
 	}
 
 	public static function register_public_query_vars( $vars ) {
-		$vars[] = self::ENDPOINT_LIST;
+
+		// NOTE: We do NOT need to add ENDPOINT_LIST here for Woo endpoints,
+		// but it doesn't usually hurt. Keeping minimal is cleaner.
+		// If you want maximum compatibility, leave it OUT.
+		// $vars[] = self::ENDPOINT_LIST;
 
 		// Popup view
 		$vars[] = 'srf_view';
@@ -141,6 +147,14 @@ class SRF_MyAccount {
 
 	/**
 	 * Handle POST actions on the Service Requests page (modal edit).
+	 *
+	 * Your requirement:
+	 * - Editing creates a NEW request (new ID)
+	 * - Only message + uploads can change
+	 * - All other fields copied from old request
+	 * - Old request + old uploads must be deleted everywhere
+	 * - Storage/quota must be updated correctly
+	 * - User must see existing files + description in popup (handled in template)
 	 */
 	public static function handle_post_actions() {
 
@@ -194,20 +208,26 @@ class SRF_MyAccount {
 			self::safe_redirect( self::url_list() );
 		}
 
-		// Create a new request (replacement).
-		$new_id = wp_insert_post( array(
-			'post_type'    => 'service_request',
-			'post_status'  => $old_post->post_status,
-			'post_title'   => $old_post->post_title,
-			'post_content' => $new_desc,
-		), true );
+		// ✅ Create a NEW request (replacement) with NEW ID.
+		$new_id = wp_insert_post(
+			array(
+				'post_type'    => 'service_request',
+				'post_status'  => $old_post->post_status,
+				'post_title'   => $old_post->post_title,
+				'post_content' => $new_desc,
+				'post_author'  => $user_id, // important
+			),
+			true
+		);
 
-		if ( is_wp_error( $new_id ) ) {
+		if ( is_wp_error( $new_id ) || ! $new_id ) {
 			wc_add_notice( __( 'Could not save your changes.', 'service-requests-form' ), 'error' );
 			self::safe_redirect( self::url_list( array( 'srf_view' => $old_id ) ) );
 		}
 
-		// Copy metas.
+		// ✅ Copy metas (ALL except those you want to be replaced).
+		// - Keep everything same as old request (service, user, contact, status, etc.)
+		// - Only message + uploads are changed.
 		$meta_keys = array(
 			'_sr_user_id',
 			'_sr_name',
@@ -215,8 +235,11 @@ class SRF_MyAccount {
 			'_sr_email',
 			'_sr_phone',
 			'_sr_shipping_address',
+			'_sr_service_id',
 			'_sr_service_title',
 			'_sr_status',
+			'_sr_no_file',
+			'_sr_terms_accepted',
 		);
 
 		foreach ( $meta_keys as $k ) {
@@ -226,27 +249,88 @@ class SRF_MyAccount {
 			}
 		}
 
-		// Keep description meta in sync.
+		// ✅ Keep description meta in sync (this is one of the only editable fields).
 		update_post_meta( $new_id, '_sr_description', wp_strip_all_tags( $new_desc ) );
 
-		// Delete old uploaded files to free storage.
-		$old_files = (array) get_post_meta( $old_id, '_sr_file_ids', true );
-		if ( ! empty( $old_files ) ) {
-			foreach ( $old_files as $fid ) {
-				$fid = absint( $fid );
-				if ( $fid ) {
-					wp_delete_attachment( $fid, true );
+		// ✅ Delete old uploaded files AND subtract bytes from user storage.
+		$old_files = get_post_meta( $old_id, '_sr_file_ids', true );
+		if ( ! is_array( $old_files ) ) {
+			$old_files = array();
+		}
+
+		$bytes_to_subtract = 0;
+
+		foreach ( $old_files as $fid ) {
+			$fid = absint( $fid );
+			if ( ! $fid ) {
+				continue;
+			}
+
+			$bytes = (int) get_post_meta( $fid, '_srf_file_bytes', true );
+			if ( $bytes <= 0 ) {
+				$path = get_attached_file( $fid );
+				if ( $path && file_exists( $path ) ) {
+					$bytes = (int) filesize( $path );
 				}
 			}
+
+			$bytes_to_subtract += max( 0, $bytes );
+
+			// delete attachment + physical file
+			wp_delete_attachment( $fid, true );
 		}
+
+		// Remove old request files meta
 		delete_post_meta( $old_id, '_sr_file_ids' );
 
-		// Upload new files into the new request (if uploader exists).
-		if ( class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'handle_request_uploads' ) ) {
-			SR_Form_Handler::handle_request_uploads( $new_id );
+		// ✅ Adjust user used bytes (keep quota correct)
+		if ( $bytes_to_subtract > 0 && class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'subtract_user_used_bytes_public' ) ) {
+			SR_Form_Handler::subtract_user_used_bytes_public( $user_id, $bytes_to_subtract );
+		} elseif ( $bytes_to_subtract > 0 && class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'adjust_user_storage_bytes_public' ) ) {
+			// optional alternate wrapper name
+			SR_Form_Handler::adjust_user_storage_bytes_public( $user_id, -1 * $bytes_to_subtract );
 		}
 
-		// Delete old request completely.
+		// ✅ Upload new files into the new request (protected method via PUBLIC WRAPPER).
+		$attachment_ids = array();
+		$uploaded_bytes = 0;
+
+		if ( class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'handle_request_uploads_public' ) ) {
+			try {
+				list( $attachment_ids, $uploaded_bytes ) = SR_Form_Handler::handle_request_uploads_public( $new_id );
+
+				if ( ! is_array( $attachment_ids ) ) {
+					$attachment_ids = array();
+				}
+
+				update_post_meta( $new_id, '_sr_file_ids', array_values( array_map( 'absint', $attachment_ids ) ) );
+
+			} catch ( Exception $e ) {
+
+				// Rollback: delete new attachments
+				if ( ! empty( $attachment_ids ) ) {
+					foreach ( $attachment_ids as $aid ) {
+						wp_delete_attachment( (int) $aid, true );
+					}
+				}
+
+				// Rollback: subtract bytes if wrapper doesn't already do it internally
+				if ( $uploaded_bytes > 0 && class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'subtract_user_used_bytes_public' ) ) {
+					SR_Form_Handler::subtract_user_used_bytes_public( $user_id, $uploaded_bytes );
+				}
+
+				// Remove new request to avoid broken data
+				wp_delete_post( $new_id, true );
+
+				wc_add_notice( $e->getMessage(), 'error' );
+				self::safe_redirect( self::url_list( array( 'srf_view' => $old_id ) ) );
+			}
+		} else {
+			// If no uploads method, just store empty file list.
+			update_post_meta( $new_id, '_sr_file_ids', array() );
+		}
+
+		// ✅ Delete old request completely (everywhere).
 		wp_delete_post( $old_id, true );
 
 		wc_add_notice( __( 'Request updated successfully.', 'service-requests-form' ), 'success' );
@@ -255,7 +339,6 @@ class SRF_MyAccount {
 
 	/**
 	 * Secure download handler:
-	 * Use ONLY the list page URL + query args:
 	 * /my-account/service-requests/?srf_download=ATTACH_ID&srf_request=REQ_ID&srf_nonce=...
 	 */
 	public static function maybe_handle_download() {
@@ -405,7 +488,7 @@ class SRF_MyAccount {
 			: site_url( '/my-account/' );
 
 		// Pretty permalinks enabled -> endpoint URL
-		if ( get_option( 'permalink_structure' ) ) {
+		if ( function_exists( 'wc_get_account_endpoint_url' ) && get_option( 'permalink_structure' ) ) {
 			$base = wc_get_account_endpoint_url( self::ENDPOINT_LIST );
 		} else {
 			// No rewrites -> query arg endpoint style
@@ -416,9 +499,11 @@ class SRF_MyAccount {
 	}
 
 	public static function url_view( $request_id ) {
-		return self::url_list( array(
-			'srf_view' => absint( $request_id ),
-		) );
+		return self::url_list(
+			array(
+				'srf_view' => absint( $request_id ),
+			)
+		);
 	}
 
 	/**
@@ -447,7 +532,6 @@ class SRF_MyAccount {
 		global $wp;
 		srf_log( 'WP matched_rule: ' . ( isset( $wp->matched_rule ) ? $wp->matched_rule : '(none)' ) );
 		srf_log( 'WP matched_query: ' . ( isset( $wp->matched_query ) ? $wp->matched_query : '(none)' ) );
-		srf_log( 'Query var service-requests: ' . var_export( get_query_var( self::ENDPOINT_LIST, null ), true ) );
 		srf_log( 'GET srf_view: ' . ( isset( $_GET['srf_view'] ) ? (string) absint( $_GET['srf_view'] ) : '(none)' ) );
 	}
 }
