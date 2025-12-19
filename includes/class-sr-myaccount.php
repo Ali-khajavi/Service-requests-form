@@ -490,21 +490,18 @@ class SRF_MyAccount {
 	}
 
 	public static function url_list( $args = array() ) {
-
+		// Get My Account page URL - always use the actual My Account page URL
 		$myacc = function_exists( 'wc_get_page_permalink' )
 			? wc_get_page_permalink( 'myaccount' )
 			: site_url( '/my-account/' );
 
-		// Pretty permalinks enabled -> endpoint URL
-		if ( function_exists( 'wc_get_account_endpoint_url' ) && get_option( 'permalink_structure' ) ) {
-			$base = wc_get_account_endpoint_url( self::ENDPOINT_LIST );
-		} else {
-			// No rewrites -> query arg endpoint style
-			$base = add_query_arg( array( self::ENDPOINT_LIST => 1 ), $myacc );
-		}
+		// Build the endpoint URL properly
+		$base = trailingslashit( $myacc ) . self::ENDPOINT_LIST . '/';
 
+		// Add query args if needed
 		return ! empty( $args ) ? add_query_arg( $args, $base ) : $base;
 	}
+
 
 	public static function url_view( $request_id ) {
 		return self::url_list(
