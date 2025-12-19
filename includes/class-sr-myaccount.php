@@ -42,8 +42,49 @@ class SRF_MyAccount {
 		// Handle POST actions (edit/update in modal).
 		add_action( 'template_redirect', array( __CLASS__, 'handle_post_actions' ), 9 );
 
+		// Force any ?srf_view=ID URL back onto the My Account endpoint (fixes canonical/slug collisions).
+		add_action( 'template_redirect', array( __CLASS__, 'enforce_myaccount_view_url' ), 0 );
+
 		// Optional debug logs (safe to leave, but you can remove).
 		add_action( 'wp', array( __CLASS__, 'debug_account_routing' ), 20 );
+	}
+
+
+	/**
+	 * If a request is opened via ?srf_view=ID from anywhere (including accidental redirects),
+	 * force the URL onto the My Account endpoint so the modal works reliably.
+	 *
+	 * This is the "hard" fix that wins even if WordPress or another component redirects
+	 * /my-account/service-requests/ to a public /service-requests/ slug.
+	 */
+	public static function enforce_myaccount_view_url() {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+		$view_id = isset( $_GET['srf_view'] ) ? absint( $_GET['srf_view'] ) : 0;
+		if ( ! $view_id ) {
+			return;
+		}
+
+		$target = self::url_view( $view_id );
+
+		// Are we already on the My Account endpoint?
+		$on_endpoint = ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( self::ENDPOINT_LIST ) );
+		if ( ! $on_endpoint && isset( $_GET[ self::ENDPOINT_LIST ] ) ) {
+			$on_endpoint = true;
+		}
+
+		$req_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+
+		// Pretty-permalink check for /my-account/service-requests/ in path.
+		$path_ok = ( false !== strpos( $req_uri, '/my-account/' ) && false !== strpos( $req_uri, '/' . self::ENDPOINT_LIST ) );
+
+		if ( $on_endpoint && $path_ok ) {
+			return; // already correct
+		}
+
+		// Force redirect to the clean, correct URL (strips junk vars like service_request=...).
+		self::safe_redirect( $target );
 	}
 
 	public static function add_endpoints() {
@@ -490,18 +531,21 @@ class SRF_MyAccount {
 	}
 
 	public static function url_list( $args = array() ) {
-		// Get My Account page URL - always use the actual My Account page URL
+
 		$myacc = function_exists( 'wc_get_page_permalink' )
 			? wc_get_page_permalink( 'myaccount' )
 			: site_url( '/my-account/' );
 
-		// Build the endpoint URL properly
-		$base = trailingslashit( $myacc ) . self::ENDPOINT_LIST . '/';
+		// Pretty permalinks enabled -> endpoint URL
+		if ( function_exists( 'wc_get_account_endpoint_url' ) && get_option( 'permalink_structure' ) ) {
+			$base = wc_get_account_endpoint_url( self::ENDPOINT_LIST );
+		} else {
+			// No rewrites -> query arg endpoint style
+			$base = add_query_arg( array( self::ENDPOINT_LIST => 1 ), $myacc );
+		}
 
-		// Add query args if needed
 		return ! empty( $args ) ? add_query_arg( $args, $base ) : $base;
 	}
-
 
 	public static function url_view( $request_id ) {
 		return self::url_list(

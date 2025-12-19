@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.7.5.0.1
+ * Version:     0.7.5.0.5
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -20,7 +20,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.7.5.0.1';
+	public $version = '0.7.5.0.5';
 
 	private function __construct() {}
 	private function __clone() {}
