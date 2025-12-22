@@ -367,3 +367,52 @@
 .srf-service-details.visible {
     display: block !important;
 }
+
+
+/* =========================================================
+   Service info: Sticky + scrollable (desktop)
+========================================================= */
+@media (min-width: 901px) {
+  .srf-layout__service-info {
+    position: sticky;
+    top: 110px;               /* adjust if your header is taller */
+    max-height: calc(100vh - 140px);
+    overflow: auto;
+    padding-right: 6px;       /* little space for scrollbar */
+  }
+}
+
+/* =========================================================
+   Service info: Collapse long text + gradient fade
+========================================================= */
+.srf-service-info__text.is-collapsed {
+  max-height: 260px;          /* collapsed height */
+  overflow: hidden;
+  position: relative;
+}
+
+.srf-service-info__text.is-collapsed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70px;
+  background: linear-gradient(to bottom, rgba(248,249,250,0), rgba(248,249,250,1));
+  pointer-events: none;
+}
+
+.srf-service-info__toggle {
+  margin-top: 10px;
+  border: 1px solid #d0d7de;
+  background: #fff;
+  color: #1f2328;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.srf-service-info__toggle:hover {
+  background: #f6f8fa;
+}

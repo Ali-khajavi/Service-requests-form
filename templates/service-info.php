@@ -31,9 +31,13 @@ $images  = isset( $selected_service_data['images'] ) && is_array( $selected_serv
 <div class="srf-service-info" data-service-id="<?php echo esc_attr( $selected_service_data['id'] ); ?>">
 	<h2 class="srf-service-info__title"><?php echo esc_html( $title ); ?></h2>
 
-	<div class="srf-service-info__text">
+	<div class="srf-service-info__text is-collapsed" data-srf-collapsible="text">
 		<?php echo wp_kses_post( $content ); ?>
 	</div>
+
+	<button type="button" class="srf-service-info__toggle" data-srf-toggle="text">
+		<?php esc_html_e( 'Show more', 'service-requests-form' ); ?>
+	</button>
 
 	<?php if ( ! empty( $images ) ) :
 		$first = $images[0];

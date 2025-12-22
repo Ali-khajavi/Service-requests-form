@@ -128,7 +128,8 @@ function SRF_onReady(fn) {
     return (
       '<div class="srf-service-info" data-service-id="' + escapeAttr(service.id) + '">' +
         '<h2 class="srf-service-info__title">' + escapeHtml(title) + '</h2>' +
-        '<div class="srf-service-info__text">' + content + '</div>' +
+        '<div class="srf-service-info__text is-collapsed" data-srf-collapsible="text">' + content + '</div>' +
+        '<button type="button" class="srf-service-info__toggle" data-srf-toggle="text">Show more</button>' +
         sliderHtml +
       '</div>'
     );
@@ -178,7 +179,17 @@ function SRF_onReady(fn) {
       if (!serviceId) {
         host.innerHTML =
           '<div class="srf-service-info"><h2 class="srf-service-info__title">Please select a service</h2></div>';
-        return;
+        // Collapsible long text
+          var txt = host.querySelector('[data-srf-collapsible="text"]');
+          var btn = host.querySelector('[data-srf-toggle="text"]');
+
+          if (txt && btn) {
+            btn.addEventListener('click', function () {
+              var collapsed = txt.classList.toggle('is-collapsed');
+              btn.textContent = collapsed ? 'Show more' : 'Show less';
+            });
+          }
+          return;
       }
 
       var sid = String(serviceId);
