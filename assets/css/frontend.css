@@ -416,3 +416,20 @@
 .srf-service-info__toggle:hover {
   background: #f6f8fa;
 }
+
+
+.srf-service-info__subtitle {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.srf-service-info__variants-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.srf-service-info__variants-list li {
+  margin: 4px 0;
+}

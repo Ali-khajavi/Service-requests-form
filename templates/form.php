@@ -3,7 +3,7 @@
  * Front-end service request form template.
  *
  * Variables expected:
- * - $services            array of [id, title]
+ * - $services            array of [id, title, variations(optional)]
  * - $selected_service_id int|null
  * - $errors              array
  * - $old_data            array
@@ -42,6 +42,9 @@ if ( ! isset( $old_data ) || ! is_array( $old_data ) ) {
 $old = function( $key, $default = '' ) use ( $old_data ) {
 	return isset( $old_data[ $key ] ) ? $old_data[ $key ] : $default;
 };
+
+// old selected variant (for reload after validation errors)
+$old_variant = (string) $old( 'variant', '' );
 ?>
 
 <form class="srf-form" method="post" enctype="multipart/form-data">
@@ -54,17 +57,55 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
 		<label for="srf-service">
 			<?php esc_html_e( 'Service', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 		</label>
+
 		<select id="srf-service" name="srf_service" required>
 			<option value=""><?php esc_html_e( 'Please choose a service', 'service-requests-form' ); ?></option>
+
 			<?php foreach ( $services as $service ) : ?>
+				<?php
+				$service_id    = isset( $service['id'] ) ? (int) $service['id'] : 0;
+				$service_title = isset( $service['title'] ) ? (string) $service['title'] : '';
+
+				// variations should be array like: [ ['label'=>'Upper jaw','value'=>'upper_jaw'], ... ]
+				$variations = array();
+				if ( isset( $service['variations'] ) && is_array( $service['variations'] ) ) {
+					foreach ( $service['variations'] as $v ) {
+						$label = isset( $v['label'] ) ? sanitize_text_field( $v['label'] ) : '';
+						$value = isset( $v['value'] ) ? sanitize_key( $v['value'] ) : '';
+						if ( $label !== '' && $value !== '' ) {
+							$variations[] = array(
+								'label' => $label,
+								'value' => $value,
+							);
+						}
+					}
+				}
+
+				$variations_json = ! empty( $variations ) ? wp_json_encode( $variations ) : '[]';
+				?>
 				<option
-					value="<?php echo esc_attr( $service['id'] ); ?>"
-					<?php selected( $selected_service_id, $service['id'] ); ?>
+					value="<?php echo esc_attr( $service_id ); ?>"
+					<?php selected( $selected_service_id, $service_id ); ?>
+					data-variations="<?php echo esc_attr( $variations_json ); ?>"
 				>
-					<?php echo esc_html( $service['title'] ); ?>
+					<?php echo esc_html( $service_title ); ?>
 				</option>
 			<?php endforeach; ?>
 		</select>
+	</div>
+
+	<!-- ✅ NEW: Variant dropdown (hidden by default; shown if service has variations) -->
+	<div class="srf-form__field srf-form__field--variant" id="srf-variant-field" style="display:none;">
+		<label for="srf-variant">
+			<?php esc_html_e( 'Variant', 'service-requests-form' ); ?>
+			<span class="srf-required">*</span>
+		</label>
+		<select id="srf-variant" name="srf_variant">
+			<option value=""><?php esc_html_e( 'Please choose a variant', 'service-requests-form' ); ?></option>
+		</select>
+		<small class="srf-field__help">
+			<?php esc_html_e( 'Select the variation for this service.', 'service-requests-form' ); ?>
+		</small>
 	</div>
 
 	<div class="srf-form__field">
@@ -254,4 +295,73 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
 			<?php esc_html_e( 'Send request', 'service-requests-form' ); ?>
 		</button>
 	</div>
+
 </form>
+
+<!-- ✅ NEW: Variant logic (no external JS required) -->
+<script>
+(function(){
+	var serviceSelect  = document.getElementById('srf-service');
+	var variantField   = document.getElementById('srf-variant-field');
+	var variantSelect  = document.getElementById('srf-variant');
+
+	if (!serviceSelect || !variantField || !variantSelect) return;
+
+	var oldVariant = <?php echo wp_json_encode( $old_variant ); ?>;
+
+	function setRequired(isRequired){
+		if (isRequired) {
+			variantSelect.setAttribute('required', 'required');
+		} else {
+			variantSelect.removeAttribute('required');
+		}
+	}
+
+	function rebuildVariants(){
+		var opt = serviceSelect.options[serviceSelect.selectedIndex];
+		var json = opt ? opt.getAttribute('data-variations') : '[]';
+		var variations = [];
+
+		try { variations = JSON.parse(json || '[]'); } catch(e) { variations = []; }
+
+		// Clear options
+		variantSelect.innerHTML = '';
+		var placeholder = document.createElement('option');
+		placeholder.value = '';
+		placeholder.textContent = '<?php echo esc_js( __( 'Please choose a variant', 'service-requests-form' ) ); ?>';
+		variantSelect.appendChild(placeholder);
+
+		if (!variations || !variations.length) {
+			variantField.style.display = 'none';
+			variantSelect.value = '';
+			setRequired(false);
+			return;
+		}
+
+		variations.forEach(function(v){
+			if (!v || !v.value || !v.label) return;
+			var o = document.createElement('option');
+			o.value = v.value;
+			o.textContent = v.label;
+			variantSelect.appendChild(o);
+		});
+
+		variantField.style.display = '';
+		setRequired(true);
+
+		// restore old selection if exists
+		if (oldVariant) {
+			variantSelect.value = oldVariant;
+		}
+	}
+
+	serviceSelect.addEventListener('change', function(){
+		// once user changes service, we should not force the old variant anymore
+		oldVariant = '';
+		rebuildVariants();
+	});
+
+	// initial build (page load)
+	rebuildVariants();
+})();
+</script>
