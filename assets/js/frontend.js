@@ -219,6 +219,22 @@ function SRF_onReady(fn) {
   });
 })();
 
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-srf-toggle="text"]');
+  if (!btn) return;
+
+  var box = btn.closest('.srf-service-info');
+  if (!box) return;
+
+  var txt = box.querySelector('[data-srf-collapsible="text"]');
+  if (!txt) return;
+
+  var collapsed = txt.classList.toggle('is-collapsed');
+  btn.textContent = collapsed ? 'Show more' : 'Show less';
+});
+
+
+
 /* =========================================================
    Gate form submission to business_user only
 ========================================================= */
