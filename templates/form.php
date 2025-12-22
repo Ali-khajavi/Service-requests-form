@@ -3,7 +3,7 @@
  * Front-end service request form template.
  *
  * Variables expected:
- * - $services            array of [id, title, variations(optional)]
+ * - $services            array of [id, title]
  * - $selected_service_id int|null
  * - $errors              array
  * - $old_data            array
@@ -66,22 +66,40 @@ $old_variant = (string) $old( 'variant', '' );
 				$service_id    = isset( $service['id'] ) ? (int) $service['id'] : 0;
 				$service_title = isset( $service['title'] ) ? (string) $service['title'] : '';
 
-				// variations should be array like: [ ['label'=>'Upper jaw','value'=>'upper_jaw'], ... ]
+				/**
+				 * ✅ IMPORTANT FIX:
+				 * Always load variations from DB, not from $services array.
+				 * Because your $services currently does not include variations.
+				 */
 				$variations = array();
-				if ( isset( $service['variations'] ) && is_array( $service['variations'] ) ) {
-					foreach ( $service['variations'] as $v ) {
-						$label = isset( $v['label'] ) ? sanitize_text_field( $v['label'] ) : '';
-						$value = isset( $v['value'] ) ? sanitize_key( $v['value'] ) : '';
-						if ( $label !== '' && $value !== '' ) {
-							$variations[] = array(
-								'label' => $label,
-								'value' => $value,
-							);
-						}
+
+				if ( $service_id > 0 ) {
+					if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
+						$variations = SR_Services_CPT::get_variations( $service_id );
+					} else {
+						// fallback meta key (must match what you save in CPT)
+						$variations = get_post_meta( $service_id, '_sr_service_variations', true );
 					}
 				}
 
-				$variations_json = ! empty( $variations ) ? wp_json_encode( $variations ) : '[]';
+				if ( ! is_array( $variations ) ) {
+					$variations = array();
+				}
+
+				// sanitize variations
+				$clean_variations = array();
+				foreach ( $variations as $v ) {
+					$label = isset( $v['label'] ) ? sanitize_text_field( $v['label'] ) : '';
+					$value = isset( $v['value'] ) ? sanitize_key( $v['value'] ) : '';
+					if ( $label !== '' && $value !== '' ) {
+						$clean_variations[] = array(
+							'label' => $label,
+							'value' => $value,
+						);
+					}
+				}
+
+				$variations_json = ! empty( $clean_variations ) ? wp_json_encode( $clean_variations ) : '[]';
 				?>
 				<option
 					value="<?php echo esc_attr( $service_id ); ?>"
@@ -94,7 +112,7 @@ $old_variant = (string) $old( 'variant', '' );
 		</select>
 	</div>
 
-	<!-- ✅ NEW: Variant dropdown (hidden by default; shown if service has variations) -->
+	<!-- Variant dropdown (hidden by default; shown if service has variations) -->
 	<div class="srf-form__field srf-form__field--variant" id="srf-variant-field" style="display:none;">
 		<label for="srf-variant">
 			<?php esc_html_e( 'Variant', 'service-requests-form' ); ?>
@@ -298,7 +316,6 @@ $old_variant = (string) $old( 'variant', '' );
 
 </form>
 
-<!-- ✅ NEW: Variant logic (no external JS required) -->
 <script>
 (function(){
 	var serviceSelect  = document.getElementById('srf-service');
@@ -324,7 +341,6 @@ $old_variant = (string) $old( 'variant', '' );
 
 		try { variations = JSON.parse(json || '[]'); } catch(e) { variations = []; }
 
-		// Clear options
 		variantSelect.innerHTML = '';
 		var placeholder = document.createElement('option');
 		placeholder.value = '';
@@ -349,19 +365,16 @@ $old_variant = (string) $old( 'variant', '' );
 		variantField.style.display = '';
 		setRequired(true);
 
-		// restore old selection if exists
 		if (oldVariant) {
 			variantSelect.value = oldVariant;
 		}
 	}
 
 	serviceSelect.addEventListener('change', function(){
-		// once user changes service, we should not force the old variant anymore
 		oldVariant = '';
 		rebuildVariants();
 	});
 
-	// initial build (page load)
 	rebuildVariants();
 })();
 </script>
