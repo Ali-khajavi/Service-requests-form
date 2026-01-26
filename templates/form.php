@@ -293,7 +293,7 @@ $old_variant = (string) $old( 'variant', '' );
 	<div class="srf-form__field srf-form__field--checkbox">
 		<label>
 			<input type="checkbox" name="srf_no_file" value="1" <?php checked( $old( 'no_file' ), '1' ); ?> />
-			<?php esc_html_e( 'I don’t have a file yet / not needed for this service', 'service-requests-form' ); ?>
+			<?php esc_html_e( 'I will upload files later/ no need extra files for this service', 'service-requests-form' ); ?>
 		</label>
 	</div>
 
