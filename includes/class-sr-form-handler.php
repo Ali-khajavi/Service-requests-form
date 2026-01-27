@@ -143,7 +143,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 			if ( $raw === '' ) {
 				// fallback default
-				return array( 'stl', 'obj', 'ply', 'zip', 'rar', '7z', 'step', 'stp', 'igs', 'iges' );
+				return array( 'stl', 'obj','mtl' , 'ply', 'zip', 'rar', '7z', 'step', 'stp', 'igs', 'iges', 'png', 'jpg', 'jpeg', 'pdf','3mf'  );
 			}
 
 			$parts = array_map( 'trim', explode( ',', $raw ) );
@@ -780,12 +780,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// Helpers
 		// ===============================
 		protected static function current_user_can_submit() {
-			if ( ! is_user_logged_in() ) {
-				return false;
-			}
-			$user  = wp_get_current_user();
-			$roles = (array) $user->roles;
-			return in_array( 'business_user', $roles, true );
+		if ( ! is_user_logged_in() ) return false;
+		$roles = (array) wp_get_current_user()->roles;
+		return array_intersect($roles, array('business_user','administrator'));
 		}
 
 		protected static function load_template( $template_name, $vars = array() ) {
