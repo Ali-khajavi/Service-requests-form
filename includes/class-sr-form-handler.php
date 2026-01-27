@@ -11,6 +11,10 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		const DEFAULT_USER_QUOTA_BYTES = 1073741824; // 1GB
 		const DEFAULT_MAX_FILE_BYTES   = 104857600;  // 100MB
 
+		// Storage meta (canonical + back-compat)
+		const USER_USED_META_KEY        = '_srf_storage_used_bytes';
+		const USER_USED_META_KEY_LEGACY = 'srf_used_bytes';
+
 		/**
 		 * Public wrappers
 		 * - Keep upload logic protected, expose wrappers for other classes (SRF_MyAccount).
@@ -101,12 +105,38 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			return self::DEFAULT_USER_QUOTA_BYTES;
 		}
 
+		/**
+		 * Public wrapper used by admin pages (Storage tab) and other classes.
+		 */
+		public static function get_user_quota_bytes_public( $user_id = 0 ) {
+			$user_id = (int) $user_id;
+			if ( $user_id <= 0 ) {
+				return self::DEFAULT_USER_QUOTA_BYTES;
+			}
+			return self::get_user_quota_bytes( $user_id );
+		}
+
 		protected static function get_user_used_bytes( $user_id ) {
 			$user_id = (int) $user_id;
 			if ( ! $user_id ) {
 				return 0;
 			}
-			return (int) get_user_meta( $user_id, 'srf_used_bytes', true );
+
+			// Canonical key first
+			$used = (int) get_user_meta( $user_id, self::USER_USED_META_KEY, true );
+			if ( $used > 0 ) {
+				return $used;
+			}
+
+			// Back-compat: legacy key
+			$legacy = (int) get_user_meta( $user_id, self::USER_USED_META_KEY_LEGACY, true );
+			if ( $legacy > 0 ) {
+				// Soft-migrate
+				update_user_meta( $user_id, self::USER_USED_META_KEY, $legacy );
+				return $legacy;
+			}
+
+			return 0;
 		}
 
 		protected static function add_user_used_bytes( $user_id, $bytes ) {
@@ -115,8 +145,13 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( ! $user_id || $bytes <= 0 ) {
 				return;
 			}
+
 			$used = self::get_user_used_bytes( $user_id );
-			update_user_meta( $user_id, 'srf_used_bytes', max( 0, $used + $bytes ) );
+			$new  = max( 0, $used + $bytes );
+
+			// Write both keys (canonical + legacy) for compatibility
+			update_user_meta( $user_id, self::USER_USED_META_KEY, $new );
+			update_user_meta( $user_id, self::USER_USED_META_KEY_LEGACY, $new );
 		}
 
 		protected static function subtract_user_used_bytes( $user_id, $bytes ) {
@@ -125,8 +160,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( ! $user_id || $bytes <= 0 ) {
 				return;
 			}
+
 			$used = self::get_user_used_bytes( $user_id );
-			update_user_meta( $user_id, 'srf_used_bytes', max( 0, $used - $bytes ) );
+			$new  = max( 0, $used - $bytes );
+
+			update_user_meta( $user_id, self::USER_USED_META_KEY, $new );
+			update_user_meta( $user_id, self::USER_USED_META_KEY_LEGACY, $new );
 		}
 
 		protected static function get_max_file_bytes() {
