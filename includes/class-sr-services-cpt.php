@@ -13,7 +13,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		const META_GALLERY_IDS = '_sr_service_gallery_ids';
 
 		/**
-		 * Meta key for service variations (array of rows: [label,value]).
+		 * Meta key for service variant groups (array of rows: [key, values[]]).
 		 */
 		const META_VARIATIONS = '_sr_service_variations';
 
@@ -166,40 +166,59 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			if ( ! is_array( $rows ) ) {
 				$rows = array();
 			}
+			+			/**
+			 * New structure:
+			 * [
+			 *   [
+			 *     'key'    => 'Height',
+			 *     'values' => ['2m','3m','7.5m']
+			 *   ],
+			 *   ...
+			 * ]
+			 *
+			 * Admin UI stores values as comma-separated string for convenience.
+			 */
 
 			?>
 			<p class="description">
-				<?php esc_html_e( 'Add variations for this service (optional). Example: Upper jaw / Lower jaw.', 'service-requests-form' ); ?>
+				<?php esc_html_e( 'Add variant groups for this service (optional). Example: Key = Height, Values = 2m, 3m, 7.5m.', 'service-requests-form' ); ?>
 			</p>
 
 			<div id="sr-service-variations-wrap">
 				<?php foreach ( $rows as $i => $row ) :
-					$label = isset( $row['label'] ) ? (string) $row['label'] : '';
-					$value = isset( $row['value'] ) ? (string) $row['value'] : '';
+					$key    = isset( $row['key'] ) ? (string) $row['key'] : '';
+					$values = '';
+
+					if ( isset( $row['values'] ) && is_array( $row['values'] ) ) {
+						$values = implode( ', ', array_map( 'sanitize_text_field', $row['values'] ) );
+					} elseif ( isset( $row['values'] ) && is_string( $row['values'] ) ) {
+						$values = (string) $row['values'];
+					}
 					?>
-					<div class="sr-service-var-row" style="display:flex;gap:10px;margin:10px 0;align-items:center;">
-						<input
-							style="flex:1"
-							type="text"
-							name="sr_service_variations[<?php echo esc_attr( $i ); ?>][label]"
-							placeholder="<?php echo esc_attr__( 'Label (e.g. Upper jaw)', 'service-requests-form' ); ?>"
-							value="<?php echo esc_attr( $label ); ?>"
-						/>
-						<input
-							style="flex:1"
-							type="text"
-							name="sr_service_variations[<?php echo esc_attr( $i ); ?>][value]"
-							placeholder="<?php echo esc_attr__( 'Value (e.g. upper_jaw)', 'service-requests-form' ); ?>"
-							value="<?php echo esc_attr( $value ); ?>"
-						/>
-						<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_attr__( 'Remove', 'service-requests-form' ); ?>">×</button>
+					<div class="sr-service-var-row" style="margin:12px 0;padding:12px;border:1px solid #e5e5e5;border-radius:6px;">
+						<div style="display:flex;gap:10px;align-items:center;">
+							<input
+								style="flex:1"
+								type="text"
+								name="sr_service_variations[<?php echo esc_attr( $i ); ?>][key]"
+								placeholder="<?php echo esc_attr__( 'Key (e.g. Height)', 'service-requests-form' ); ?>"
+								value="<?php echo esc_attr( $key ); ?>"
+							/>
+							<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_attr__( 'Remove', 'service-requests-form' ); ?>">×</button>
+						</div>
+
+						<textarea
+							style="width:100%;margin-top:10px;"
+							rows="2"
+							name="sr_service_variations[<?php echo esc_attr( $i ); ?>][values]"
+							placeholder="<?php echo esc_attr__( 'Values (comma separated) e.g. 2m, 3m, 7.5m', 'service-requests-form' ); ?>"
+						><?php echo esc_textarea( $values ); ?></textarea>
 					</div>
 				<?php endforeach; ?>
 			</div>
-
-			<button type="button" class="button button-primary" id="sr-service-var-add">
-				<?php esc_html_e( 'Add variation', 'service-requests-form' ); ?>
-			</button>
+			<p>
+				<button type="button" class="button button-primary" id="sr-service-add-variation"><?php esc_html_e( 'Add variant group', 'service-requests-form' ); ?></button>
+			</p>
 
 			<script>
 			(function(){
@@ -217,29 +236,37 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 					});
 				}
 
-				wrap.addEventListener('click', function(e){
-					if (e.target && e.target.classList.contains('sr-service-var-remove')) {
-						e.preventDefault();
-						var row = e.target.closest('.sr-service-var-row');
-						if (row) row.remove();
-						reindex();
+				function wireRow(row){
+					var btn = row.querySelector('.sr-service-var-remove');
+					if (btn){
+						btn.addEventListener('click', function(){
+							row.parentNode.removeChild(row);
+						});
 					}
-				});
+				}
+				wrap.querySelectorAll('.sr-service-var-row').forEach(wireRow);
 
 				btn.addEventListener('click', function(e){
 					e.preventDefault();
 					var idx = wrap.querySelectorAll('.sr-service-var-row').length;
-
+						'<div style="display:flex;gap:10px;align-items:center;">' +
+							'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][key]" placeholder="<?php echo esc_js( __( 'Key (e.g. Height)', 'service-requests-form' ) ); ?>" />' +
+							'<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_js( __( 'Remove', 'service-requests-form' ) ); ?>">×</button>' +
+						'</div>' +
+						'<textarea style="width:100%;margin-top:10px;" rows="2" name="sr_service_variations['+idx+'][values]" placeholder="<?php echo esc_js( __( 'Values (comma separated) e.g. 2m, 3m, 7.5m', 'service-requests-form' ) ); ?>"></textarea>';
+ 
 					var row = document.createElement('div');
 					row.className = 'sr-service-var-row';
-					row.style.cssText = 'display:flex;gap:10px;margin:10px 0;align-items:center;';
+					row.style.margin = '12px 0';
+					row.style.padding = '12px';
+					row.style.border = '1px solid #e5e5e5';
+					row.style.borderRadius = '6px';
 
 					row.innerHTML =
-						'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][label]" placeholder="<?php echo esc_js( __( 'Label (e.g. Upper jaw)', 'service-requests-form' ) ); ?>" />' +
-						'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][value]" placeholder="<?php echo esc_js( __( 'Value (e.g. upper_jaw)', 'service-requests-form' ) ); ?>" />' +
-						'<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_js( __( 'Remove', 'service-requests-form' ) ); ?>">×</button>';
+
 
 					wrap.appendChild(row);
+					wireRow(row);
 				});
 			})();
 			</script>
@@ -300,16 +327,33 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				$clean = array();
 
 				foreach ( $rows as $r ) {
-					$label = isset( $r['label'] ) ? sanitize_text_field( wp_unslash( $r['label'] ) ) : '';
-					$value = isset( $r['value'] ) ? sanitize_key( wp_unslash( $r['value'] ) ) : '';
+					$key_raw    = isset( $r['key'] ) ? sanitize_text_field( wp_unslash( $r['key'] ) ) : '';
+					$values_raw = isset( $r['values'] ) ? (string) wp_unslash( $r['values'] ) : '';
+ 
 
 					if ( $label === '' || $value === '' ) {
+					$key_raw = trim( $key_raw );
+					if ( $key_raw === '' ) {
 						continue;
 					}
+
+					$vals = array();
+					if ( $values_raw !== '' ) {
+						$parts = array_map( 'trim', explode( ',', $values_raw ) );
+						foreach ( $parts as $p ) {
+							$p = sanitize_text_field( $p );
+							if ( $p !== '' ) $vals[] = $p;
+						}
+					}
+
+					if ( empty( $vals ) ) continue;
+					
 
 					$clean[] = array(
 						'label' => $label,
 						'value' => $value,
+						'key'    => $key_raw,
+						'values' => array_values( array_unique( $vals ) ),
 					);
 				}
 

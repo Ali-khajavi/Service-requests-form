@@ -104,6 +104,50 @@ function SRF_onReady(fn) {
     var content = service.content || '';
     var images  = Array.isArray(service.images) ? service.images : [];
 
+    // Variant groups (optional)
+    var variantsRaw  = service.variants || service.variations || [];
+    var variants     = Array.isArray(variantsRaw) ? variantsRaw : [];
+    var variantsHtml = '';
+
+    if (variants.length) {
+      var items = [];
+      for (var i = 0; i < variants.length; i++) {
+        var g = variants[i] || {};
+
+        // New format: { key: 'Height', values: ['2m','3m'] }
+        if (g.key && Array.isArray(g.values) && g.values.length) {
+          var vals = [];
+          for (var j = 0; j < g.values.length; j++) {
+            if (g.values[j] == null) continue;
+            vals.push(String(g.values[j]));
+          }
+          if (vals.length) {
+            items.push(
+              '<li><strong>' +
+                escapeHtml(String(g.key)) +
+              ':</strong> ' +
+                escapeHtml(vals.join(', ')) +
+              '</li>'
+            );
+          }
+          continue;
+        }
+
+        // Legacy format: { label: 'Upper jaw', value: 'upper_jaw' }
+        if (g.label) {
+          items.push('<li>' + escapeHtml(String(g.label)) + '</li>');
+        }
+      }
+
+      if (items.length) {
+        variantsHtml =
+          '<div class="srf-service-info__variants">' +
+            '<h3 class="srf-service-info__subtitle">Variants</h3>' +
+            '<ul class="srf-service-info__variants-list">' + items.join('') + '</ul>' +
+          '</div>';
+      }
+    }
+
     var sliderHtml = '';
     if (images.length) {
       var first = images[0];
@@ -130,6 +174,7 @@ function SRF_onReady(fn) {
         '<h2 class="srf-service-info__title">' + escapeHtml(title) + '</h2>' +
         '<div class="srf-service-info__text is-collapsed" data-srf-collapsible="text">' + content + '</div>' +
         '<button type="button" class="srf-service-info__toggle" data-srf-toggle="text">Show more</button>' +
+        variantsHtml +
         sliderHtml +
       '</div>'
     );
@@ -179,17 +224,7 @@ function SRF_onReady(fn) {
       if (!serviceId) {
         host.innerHTML =
           '<div class="srf-service-info"><h2 class="srf-service-info__title">Please select a service</h2></div>';
-        // Collapsible long text
-          var txt = host.querySelector('[data-srf-collapsible="text"]');
-          var btn = host.querySelector('[data-srf-toggle="text"]');
-
-          if (txt && btn) {
-            btn.addEventListener('click', function () {
-              var collapsed = txt.classList.toggle('is-collapsed');
-              btn.textContent = collapsed ? 'Show more' : 'Show less';
-            });
-          }
-          return;
+        return;
       }
 
       var sid = String(serviceId);
@@ -205,7 +240,7 @@ function SRF_onReady(fn) {
       }
     }
 
-    // Init: if no selection, keep placeholder option selected
+    // Init
     updateServiceInfo(select.value);
 
     select.addEventListener('change', function () {

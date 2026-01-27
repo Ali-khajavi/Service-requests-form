@@ -92,11 +92,50 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
                 }
             }
 
+			// Variant groups (key => values) for the service
+			$variant_groups = array();
+			if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
+				$raw_vars = SR_Services_CPT::get_variations( $service_id );
+				if ( is_array( $raw_vars ) ) {
+					foreach ( $raw_vars as $row ) {
+						// New format: ['key' => '...', 'values' => ['...']]
+						if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
+							$k = trim( sanitize_text_field( $row['key'] ) );
+							$vals = array();
+							foreach ( $row['values'] as $v ) {
+								$v = trim( sanitize_text_field( $v ) );
+								if ( $v !== '' ) $vals[] = $v;
+							}
+							if ( $k !== '' && ! empty( $vals ) ) {
+								$variant_groups[] = array(
+									'key'    => $k,
+									'values' => array_values( array_unique( $vals ) ),
+								);
+							}
+							continue;
+						}
+
+						// Back-compat: old format rows ['label' => 'Upper jaw', 'value' => 'upper_jaw']
+						if ( isset( $row['label'] ) ) {
+							$lbl = trim( sanitize_text_field( $row['label'] ) );
+							if ( $lbl !== '' ) {
+								$variant_groups[] = array(
+									'key'    => __( 'Variant', 'service-requests-form' ),
+									'values' => array( $lbl ),
+								);
+							}
+						}
+					}
+				}
+			}
+
+
             return array(
                 'id'      => $service_id,
                 'title'   => $title,
                 'content' => $content,
                 'images'  => $images,
+                'variants'=> $variant_groups,
             );
         }
 

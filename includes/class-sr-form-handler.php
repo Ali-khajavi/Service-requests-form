@@ -14,55 +14,25 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		/**
 		 * Public wrappers
 		 * - Keep upload logic protected, expose wrappers for other classes (SRF_MyAccount).
-		 * - Keep old wrappers for backward compatibility.
+		 * - Keep SRF single source of truth for validation/quota.
 		 */
 
-		// (existing)
-		public static function get_user_quota_bytes_public() {
-			return self::get_user_quota_bytes();
-		}
-
-		// ✅ NEW: wrapper required by SRF_MyAccount (keep uploader protected internally)
-		public static function handle_request_uploads_public( $post_id ) {
-			return self::handle_request_uploads( (int) $post_id );
-		}
-
-		// ✅ NEW: wrapper required by SRF_MyAccount (adjust quota)
-		public static function subtract_user_used_bytes_public( $user_id, $bytes ) {
-			self::subtract_user_used_bytes( (int) $user_id, (int) $bytes );
-		}
-
-		// (existing)
-		public static function cleanup_request_files_public( $post_id, $user_id = 0 ) {
-			self::cleanup_request_files( (int) $post_id, (int) $user_id );
-		}
-
-		// (existing)
-		public static function on_request_done( $post_id, $user_id = 0 ) {
-			self::cleanup_request_files( (int) $post_id, (int) $user_id );
-		}
-
 		public static function init() {
-			add_shortcode( 'service_request_form', array( __CLASS__, 'render_form_shortcode' ) );
+			add_shortcode( 'service_request_form', array( __CLASS__, 'shortcode_service_request_form' ) );
 			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
-			add_action( 'srf_request_marked_done', array( __CLASS__, 'on_request_done' ), 10, 2 );
 		}
 
-		// ===============================
-		// Assets
-		// ===============================
 		public static function enqueue_assets() {
 
-			$css_rel = file_exists( SRF_PLUGIN_DIR . 'assets/css/frontend.css' )
-				? 'assets/css/frontend.css'
-				: 'frontend.css';
+			if ( ! defined( 'SRF_PLUGIN_URL' ) || ! defined( 'SRF_PLUGIN_DIR' ) || ! defined( 'SRF_VERSION' ) ) {
+				return;
+			}
 
-			$js_rel = file_exists( SRF_PLUGIN_DIR . 'assets/js/frontend.js' )
-				? 'assets/js/frontend.js'
-				: 'frontend.js';
+			$css_rel = 'assets/css/frontend.css';
+			$js_rel  = 'assets/js/frontend.js';
 
 			wp_enqueue_style(
-				'srf-frontend',
+				'srf-frontend-css',
 				SRF_PLUGIN_URL . $css_rel,
 				array(),
 				SRF_VERSION
@@ -98,10 +68,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$js_service_map = array();
 			foreach ( $services_data as $service_id => $service ) {
 				$js_service_map[ (string) $service_id ] = array(
-					'id'      => (string) $service_id,
-					'title'   => isset( $service['title'] ) ? (string) $service['title'] : '',
-					'content' => isset( $service['content'] ) ? (string) $service['content'] : '',
-					'images'  => isset( $service['images'] ) ? (array) $service['images'] : array(),
+					'id'       => (string) $service_id,
+					'title'    => isset( $service['title'] ) ? (string) $service['title'] : '',
+					'content'  => isset( $service['content'] ) ? (string) $service['content'] : '',
+					'images'   => isset( $service['images'] ) ? (array) $service['images'] : array(),
+					'variants' => isset( $service['variants'] ) ? (array) $service['variants'] : ( isset( $service['variations'] ) ? (array) $service['variations'] : array() ),
 				);
 			}
 
@@ -116,74 +87,251 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// ===============================
 		// Settings / quota helpers
 		// ===============================
-		protected static function get_user_quota_bytes() {
-			$default = self::DEFAULT_USER_QUOTA_BYTES;
-			$quota   = (int) get_option( 'srf_user_quota_bytes', $default );
-			return ( $quota > 0 ) ? $quota : $default;
-		}
-
-		public static function hard_allowed_extensions() {
-			// Exact hard whitelist requested (kept)
-			return array( 'stl','obj','step','stp','iges','igs','zip','rar','7z','pdf','jpg','jpeg','png' );
-		}
-
-		protected static function get_allowed_extensions() {
-
-			$default = self::hard_allowed_extensions();
-
-			$opt = get_option( 'srf_allowed_extensions', '' );
-			if ( is_string( $opt ) && trim( $opt ) !== '' ) {
-				$list = array_map( 'trim', explode( ',', strtolower( $opt ) ) );
-				$list = array_values( array_filter( $list ) );
-				if ( ! empty( $list ) ) {
-					return $list;
-				}
+		protected static function get_user_quota_bytes( $user_id ) {
+			$user_id = (int) $user_id;
+			if ( ! $user_id ) {
+				return self::DEFAULT_USER_QUOTA_BYTES;
 			}
 
-			return $default;
-		}
-
-		protected static function get_max_file_size_bytes() {
-			$default = self::DEFAULT_MAX_FILE_BYTES;
-			$opt     = (int) get_option( 'srf_max_file_bytes', $default );
-			return ( $opt > 0 ) ? $opt : $default;
+			// Optional: per-user override
+			$quota = (int) get_user_meta( $user_id, 'srf_quota_bytes', true );
+			if ( $quota > 0 ) {
+				return $quota;
+			}
+			return self::DEFAULT_USER_QUOTA_BYTES;
 		}
 
 		protected static function get_user_used_bytes( $user_id ) {
 			$user_id = (int) $user_id;
-			if ( $user_id <= 0 ) {
+			if ( ! $user_id ) {
 				return 0;
 			}
-			$used = (int) get_user_meta( $user_id, '_srf_storage_used_bytes', true );
-			return ( $used > 0 ) ? $used : 0;
+			return (int) get_user_meta( $user_id, 'srf_used_bytes', true );
 		}
 
 		protected static function add_user_used_bytes( $user_id, $bytes ) {
 			$user_id = (int) $user_id;
 			$bytes   = (int) $bytes;
-			if ( $user_id <= 0 || $bytes <= 0 ) {
+			if ( ! $user_id || $bytes <= 0 ) {
 				return;
 			}
-			$current = self::get_user_used_bytes( $user_id );
-			update_user_meta( $user_id, '_srf_storage_used_bytes', $current + $bytes );
+			$used = self::get_user_used_bytes( $user_id );
+			update_user_meta( $user_id, 'srf_used_bytes', max( 0, $used + $bytes ) );
 		}
 
 		protected static function subtract_user_used_bytes( $user_id, $bytes ) {
 			$user_id = (int) $user_id;
 			$bytes   = (int) $bytes;
-			if ( $user_id <= 0 || $bytes <= 0 ) {
+			if ( ! $user_id || $bytes <= 0 ) {
 				return;
 			}
-			$current = self::get_user_used_bytes( $user_id );
-			$new     = $current - $bytes;
-			if ( $new < 0 ) {
-				$new = 0;
+			$used = self::get_user_used_bytes( $user_id );
+			update_user_meta( $user_id, 'srf_used_bytes', max( 0, $used - $bytes ) );
+		}
+
+		protected static function get_max_file_bytes() {
+			$mb = (int) get_option( 'srf_max_file_size_mb', 0 );
+			if ( $mb <= 0 ) {
+				return self::DEFAULT_MAX_FILE_BYTES;
 			}
-			update_user_meta( $user_id, '_srf_storage_used_bytes', $new );
+			return max( 1, $mb ) * 1024 * 1024;
+		}
+
+		protected static function get_allowed_extensions() {
+			$raw = (string) get_option( 'srf_allowed_file_types', '' );
+			$raw = trim( $raw );
+
+			if ( $raw === '' ) {
+				// fallback default
+				return array( 'stl', 'obj', 'ply', 'zip', 'rar', '7z', 'step', 'stp', 'igs', 'iges' );
+			}
+
+			$parts = array_map( 'trim', explode( ',', $raw ) );
+			$out   = array();
+
+			foreach ( $parts as $p ) {
+				$p = strtolower( preg_replace( '/[^a-z0-9]/i', '', $p ) );
+				if ( $p !== '' ) {
+					$out[] = $p;
+				}
+			}
+
+			return array_values( array_unique( $out ) );
+		}
+
+		protected static function extension_is_allowed( $filename ) {
+			$filename = (string) $filename;
+			$ext      = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+			if ( $ext === '' ) {
+				return false;
+			}
+			$allowed = self::get_allowed_extensions();
+			return in_array( $ext, $allowed, true );
+		}
+
+		protected static function ensure_user_quota( $user_id, $bytes_to_add ) {
+			$user_id      = (int) $user_id;
+			$bytes_to_add = (int) $bytes_to_add;
+
+			if ( $bytes_to_add <= 0 ) {
+				return;
+			}
+
+			$quota = self::get_user_quota_bytes( $user_id );
+			$used  = self::get_user_used_bytes( $user_id );
+
+			if ( ( $used + $bytes_to_add ) > $quota ) {
+				throw new Exception(
+					sprintf(
+						__( 'Storage quota exceeded. You have used %1$s of %2$s.', 'service-requests-form' ),
+						size_format( $used ),
+						size_format( $quota )
+					)
+				);
+			}
 		}
 
 		// ===============================
-		// Email (admin new request)
+		// Upload handling
+		// ===============================
+		protected static function normalize_files_array( $files ) {
+			$out = array();
+
+			if ( ! is_array( $files ) || empty( $files['name'] ) ) {
+				return $out;
+			}
+
+			if ( is_array( $files['name'] ) ) {
+				$count = count( $files['name'] );
+				for ( $i = 0; $i < $count; $i++ ) {
+					$out[] = array(
+						'name'     => $files['name'][ $i ],
+						'type'     => isset( $files['type'][ $i ] ) ? $files['type'][ $i ] : '',
+						'tmp_name' => isset( $files['tmp_name'][ $i ] ) ? $files['tmp_name'][ $i ] : '',
+						'error'    => isset( $files['error'][ $i ] ) ? $files['error'][ $i ] : 0,
+						'size'     => isset( $files['size'][ $i ] ) ? $files['size'][ $i ] : 0,
+					);
+				}
+			} else {
+				$out[] = $files;
+			}
+
+			return $out;
+		}
+
+		/**
+		 * Handles uploads and returns [attachment_ids, total_uploaded_bytes].
+		 * Throws Exception on validation/quota errors.
+		 */
+		protected static function handle_request_uploads( $post_id ) {
+			$post_id = (int) $post_id;
+
+			if ( empty( $_FILES['srf_files'] ) ) {
+				return array( array(), 0 );
+			}
+
+			$user_id = get_current_user_id();
+			$max     = self::get_max_file_bytes();
+			$items   = self::normalize_files_array( $_FILES['srf_files'] );
+
+			$total_bytes = 0;
+			foreach ( $items as $f ) {
+				$size = isset( $f['size'] ) ? (int) $f['size'] : 0;
+				$total_bytes += max( 0, $size );
+			}
+
+			// Quota check (before uploading)
+			if ( $user_id ) {
+				self::ensure_user_quota( $user_id, $total_bytes );
+			}
+
+			$attachment_ids = array();
+
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+
+			foreach ( $items as $file ) {
+
+				$name  = isset( $file['name'] ) ? (string) $file['name'] : '';
+				$err   = isset( $file['error'] ) ? (int) $file['error'] : 0;
+				$size  = isset( $file['size'] ) ? (int) $file['size'] : 0;
+
+				if ( $name === '' ) {
+					continue;
+				}
+
+				if ( $err !== UPLOAD_ERR_OK ) {
+					throw new Exception( sprintf( __( 'Upload error for "%s".', 'service-requests-form' ), $name ) );
+				}
+
+				if ( $size <= 0 ) {
+					throw new Exception( sprintf( __( 'File "%s" is empty.', 'service-requests-form' ), $name ) );
+				}
+
+				if ( $size > $max ) {
+					throw new Exception(
+						sprintf(
+							__( 'File "%1$s" exceeds the maximum size (%2$s).', 'service-requests-form' ),
+							$name,
+							size_format( $max )
+						)
+					);
+				}
+
+				if ( ! self::extension_is_allowed( $name ) ) {
+					throw new Exception(
+						sprintf(
+							__( 'File type not allowed: "%s".', 'service-requests-form' ),
+							$name
+						)
+					);
+				}
+
+				$overrides = array(
+					'test_form' => false,
+					'mimes'     => null, // allow WP to decide; we enforce extension above
+				);
+
+				$uploaded = wp_handle_upload( $file, $overrides );
+
+				if ( ! is_array( $uploaded ) || ! empty( $uploaded['error'] ) ) {
+					$msg = is_array( $uploaded ) && ! empty( $uploaded['error'] ) ? $uploaded['error'] : __( 'Unknown upload error.', 'service-requests-form' );
+					throw new Exception( sprintf( __( 'Upload failed for "%1$s": %2$s', 'service-requests-form' ), $name, $msg ) );
+				}
+
+				$filetype = wp_check_filetype( $uploaded['file'], null );
+
+				$attachment = array(
+					'post_mime_type' => isset( $filetype['type'] ) ? $filetype['type'] : 'application/octet-stream',
+					'post_title'     => sanitize_file_name( $name ),
+					'post_content'   => '',
+					'post_status'    => 'inherit',
+				);
+
+				$attach_id = wp_insert_attachment( $attachment, $uploaded['file'], $post_id );
+
+				if ( is_wp_error( $attach_id ) ) {
+					@unlink( $uploaded['file'] );
+					throw new Exception( sprintf( __( 'Could not create attachment for "%s".', 'service-requests-form' ), $name ) );
+				}
+
+				$attach_data = wp_generate_attachment_metadata( $attach_id, $uploaded['file'] );
+				wp_update_attachment_metadata( $attach_id, $attach_data );
+
+				$attachment_ids[] = (int) $attach_id;
+			}
+
+			// Quota increment only after success
+			if ( $user_id && $total_bytes > 0 ) {
+				self::add_user_used_bytes( $user_id, $total_bytes );
+			}
+
+			return array( $attachment_ids, $total_bytes );
+		}
+
+		// ===============================
+		// Email
 		// ===============================
 		protected static function send_admin_new_request_email( $post_id ) {
 
@@ -209,6 +357,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$description      = (string) get_post_meta( $post_id, '_sr_description', true );
 			$status           = (string) get_post_meta( $post_id, '_sr_status', true );
 			$file_ids         = get_post_meta( $post_id, '_sr_file_ids', true );
+			$variants        = get_post_meta( $post_id, '_sr_variants', true );
 
 			if ( empty( $status ) ) {
 				$status = 'new';
@@ -228,6 +377,16 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$lines[] = sprintf( __( 'Request ID: %d', 'service-requests-form' ), $post_id );
 			$lines[] = sprintf( __( 'Status: %s', 'service-requests-form' ), $status );
 			$lines[] = sprintf( __( 'Service: %s', 'service-requests-form' ), $service_title );
+			$lines[] = '';
+			$lines[] = __( 'Variants:', 'service-requests-form' );
+			if ( is_array( $variants ) && ! empty( $variants ) ) {
+				foreach ( $variants as $vk => $vv ) {
+					$lines[] = '- ' . (string) $vk . ': ' . (string) $vv;
+				}
+			} else {
+				$lines[] = '- ' . __( 'None', 'service-requests-form' );
+			}
+
 			$lines[] = '';
 			$lines[] = sprintf( __( 'Name: %s', 'service-requests-form' ), $name );
 			$lines[] = sprintf( __( 'Company: %s', 'service-requests-form' ), $company );
@@ -279,253 +438,45 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		protected static function cleanup_request_files( $post_id, $user_id = 0 ) {
 
 			$post_id = (int) $post_id;
-			if ( $post_id <= 0 ) {
+			$user_id = (int) $user_id;
+
+			$file_ids = get_post_meta( $post_id, '_sr_file_ids', true );
+			if ( ! is_array( $file_ids ) || empty( $file_ids ) ) {
 				return;
 			}
 
-			$file_ids = get_post_meta( $post_id, '_sr_file_ids', true );
-			if ( ! is_array( $file_ids ) ) {
-				$file_ids = array();
-			}
-			$file_ids = array_filter( array_map( 'absint', $file_ids ) );
-
-			if ( ! $user_id ) {
-				$user_id = (int) get_post_meta( $post_id, '_sr_user_id', true );
-				if ( ! $user_id ) {
-					$user_id = (int) get_post_field( 'post_author', $post_id );
-				}
-			}
-
-			$bytes_to_subtract = 0;
+			$total = 0;
 
 			foreach ( $file_ids as $aid ) {
-
-				$bytes = (int) get_post_meta( $aid, '_srf_file_bytes', true );
-				if ( $bytes <= 0 ) {
-					$path = get_attached_file( $aid );
-					if ( $path && file_exists( $path ) ) {
-						$bytes = (int) filesize( $path );
-					}
+				$aid = (int) $aid;
+				if ( ! $aid ) {
+					continue;
 				}
 
-				$bytes_to_subtract += max( 0, $bytes );
+				$file = get_attached_file( $aid );
+				if ( $file && file_exists( $file ) ) {
+					$total += (int) filesize( $file );
+				}
 
 				wp_delete_attachment( $aid, true );
 			}
 
 			delete_post_meta( $post_id, '_sr_file_ids' );
 
-			if ( $user_id && $bytes_to_subtract > 0 ) {
-				self::subtract_user_used_bytes( $user_id, $bytes_to_subtract );
+			if ( $user_id && $total > 0 ) {
+				self::subtract_user_used_bytes( $user_id, $total );
 			}
 		}
 
-		// ===============================
-		// Uploading
-		// ===============================
-		protected static function normalize_files_array( $files ) {
-
-			if ( empty( $files ) || ! is_array( $files ) ) {
-				return array();
-			}
-
-			// Multiple upload format
-			if ( isset( $files['name'] ) && is_array( $files['name'] ) ) {
-				$out   = array();
-				$count = count( $files['name'] );
-
-				for ( $i = 0; $i < $count; $i++ ) {
-					$out[] = array(
-						'name'     => isset( $files['name'][ $i ] ) ? (string) $files['name'][ $i ] : '',
-						'type'     => isset( $files['type'][ $i ] ) ? (string) $files['type'][ $i ] : '',
-						'tmp_name' => isset( $files['tmp_name'][ $i ] ) ? (string) $files['tmp_name'][ $i ] : '',
-						'error'    => isset( $files['error'][ $i ] ) ? (int) $files['error'][ $i ] : UPLOAD_ERR_NO_FILE,
-						'size'     => isset( $files['size'][ $i ] ) ? (int) $files['size'][ $i ] : 0,
-					);
-				}
-
-				return $out;
-			}
-
-			// Single upload format
-			if ( isset( $files['name'] ) ) {
-				return array( $files );
-			}
-
-			return array();
-		}
-
-		/**
-		 * Upload files and attach to request.
-		 * Returns array( $attachment_ids, $total_bytes )
-		 *
-		 * IMPORTANT:
-		 * - This method DOES NOT redirect.
-		 * - It throws Exception on any validation/upload failure.
-		 */
-		protected static function handle_request_uploads( $post_id ) {
-
-			$post_id = (int) $post_id;
-			if ( $post_id <= 0 ) {
-				return array( array(), 0 );
-			}
-
-			// Ensure WP upload helpers exist.
-			if ( ! function_exists( 'wp_handle_upload' ) ) {
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-			}
-			if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-				require_once ABSPATH . 'wp-admin/includes/image.php';
-			}
-
-			$allowed_ext = (array) self::get_allowed_extensions();
-			$max_bytes   = (int) self::get_max_file_size_bytes();
-
-			$files = isset( $_FILES['srf_files'] ) ? $_FILES['srf_files'] : null;
-			$items = self::normalize_files_array( $files );
-
-			$attachment_ids = array();
-			$total_bytes    = 0;
-
-			$user_id = (int) get_post_field( 'post_author', $post_id );
-			if ( ! $user_id ) {
-				$user_id = get_current_user_id();
-			}
-
-			if ( empty( $items ) ) {
-				return array( array(), 0 );
-			}
-
-			// 1) Pre-check quota using declared sizes (fast fail)
-			$quota     = (int) self::get_user_quota_bytes();
-			$used      = (int) self::get_user_used_bytes( $user_id );
-			$new_total = 0;
-
-			foreach ( $items as $f ) {
-				$err  = isset( $f['error'] ) ? (int) $f['error'] : UPLOAD_ERR_NO_FILE;
-				$size = isset( $f['size'] ) ? (int) $f['size'] : 0;
-				if ( $err === UPLOAD_ERR_OK && $size > 0 ) {
-					$new_total += $size;
-				}
-			}
-
-			if ( $new_total > 0 && ( $used + $new_total ) > $quota ) {
-				throw new Exception(
-					__( 'Upload limit reached (1GB total). Please wait until your previous request is completed.', 'service-requests-form' )
-				);
-			}
-
-			// 2) Per-file validate + upload
-			foreach ( $items as $file ) {
-
-				$err = isset( $file['error'] ) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
-
-				if ( $err === UPLOAD_ERR_NO_FILE ) {
-					continue;
-				}
-
-				if ( $err !== UPLOAD_ERR_OK ) {
-					throw new Exception( __( 'One of the uploaded files failed to upload. Please try again.', 'service-requests-form' ) );
-				}
-
-				$file_name = isset( $file['name'] ) ? sanitize_file_name( wp_unslash( $file['name'] ) ) : '';
-				if ( $file_name === '' ) {
-					throw new Exception( __( 'Uploaded file is missing a name.', 'service-requests-form' ) );
-				}
-
-				$declared_bytes = isset( $file['size'] ) ? (int) $file['size'] : 0;
-				if ( $declared_bytes > 0 && $declared_bytes > $max_bytes ) {
-					throw new Exception(
-						sprintf(
-							__( 'File "%s" is too large. Maximum allowed size is %d MB.', 'service-requests-form' ),
-							$file_name,
-							(int) ( $max_bytes / 1024 / 1024 )
-						)
-					);
-				}
-
-				$ext = strtolower( pathinfo( $file_name, PATHINFO_EXTENSION ) );
-				if ( empty( $ext ) || ! in_array( $ext, $allowed_ext, true ) ) {
-					throw new Exception(
-						sprintf(
-							__( 'File type not allowed: "%s". Allowed: %s', 'service-requests-form' ),
-							$file_name,
-							implode( ', ', $allowed_ext )
-						)
-					);
-				}
-
-				// Extra safety: verify actual filetype/ext.
-				if ( ! empty( $file['tmp_name'] ) ) {
-					$checked = wp_check_filetype_and_ext( $file['tmp_name'], $file_name );
-					if ( ! empty( $checked['ext'] ) ) {
-						$real_ext = strtolower( $checked['ext'] );
-						if ( ! in_array( $real_ext, $allowed_ext, true ) ) {
-							throw new Exception(
-								sprintf( __( 'File type not allowed: "%s".', 'service-requests-form' ), $file_name )
-							);
-						}
-					}
-				}
-
-				$overrides = array( 'test_form' => false );
-				$movefile  = wp_handle_upload( $file, $overrides );
-
-				if ( ! $movefile || isset( $movefile['error'] ) ) {
-					throw new Exception( __( 'Upload failed. Please try again.', 'service-requests-form' ) );
-				}
-
-				$attachment = array(
-					'post_mime_type' => isset( $movefile['type'] ) ? (string) $movefile['type'] : '',
-					'post_title'     => $file_name,
-					'post_content'   => '',
-					'post_status'    => 'inherit',
-				);
-
-				$attach_id = wp_insert_attachment( $attachment, $movefile['file'], $post_id );
-				if ( is_wp_error( $attach_id ) || ! $attach_id ) {
-					throw new Exception( __( 'Could not attach uploaded file to the request.', 'service-requests-form' ) );
-				}
-
-				// Ensure correct parent.
-				wp_update_post(
-					array(
-						'ID'          => (int) $attach_id,
-						'post_parent' => (int) $post_id,
-					)
-				);
-
-				$attach_data = wp_generate_attachment_metadata( $attach_id, $movefile['file'] );
-				if ( is_array( $attach_data ) ) {
-					wp_update_attachment_metadata( $attach_id, $attach_data );
-				}
-
-				// Reliable bytes: prefer real filesize.
-				$file_bytes = 0;
-				if ( ! empty( $movefile['file'] ) && file_exists( $movefile['file'] ) ) {
-					$file_bytes = (int) filesize( $movefile['file'] );
-				}
-				if ( $file_bytes <= 0 && $declared_bytes > 0 ) {
-					$file_bytes = $declared_bytes;
-				}
-
-				update_post_meta( (int) $attach_id, '_srf_file_bytes', (int) $file_bytes );
-
-				$attachment_ids[] = (int) $attach_id;
-
-				if ( $file_bytes > 0 && $user_id > 0 ) {
-					self::add_user_used_bytes( $user_id, $file_bytes );
-					$total_bytes += $file_bytes;
-				}
-			}
-
-			return array( $attachment_ids, $total_bytes );
+		// Public wrapper for cleanup, used by admin-status class if needed
+		public static function cleanup_request_files_public( $post_id, $user_id = 0 ) {
+			self::cleanup_request_files( $post_id, $user_id );
 		}
 
 		// ===============================
-		// Shortcode render + submission
+		// Shortcode
 		// ===============================
-		public static function render_form_shortcode( $atts = array(), $content = '' ) {
+		public static function shortcode_service_request_form() {
 
 			$errors   = array();
 			$old_data = array();
@@ -556,6 +507,19 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'terms'       => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
 				);
 
+				// Variant selections (key => chosen value), posted as srf_variants[index][key/value]
+				$selected_variants = array();
+				if ( isset( $_POST['srf_variants'] ) && is_array( $_POST['srf_variants'] ) ) {
+					foreach ( (array) $_POST['srf_variants'] as $row ) {
+						$key = isset( $row['key'] ) ? trim( sanitize_text_field( wp_unslash( $row['key'] ) ) ) : '';
+						$val = isset( $row['value'] ) ? trim( sanitize_text_field( wp_unslash( $row['value'] ) ) ) : '';
+						if ( $key !== '' && $val !== '' ) {
+							$selected_variants[ $key ] = $val;
+						}
+					}
+				}
+				$old_data['variants'] = $selected_variants;
+
 				if ( ! empty( $old_data['service'] ) ) {
 					$selected_service_id = (int) $old_data['service'];
 				}
@@ -583,6 +547,70 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				if ( empty( $old_data['phone'] ) )       $errors[] = __( 'Phone is required.', 'service-requests-form' );
 				if ( empty( $old_data['email'] ) || ! is_email( $old_data['email'] ) ) $errors[] = __( 'A valid email is required.', 'service-requests-form' );
 				if ( empty( $old_data['description'] ) ) $errors[] = __( 'Project description is required.', 'service-requests-form' );
+
+				// Variants validation (if service defines variant groups)
+				if ( empty( $errors ) && ! empty( $old_data['service'] ) ) {
+					$variant_defs = array();
+					if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
+						$variant_defs = SR_Services_CPT::get_variations( (int) $old_data['service'] );
+					} else {
+						$variant_defs = get_post_meta( (int) $old_data['service'], '_sr_service_variations', true );
+					}
+
+					// Normalize definitions into groups: [ ['key'=>..., 'values'=>[...] ], ... ]
+					$groups = array();
+					if ( is_array( $variant_defs ) ) {
+						foreach ( $variant_defs as $row ) {
+							// New format
+							if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
+								$key  = trim( sanitize_text_field( $row['key'] ) );
+								$vals = array();
+								foreach ( $row['values'] as $v ) {
+									$v = trim( sanitize_text_field( $v ) );
+									if ( $v !== '' ) $vals[] = $v;
+								}
+								if ( $key !== '' && ! empty( $vals ) ) {
+									$groups[] = array(
+										'key'    => $key,
+										'values' => array_values( array_unique( $vals ) ),
+									);
+								}
+								continue;
+							}
+
+							// Back-compat: old rows label/value
+							if ( isset( $row['label'] ) ) {
+								$lbl = trim( sanitize_text_field( $row['label'] ) );
+								if ( $lbl !== '' ) {
+									$groups[] = array(
+										'key'    => __( 'Variant', 'service-requests-form' ),
+										'values' => array( $lbl ),
+									);
+								}
+							}
+						}
+					}
+
+					if ( ! empty( $groups ) ) {
+						$selected = isset( $old_data['variants'] ) && is_array( $old_data['variants'] ) ? $old_data['variants'] : array();
+						foreach ( $groups as $g ) {
+							$key     = isset( $g['key'] ) ? (string) $g['key'] : '';
+							$allowed = isset( $g['values'] ) && is_array( $g['values'] ) ? $g['values'] : array();
+							$chosen  = isset( $selected[ $key ] ) ? (string) $selected[ $key ] : '';
+
+							if ( $key === '' ) {
+								continue;
+							}
+							if ( $chosen === '' ) {
+								$errors[] = sprintf( __( 'Please choose %s.', 'service-requests-form' ), $key );
+								continue;
+							}
+							if ( ! empty( $allowed ) && ! in_array( $chosen, $allowed, true ) ) {
+								$errors[] = sprintf( __( 'Invalid option selected for %s.', 'service-requests-form' ), $key );
+							}
+						}
+					}
+				}
 
 				// Terms
 				if ( $old_data['terms'] !== '1' ) {
@@ -652,6 +680,13 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_terms_accepted', 1 );
 						update_post_meta( $post_id, '_sr_user_id', $user_id );
 						update_post_meta( $post_id, '_sr_status', 'new' );
+
+						// Selected variants (key => value)
+						if ( ! empty( $selected_variants ) && is_array( $selected_variants ) ) {
+							update_post_meta( $post_id, '_sr_variants', $selected_variants );
+						} else {
+							delete_post_meta( $post_id, '_sr_variants' );
+						}
 
 						$attachment_ids = array();
 						$uploaded_bytes = 0;

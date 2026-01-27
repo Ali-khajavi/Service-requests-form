@@ -43,8 +43,11 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
 	return isset( $old_data[ $key ] ) ? $old_data[ $key ] : $default;
 };
 
-// old selected variant (for reload after validation errors)
-$old_variant = (string) $old( 'variant', '' );
+// old selected variants (map: Variant Key => chosen Value) for reload after validation errors
+$old_variants = $old( 'variants', array() );
+if ( ! is_array( $old_variants ) ) {
+	$old_variants = array();
+}
 ?>
 
 <form class="srf-form" method="post" enctype="multipart/form-data">
@@ -67,44 +70,66 @@ $old_variant = (string) $old( 'variant', '' );
 				$service_title = isset( $service['title'] ) ? (string) $service['title'] : '';
 
 				/**
-				 * ✅ IMPORTANT FIX:
-				 * Always load variations from DB, not from $services array.
-				 * Because your $services currently does not include variations.
+				 * Variant Groups: Key + Values[] (stored in _sr_service_variations)
+				 * Example: [ ['key'=>'Height','values'=>['2m','3m']] ]
 				 */
-				$variations = array();
+				$variant_groups = array();
 
 				if ( $service_id > 0 ) {
 					if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
-						$variations = SR_Services_CPT::get_variations( $service_id );
+						$variant_groups = SR_Services_CPT::get_variations( $service_id );
 					} else {
-						// fallback meta key (must match what you save in CPT)
-						$variations = get_post_meta( $service_id, '_sr_service_variations', true );
+						$variant_groups = get_post_meta( $service_id, '_sr_service_variations', true );
 					}
 				}
 
-				if ( ! is_array( $variations ) ) {
-					$variations = array();
+				if ( ! is_array( $variant_groups ) ) {
+					$variant_groups = array();
 				}
 
-				// sanitize variations
-				$clean_variations = array();
-				foreach ( $variations as $v ) {
-					$label = isset( $v['label'] ) ? sanitize_text_field( $v['label'] ) : '';
-					$value = isset( $v['value'] ) ? sanitize_key( $v['value'] ) : '';
-					if ( $label !== '' && $value !== '' ) {
-						$clean_variations[] = array(
-							'label' => $label,
-							'value' => $value,
-						);
+				// Normalize + sanitize to: [ ['key'=>string,'values'=>[string...]] ... ]
+				$clean_groups = array();
+				foreach ( $variant_groups as $row ) {
+
+					// New format
+					if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
+						$key  = trim( sanitize_text_field( $row['key'] ) );
+						$vals = array();
+
+						foreach ( $row['values'] as $v ) {
+							$v = trim( sanitize_text_field( $v ) );
+							if ( $v !== '' ) {
+								$vals[] = $v;
+							}
+						}
+
+						if ( $key !== '' && ! empty( $vals ) ) {
+							$clean_groups[] = array(
+								'key'    => $key,
+								'values' => array_values( array_unique( $vals ) ),
+							);
+						}
+						continue;
+					}
+
+					// Back-compat: old rows label/value -> treated as a single Variant group
+					if ( isset( $row['label'] ) ) {
+						$lbl = trim( sanitize_text_field( $row['label'] ) );
+						if ( $lbl !== '' ) {
+							$clean_groups[] = array(
+								'key'    => __( 'Variant', 'service-requests-form' ),
+								'values' => array( $lbl ),
+							);
+						}
 					}
 				}
 
-				$variations_json = ! empty( $clean_variations ) ? wp_json_encode( $clean_variations ) : '[]';
+				$variants_json = ! empty( $clean_groups ) ? wp_json_encode( $clean_groups ) : '[]';
 				?>
 				<option
 					value="<?php echo esc_attr( $service_id ); ?>"
 					<?php selected( $selected_service_id, $service_id ); ?>
-					data-variations="<?php echo esc_attr( $variations_json ); ?>"
+					data-variants="<?php echo esc_attr( $variants_json ); ?>"
 				>
 					<?php echo esc_html( $service_title ); ?>
 				</option>
@@ -112,17 +137,11 @@ $old_variant = (string) $old( 'variant', '' );
 		</select>
 	</div>
 
-	<!-- Variant dropdown (hidden by default; shown if service has variations) -->
-	<div class="srf-form__field srf-form__field--variant" id="srf-variant-field" style="display:none;">
-		<label for="srf-variant">
-			<?php esc_html_e( 'Variant', 'service-requests-form' ); ?>
-			<span class="srf-required">*</span>
-		</label>
-		<select id="srf-variant" name="srf_variant">
-			<option value=""><?php esc_html_e( 'Please choose a variant', 'service-requests-form' ); ?></option>
-		</select>
+	<!-- Variant groups (dynamic; shown only if the selected service has variants) -->
+	<div class="srf-form__field srf-form__field--variants" id="srf-variants-field" style="display:none;">
+		<div id="srf-variants-wrap"></div>
 		<small class="srf-field__help">
-			<?php esc_html_e( 'Select the variation for this service.', 'service-requests-form' ); ?>
+			<?php esc_html_e( 'Choose the option(s) required for this service.', 'service-requests-form' ); ?>
 		</small>
 	</div>
 
@@ -178,70 +197,40 @@ $old_variant = (string) $old( 'variant', '' );
 		/>
 	</div>
 
-	<div class="srf-form__field">
-		<label>
-			<?php esc_html_e( 'Shipping address', 'service-requests-form' ); ?>
-			<span class="srf-required">*</span>
-		</label>
+	<?php
+	// Shipping address from Woo (rendered as display box + hidden input)
+	$shipping_ok        = false;
+	$shipping_edit_url  = function_exists( 'wc_get_endpoint_url' )
+		? wc_get_endpoint_url( 'edit-address', 'shipping', wc_get_page_permalink( 'myaccount' ) )
+		: '';
 
-		<?php
-		$shipping_display     = '';
-		$shipping_single_line = '';
-		$shipping_ok          = false;
+	$shipping_single_line = '';
 
-		$my_account_url = site_url( '/my-account/' );
-		if ( function_exists( 'wc_get_page_permalink' ) ) {
-			$my_account_url = wc_get_page_permalink( 'myaccount' );
-		}
-
-		$shipping_edit_url = $my_account_url;
-		if ( function_exists( 'wc_get_endpoint_url' ) && function_exists( 'wc_get_page_permalink' ) ) {
-			$shipping_edit_url = wc_get_endpoint_url( 'edit-address', 'shipping', wc_get_page_permalink( 'myaccount' ) );
-		}
-
-		if ( is_user_logged_in() && function_exists( 'WC' ) && WC() && WC()->customer ) {
-
-			$address = array(
-				'first_name' => WC()->customer->get_shipping_first_name(),
-				'last_name'  => WC()->customer->get_shipping_last_name(),
-				'company'    => WC()->customer->get_shipping_company(),
-				'address_1'  => WC()->customer->get_shipping_address_1(),
-				'address_2'  => WC()->customer->get_shipping_address_2(),
-				'city'       => WC()->customer->get_shipping_city(),
-				'state'      => WC()->customer->get_shipping_state(),
-				'postcode'   => WC()->customer->get_shipping_postcode(),
-				'country'    => WC()->customer->get_shipping_country(),
+	if ( function_exists( 'wc' ) && is_user_logged_in() ) {
+		$customer = new WC_Customer( get_current_user_id() );
+		if ( $customer ) {
+			$parts = array(
+				$customer->get_shipping_first_name() . ' ' . $customer->get_shipping_last_name(),
+				$customer->get_shipping_company(),
+				$customer->get_shipping_address_1(),
+				$customer->get_shipping_address_2(),
+				$customer->get_shipping_postcode() . ' ' . $customer->get_shipping_city(),
+				$customer->get_shipping_country(),
 			);
 
-			if ( ! empty( $address['address_1'] ) && ! empty( $address['city'] ) && ! empty( $address['postcode'] ) ) {
-				$shipping_ok = true;
+			$parts = array_filter( array_map( 'trim', $parts ) );
+			$shipping_single_line = implode( ', ', $parts );
+			$shipping_single_line = trim( $shipping_single_line, " ,\t\n\r\0\x0B" );
 
-				if ( isset( WC()->countries ) && is_object( WC()->countries ) ) {
-					$shipping_display = WC()->countries->get_formatted_address( $address );
-				}
-
-				if ( empty( $shipping_display ) ) {
-					$shipping_display = implode( "\n", array_filter( array(
-						trim( $address['first_name'] . ' ' . $address['last_name'] ),
-						$address['company'],
-						$address['address_1'],
-						$address['address_2'],
-						trim( $address['postcode'] . ' ' . $address['city'] ),
-						$address['state'],
-						$address['country'],
-					) ) );
-				}
-
-				$shipping_single_line = (string) $shipping_display;
-				$shipping_single_line = str_replace( array( '<br>', '<br/>', '<br />' ), ', ', $shipping_single_line );
-				$shipping_single_line = str_replace( array( "\r\n", "\n", "\r" ), ', ', $shipping_single_line );
-				$shipping_single_line = wp_strip_all_tags( $shipping_single_line );
-				$shipping_single_line = preg_replace( '/\s+/', ' ', $shipping_single_line );
-				$shipping_single_line = preg_replace( '/\s*,\s*/', ', ', $shipping_single_line );
-				$shipping_single_line = trim( $shipping_single_line, " ,\t\n\r\0\x0B" );
-			}
+			$shipping_ok = ( $shipping_single_line !== '' );
 		}
-		?>
+	}
+	?>
+
+	<div class="srf-form__field">
+		<label>
+			<?php esc_html_e( 'Shipping address', 'service-requests-form' ); ?> <span class="srf-required">*</span>
+		</label>
 
 		<?php if ( $shipping_ok ) : ?>
 			<div class="srf-shipping-box">
@@ -272,36 +261,40 @@ $old_variant = (string) $old( 'variant', '' );
 		<label for="srf-description">
 			<?php esc_html_e( 'Project description', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 		</label>
-		<textarea
-			id="srf-description"
-			name="srf_description"
-			rows="5"
-			required
-		><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
+		<textarea id="srf-description" name="srf_description" rows="6" required><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
 	</div>
 
 	<div class="srf-form__field">
-		<label for="srf-file">
+		<label for="srf-files">
 			<?php esc_html_e( 'Upload file(s)', 'service-requests-form' ); ?>
 		</label>
-		<input type="file" id="srf-file" name="srf_files[]" multiple="multiple" />
+		<input type="file" id="srf-files" name="srf_files[]" multiple />
 		<small class="srf-field__help">
-			<?php esc_html_e( 'You can upload CAD/3D/scan files here. File type and size limits will apply in a later phase.', 'service-requests-form' ); ?>
+			<?php esc_html_e( 'You can upload CAD/3D/scan files here. File type and size limits apply.', 'service-requests-form' ); ?>
 		</small>
 	</div>
 
 	<div class="srf-form__field srf-form__field--checkbox">
 		<label>
 			<input type="checkbox" name="srf_no_file" value="1" <?php checked( $old( 'no_file' ), '1' ); ?> />
-			<?php esc_html_e( 'I will upload files later/ no need extra files for this service', 'service-requests-form' ); ?>
+			<?php esc_html_e( 'I don’t have a file yet / not needed', 'service-requests-form' ); ?>
 		</label>
 	</div>
 
 	<div class="srf-form__field srf-form__field--checkbox">
 		<label>
 			<input type="checkbox" name="srf_terms" value="1" <?php checked( $old( 'terms' ), '1' ); ?> required />
-			<?php esc_html_e( 'I accept the Terms & Conditions', 'service-requests-form' ); ?>
-			<span class="srf-required">*</span>
+			<?php
+			$terms_url = (string) get_option( 'srf_terms_url', '' );
+			if ( $terms_url ) {
+				printf(
+					wp_kses_post( __( 'I accept the <a href="%s" target="_blank" rel="noopener">Terms & Conditions</a>.', 'service-requests-form' ) ),
+					esc_url( $terms_url )
+				);
+			} else {
+				esc_html_e( 'I accept the Terms & Conditions.', 'service-requests-form' );
+			}
+			?>
 		</label>
 	</div>
 
@@ -310,7 +303,7 @@ $old_variant = (string) $old( 'variant', '' );
 
 	<div class="srf-form__actions">
 		<button type="submit" class="srf-button">
-			<?php esc_html_e( 'Send request', 'service-requests-form' ); ?>
+			<?php esc_html_e( 'Submit', 'service-requests-form' ); ?>
 		</button>
 	</div>
 
@@ -318,63 +311,93 @@ $old_variant = (string) $old( 'variant', '' );
 
 <script>
 (function(){
-	var serviceSelect  = document.getElementById('srf-service');
-	var variantField   = document.getElementById('srf-variant-field');
-	var variantSelect  = document.getElementById('srf-variant');
+	var serviceSelect = document.getElementById('srf-service');
+	var variantsField = document.getElementById('srf-variants-field');
+	var wrap          = document.getElementById('srf-variants-wrap');
 
-	if (!serviceSelect || !variantField || !variantSelect) return;
+	if (!serviceSelect || !variantsField || !wrap) return;
 
-	var oldVariant = <?php echo wp_json_encode( $old_variant ); ?>;
+	var oldSelections = <?php echo wp_json_encode( $old_variants ); ?> || {};
 
-	function setRequired(isRequired){
-		if (isRequired) {
-			variantSelect.setAttribute('required', 'required');
-		} else {
-			variantSelect.removeAttribute('required');
-		}
+	function clearWrap(){
+		while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
 	}
 
-	function rebuildVariants(){
-		var opt = serviceSelect.options[serviceSelect.selectedIndex];
-		var json = opt ? opt.getAttribute('data-variations') : '[]';
-		var variations = [];
+	function buildGroupRow(group, idx){
+		if (!group) return;
 
-		try { variations = JSON.parse(json || '[]'); } catch(e) { variations = []; }
+		var key = group.key ? String(group.key) : '';
+		var values = Array.isArray(group.values) ? group.values : [];
 
-		variantSelect.innerHTML = '';
+		if (!key || !values.length) return;
+
+		var row = document.createElement('div');
+		row.className = 'srf-form__field';
+		row.style.marginBottom = '1rem';
+
+		var label = document.createElement('label');
+		label.textContent = key + ' *';
+		row.appendChild(label);
+
+		// Hidden key field
+		var hiddenKey = document.createElement('input');
+		hiddenKey.type = 'hidden';
+		hiddenKey.name = 'srf_variants[' + idx + '][key]';
+		hiddenKey.value = key;
+		row.appendChild(hiddenKey);
+
+		// Select
+		var select = document.createElement('select');
+		select.name = 'srf_variants[' + idx + '][value]';
+		select.required = true;
+
 		var placeholder = document.createElement('option');
 		placeholder.value = '';
-		placeholder.textContent = '<?php echo esc_js( __( 'Please choose a variant', 'service-requests-form' ) ); ?>';
-		variantSelect.appendChild(placeholder);
+		placeholder.textContent = '<?php echo esc_js( __( 'Please choose', 'service-requests-form' ) ); ?>';
+		select.appendChild(placeholder);
 
-		if (!variations || !variations.length) {
-			variantField.style.display = 'none';
-			variantSelect.value = '';
-			setRequired(false);
+		values.forEach(function(v){
+			v = String(v);
+			var o = document.createElement('option');
+			o.value = v;
+			o.textContent = v;
+			select.appendChild(o);
+		});
+
+		// Restore previous selection if available (key => value)
+		if (oldSelections && typeof oldSelections === 'object' && oldSelections[key]) {
+			select.value = String(oldSelections[key]);
+		}
+
+		row.appendChild(select);
+		wrap.appendChild(row);
+	}
+
+	function rebuild(){
+		clearWrap();
+
+		var opt  = serviceSelect.options[serviceSelect.selectedIndex];
+		var json = opt ? opt.getAttribute('data-variants') : '[]';
+
+		var groups = [];
+		try { groups = JSON.parse(json || '[]'); } catch(e) { groups = []; }
+
+		if (!groups || !groups.length) {
+			variantsField.style.display = 'none';
 			return;
 		}
 
-		variations.forEach(function(v){
-			if (!v || !v.value || !v.label) return;
-			var o = document.createElement('option');
-			o.value = v.value;
-			o.textContent = v.label;
-			variantSelect.appendChild(o);
+		variantsField.style.display = '';
+		groups.forEach(function(g, i){
+			buildGroupRow(g, i);
 		});
-
-		variantField.style.display = '';
-		setRequired(true);
-
-		if (oldVariant) {
-			variantSelect.value = oldVariant;
-		}
 	}
 
 	serviceSelect.addEventListener('change', function(){
-		oldVariant = '';
-		rebuildVariants();
+		oldSelections = {};
+		rebuild();
 	});
 
-	rebuildVariants();
+	rebuild();
 })();
 </script>
