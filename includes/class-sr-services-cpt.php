@@ -166,7 +166,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			if ( ! is_array( $rows ) ) {
 				$rows = array();
 			}
-			+			/**
+						/**
 			 * New structure:
 			 * [
 			 *   [
@@ -249,10 +249,10 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				btn.addEventListener('click', function(e){
 					e.preventDefault();
 					var idx = wrap.querySelectorAll('.sr-service-var-row').length;
-						'<div style="display:flex;gap:10px;align-items:center;">' +
-							'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][key]" placeholder="<?php echo esc_js( __( 'Key (e.g. Height)', 'service-requests-form' ) ); ?>" />' +
-							'<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_js( __( 'Remove', 'service-requests-form' ) ); ?>">×</button>' +
-						'</div>' +
+						'<div style="display:flex;gap:10px;align-items:center;">' 
+							'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][key]" placeholder="<?php echo esc_js( __( 'Key (e.g. Height)', 'service-requests-form' ) ); ?>" />' 
+							'<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_js( __( 'Remove', 'service-requests-form' ) ); ?>">×</button>' 
+						'</div>' 
 						'<textarea style="width:100%;margin-top:10px;" rows="2" name="sr_service_variations['+idx+'][values]" placeholder="<?php echo esc_js( __( 'Values (comma separated) e.g. 2m, 3m, 7.5m', 'service-requests-form' ) ); ?>"></textarea>';
  
 					var row = document.createElement('div');
