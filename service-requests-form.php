@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.7.7.4
+ * Version:     0.7.7.5
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -20,7 +20,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.7.7.4';
+	public $version = '0.7.7.5';
 
 	private function __construct() {}
 	private function __clone() {}
@@ -167,6 +167,52 @@ function SRF() {
 	return Service_Requests_Form::instance();
 }
 SRF();
+
+// ======================================================
+// Allow CAD / medical / compressed / image uploads
+// ======================================================
+add_filter( 'upload_mimes', 'srf_allow_extended_upload_mimes' );
+function srf_allow_extended_upload_mimes( $mimes ) {
+
+	// Only logged-in users who can upload files
+	if ( ! is_user_logged_in() || ! current_user_can( 'upload_files' ) ) {
+		return $mimes;
+	}
+
+	// --------------------------------------------------
+	// 3D / CAD / Dental formats
+	// --------------------------------------------------
+	$mimes['obj']  = 'text/plain';                 // Wavefront OBJ
+	$mimes['stl']  = 'application/sla';            // STL
+	$mimes['ply']  = 'application/octet-stream';   // PLY
+	$mimes['step'] = 'application/step';           // STEP
+	$mimes['stp']  = 'application/step';           // STP
+	$mimes['igs']  = 'application/iges';           // IGES
+	$mimes['iges'] = 'application/iges';           // IGES
+
+	// --------------------------------------------------
+	// Compressed archives
+	// --------------------------------------------------
+	$mimes['zip'] = 'application/zip';
+	$mimes['rar'] = 'application/x-rar-compressed';
+	$mimes['7z']  = 'application/x-7z-compressed';
+
+	// --------------------------------------------------
+	// Images (medical photos / screenshots)
+	// --------------------------------------------------
+	$mimes['png']  = 'image/png';
+	$mimes['jpg']  = 'image/jpeg';
+	$mimes['jpeg'] = 'image/jpeg';
+	$mimes['webp'] = 'image/webp';
+
+	// --------------------------------------------------
+	// Documents
+	// --------------------------------------------------
+	$mimes['pdf'] = 'application/pdf';
+
+	return $mimes;
+}
+
 
 // ======================================================
 // Debug logging helper (safe)
