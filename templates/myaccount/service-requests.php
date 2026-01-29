@@ -29,6 +29,25 @@ if ( ! empty( $view_id ) ) {
 
 		$desc = (string) $view_post->post_content;
 
+		$variants = get_post_meta( $view_id, '_sr_variants', true );
+		if ( ! is_array( $variants ) ) {
+			$variants = array();
+		}
+
+		if ( ! empty( $variants ) ) {
+			echo '<div class="srf-modal__variants" style="margin:10px 0 12px;">';
+			echo '<h4 style="margin:0 0 6px;">' . esc_html__( 'Selected variants', 'service-requests-form' ) . '</h4>';
+			echo '<ul style="margin:0; padding-left:18px;">';
+			foreach ( $variants as $k => $v ) {
+				$k = trim( (string) $k );
+				$v = trim( (string) $v );
+				if ( $k === '' || $v === '' ) continue;
+				echo '<li><strong>' . esc_html( $k ) . ':</strong> ' . esc_html( $v ) . '</li>';
+			}
+			echo '</ul>';
+			echo '</div>';
+		}
+
 		// Uploaded files for this request
 		$file_ids = get_post_meta( $view_id, '_sr_file_ids', true );
 		if ( ! is_array( $file_ids ) ) {
