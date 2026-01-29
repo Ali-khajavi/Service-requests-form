@@ -24,6 +24,8 @@ class SRF_MyAccount {
 			return;
 		}
 
+		add_action( 'template_redirect', array( __CLASS__, 'maybe_handle_export' ), 5 );
+
 		// Let Woo know about our endpoint var.
 		add_filter( 'woocommerce_get_query_vars', array( __CLASS__, 'register_wc_query_vars' ) );
 
@@ -278,10 +280,12 @@ class SRF_MyAccount {
 			'_sr_shipping_address',
 			'_sr_service_id',
 			'_sr_service_title',
+			'_sr_variants', // ✅ FIX: preserve variants when creating the replacement request
 			'_sr_status',
 			'_sr_no_file',
 			'_sr_terms_accepted',
 		);
+
 
 		foreach ( $meta_keys as $k ) {
 			$val = get_post_meta( $old_id, $k, true );
@@ -289,6 +293,26 @@ class SRF_MyAccount {
 				update_post_meta( $new_id, $k, $val );
 			}
 		}
+
+		// ✅ If customer submitted updated variants from the modal, store them.
+		// Otherwise, the copied _sr_variants from the old request remains.
+		if ( isset( $_POST['srf_variants'] ) && is_array( $_POST['srf_variants'] ) ) {
+
+			$selected_variants = array();
+
+			foreach ( (array) $_POST['srf_variants'] as $row ) {
+				$key = isset( $row['key'] ) ? trim( sanitize_text_field( wp_unslash( $row['key'] ) ) ) : '';
+				$val = isset( $row['value'] ) ? trim( sanitize_text_field( wp_unslash( $row['value'] ) ) ) : '';
+
+				if ( $key !== '' && $val !== '' ) {
+					$selected_variants[ $key ] = $val;
+				}
+			}
+
+			// Optional: only update if there is at least one selection
+			update_post_meta( $new_id, '_sr_variants', $selected_variants );
+		}
+
 
 		// ✅ Keep description meta in sync (this is one of the only editable fields).
 		update_post_meta( $new_id, '_sr_description', wp_strip_all_tags( $new_desc ) );

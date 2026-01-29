@@ -48,6 +48,55 @@ if ( ! empty( $view_id ) ) {
 			echo '</div>';
 		}
 
+		<?php
+		$service_id = (int) get_post_meta( $view_id, '_sr_service_id', true );
+
+		// Get variant definitions from the service
+		$variant_defs = array();
+		if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
+			$variant_defs = SR_Services_CPT::get_variations( $service_id );
+		} else {
+			$variant_defs = get_post_meta( $service_id, '_sr_service_variations', true );
+		}
+
+		$groups = is_array( $variant_defs ) ? $variant_defs : array();
+		?>
+
+		<?php if ( ! empty( $groups ) ) : ?>
+			<div class="srf-modal__variants" style="margin:10px 0 12px;">
+				<h4 style="margin:0 0 6px;"><?php esc_html_e( 'Variants', 'service-requests-form' ); ?></h4>
+
+				<?php $i = 0; ?>
+				<?php foreach ( $groups as $g ) :
+					$key    = isset( $g['key'] ) ? trim( (string) $g['key'] ) : '';
+					$values = ( isset( $g['values'] ) && is_array( $g['values'] ) ) ? $g['values'] : array();
+					if ( $key === '' || empty( $values ) ) continue;
+
+					$current = isset( $variants[ $key ] ) ? (string) $variants[ $key ] : '';
+				?>
+					<div style="margin:0 0 10px;">
+						<label style="display:block; font-weight:600; margin-bottom:4px;">
+							<?php echo esc_html( $key ); ?> <span style="color:#b32d2e;">*</span>
+						</label>
+
+						<input type="hidden" name="srf_variants[<?php echo (int) $i; ?>][key]" value="<?php echo esc_attr( $key ); ?>" />
+
+						<select name="srf_variants[<?php echo (int) $i; ?>][value]" required style="width:100%; max-width:420px;">
+							<option value=""><?php esc_html_e( 'Select…', 'service-requests-form' ); ?></option>
+							<?php foreach ( $values as $opt ) :
+								$opt = (string) $opt;
+							?>
+								<option value="<?php echo esc_attr( $opt ); ?>" <?php selected( $current, $opt ); ?>>
+									<?php echo esc_html( $opt ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				<?php $i++; endforeach; ?>
+			</div>
+		<?php endif; ?>
+
+
 		// Uploaded files for this request
 		$file_ids = get_post_meta( $view_id, '_sr_file_ids', true );
 		if ( ! is_array( $file_ids ) ) {

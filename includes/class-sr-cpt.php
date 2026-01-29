@@ -216,7 +216,7 @@ class SR_CPT {
 		exit;
 	}
 
-	private static function build_export_html( $rid, $format = 'html' ) {
+	public static function build_export_html( $rid, $format = 'html' ) {
 
 		$post = get_post( $rid );
 		if ( ! $post ) {
