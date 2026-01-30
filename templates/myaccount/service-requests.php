@@ -29,73 +29,22 @@ if ( ! empty( $view_id ) ) {
 
 		$desc = (string) $view_post->post_content;
 
+		// Current selected variants on request
 		$variants = get_post_meta( $view_id, '_sr_variants', true );
 		if ( ! is_array( $variants ) ) {
 			$variants = array();
 		}
 
-		if ( ! empty( $variants ) ) {
-			echo '<div class="srf-modal__variants" style="margin:10px 0 12px;">';
-			echo '<h4 style="margin:0 0 6px;">' . esc_html__( 'Selected variants', 'service-requests-form' ) . '</h4>';
-			echo '<ul style="margin:0; padding-left:18px;">';
-			foreach ( $variants as $k => $v ) {
-				$k = trim( (string) $k );
-				$v = trim( (string) $v );
-				if ( $k === '' || $v === '' ) continue;
-				echo '<li><strong>' . esc_html( $k ) . ':</strong> ' . esc_html( $v ) . '</li>';
-			}
-			echo '</ul>';
-			echo '</div>';
-		}
-
-		<?php
+		// Variant definitions from the service
 		$service_id = (int) get_post_meta( $view_id, '_sr_service_id', true );
 
-		// Get variant definitions from the service
 		$variant_defs = array();
 		if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
 			$variant_defs = SR_Services_CPT::get_variations( $service_id );
 		} else {
 			$variant_defs = get_post_meta( $service_id, '_sr_service_variations', true );
 		}
-
 		$groups = is_array( $variant_defs ) ? $variant_defs : array();
-		?>
-
-		<?php if ( ! empty( $groups ) ) : ?>
-			<div class="srf-modal__variants" style="margin:10px 0 12px;">
-				<h4 style="margin:0 0 6px;"><?php esc_html_e( 'Variants', 'service-requests-form' ); ?></h4>
-
-				<?php $i = 0; ?>
-				<?php foreach ( $groups as $g ) :
-					$key    = isset( $g['key'] ) ? trim( (string) $g['key'] ) : '';
-					$values = ( isset( $g['values'] ) && is_array( $g['values'] ) ) ? $g['values'] : array();
-					if ( $key === '' || empty( $values ) ) continue;
-
-					$current = isset( $variants[ $key ] ) ? (string) $variants[ $key ] : '';
-				?>
-					<div style="margin:0 0 10px;">
-						<label style="display:block; font-weight:600; margin-bottom:4px;">
-							<?php echo esc_html( $key ); ?> <span style="color:#b32d2e;">*</span>
-						</label>
-
-						<input type="hidden" name="srf_variants[<?php echo (int) $i; ?>][key]" value="<?php echo esc_attr( $key ); ?>" />
-
-						<select name="srf_variants[<?php echo (int) $i; ?>][value]" required style="width:100%; max-width:420px;">
-							<option value=""><?php esc_html_e( 'Select…', 'service-requests-form' ); ?></option>
-							<?php foreach ( $values as $opt ) :
-								$opt = (string) $opt;
-							?>
-								<option value="<?php echo esc_attr( $opt ); ?>" <?php selected( $current, $opt ); ?>>
-									<?php echo esc_html( $opt ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-				<?php $i++; endforeach; ?>
-			</div>
-		<?php endif; ?>
-
 
 		// Uploaded files for this request
 		$file_ids = get_post_meta( $view_id, '_sr_file_ids', true );
@@ -110,6 +59,26 @@ if ( ! empty( $view_id ) ) {
 		echo '<button type="button" class="srf-modal__close" data-srf-close aria-label="' . esc_attr__( 'Close', 'service-requests-form' ) . '">&times;</button>';
 
 		echo '<h3 class="srf-modal__title">' . esc_html__( 'Edit Request', 'service-requests-form' ) . ' #' . esc_html( $view_id ) . '</h3>';
+
+		// ✅ EXPORT BUTTONS (Customer)
+		$export_nonce = wp_create_nonce( 'srf_export_' . $view_id );
+
+		$export_html_url = SRF_MyAccount::url_list( array(
+			'srf_export' => $view_id,
+			'format'     => 'html',
+			'srf_nonce'  => $export_nonce,
+		) );
+
+		$export_email_url = SRF_MyAccount::url_list( array(
+			'srf_export' => $view_id,
+			'format'     => 'email',
+			'srf_nonce'  => $export_nonce,
+		) );
+
+		echo '<div class="srf-modal__exports" style="margin:10px 0 14px; display:flex; gap:10px; flex-wrap:wrap;">';
+		echo '<a class="button" href="' . esc_url( $export_html_url ) . '">' . esc_html__( 'Download HTML', 'service-requests-form' ) . '</a>';
+		echo '<a class="button" href="' . esc_url( $export_email_url ) . '">' . esc_html__( 'Email Template', 'service-requests-form' ) . '</a>';
+		echo '</div>';
 
 		// ✅ Show existing uploads with secure download links
 		echo '<div class="srf-modal__uploads">';
@@ -152,11 +121,51 @@ if ( ! empty( $view_id ) ) {
 		}
 		echo '</div>';
 
-		// ✅ Edit form
+		// ✅ Edit form (IMPORTANT: variants must be INSIDE this form to save)
 		echo '<form method="post" enctype="multipart/form-data" class="srf-modal__form">';
 		echo '<input type="hidden" name="srf_action" value="update_request" />';
 		echo '<input type="hidden" name="request_id" value="' . esc_attr( $view_id ) . '" />';
 		wp_nonce_field( 'srf_edit_request' );
+
+		// ✅ Editable variants (inside form)
+		if ( ! empty( $groups ) ) {
+
+			echo '<div class="srf-modal__variants" style="margin:10px 0 12px;">';
+			echo '<h4 style="margin:0 0 6px;">' . esc_html__( 'Variants', 'service-requests-form' ) . '</h4>';
+
+			$i = 0;
+			foreach ( $groups as $g ) {
+
+				$key    = isset( $g['key'] ) ? trim( (string) $g['key'] ) : '';
+				$values = ( isset( $g['values'] ) && is_array( $g['values'] ) ) ? $g['values'] : array();
+
+				if ( $key === '' || empty( $values ) ) {
+					continue;
+				}
+
+				$current = isset( $variants[ $key ] ) ? (string) $variants[ $key ] : '';
+
+				echo '<div style="margin:0 0 10px;">';
+				echo '<label style="display:block; font-weight:600; margin-bottom:4px;">' . esc_html( $key ) . ' <span style="color:#b32d2e;">*</span></label>';
+
+				echo '<input type="hidden" name="srf_variants[' . (int) $i . '][key]" value="' . esc_attr( $key ) . '" />';
+
+				echo '<select name="srf_variants[' . (int) $i . '][value]" required style="width:100%; max-width:420px;">';
+				echo '<option value="">' . esc_html__( 'Select…', 'service-requests-form' ) . '</option>';
+
+				foreach ( $values as $opt ) {
+					$opt = (string) $opt;
+					echo '<option value="' . esc_attr( $opt ) . '" ' . selected( $current, $opt, false ) . '>' . esc_html( $opt ) . '</option>';
+				}
+
+				echo '</select>';
+				echo '</div>';
+
+				$i++;
+			}
+
+			echo '</div>';
+		}
 
 		echo '<p><label><strong>' . esc_html__( 'Description', 'service-requests-form' ) . '</strong></label><br />';
 		echo '<textarea name="description" rows="6" style="width:100%;">' . esc_textarea( $desc ) . '</textarea></p>';
@@ -226,7 +235,6 @@ while ( $query->have_posts() ) {
 		);
 	}
 
-	// ✅ MUST remain inside My Account endpoint URL
 	$view_url = SRF_MyAccount::url_view( $rid );
 
 	echo '<tr>';

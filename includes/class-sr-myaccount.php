@@ -476,6 +476,67 @@ class SRF_MyAccount {
 		exit;
 	}
 
+	/**
+	 * Secure export handler (owner-only).
+	 * URL example:
+	 * /my-account/service-requests/?srf_export=123&format=html&srf_nonce=XXXX
+	 */
+	public static function maybe_handle_export() {
+
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		if ( empty( $_GET['srf_export'] ) || empty( $_GET['srf_nonce'] ) ) {
+			return;
+		}
+
+		$rid    = absint( $_GET['srf_export'] );
+		$format = isset( $_GET['format'] ) ? sanitize_key( $_GET['format'] ) : 'html';
+		$nonce  = sanitize_text_field( wp_unslash( $_GET['srf_nonce'] ) );
+
+		if ( ! $rid ) {
+			return;
+		}
+
+		// Nonce check
+		if ( ! wp_verify_nonce( $nonce, 'srf_export_' . $rid ) ) {
+			wp_die( esc_html__( 'Invalid export link.', 'service-requests-form' ), 403 );
+		}
+
+		// Must be the request owner
+		$owner_id = (int) get_post_meta( $rid, '_sr_user_id', true );
+		if ( $owner_id !== (int) get_current_user_id() ) {
+			wp_die( esc_html__( 'Access denied.', 'service-requests-form' ), 403 );
+		}
+
+		$post = get_post( $rid );
+		if ( ! $post || 'service_request' !== $post->post_type ) {
+			wp_die( esc_html__( 'Request not found.', 'service-requests-form' ), 404 );
+		}
+
+		// We reuse the admin exporter builder
+		if ( ! class_exists( 'SR_CPT' ) || ! method_exists( 'SR_CPT', 'build_export_html' ) ) {
+			wp_die( esc_html__( 'Export not available.', 'service-requests-form' ), 500 );
+		}
+
+		if ( $format !== 'html' && $format !== 'email' ) {
+			$format = 'html';
+		}
+
+		$html = SR_CPT::build_export_html( $rid, $format );
+
+		$filename = 'request-' . $rid . '-' . $format . '.html';
+
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+
+		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+
 	public static function format_status_label( $status ) {
 		$status = (string) $status;
 		if ( $status === '' ) {
