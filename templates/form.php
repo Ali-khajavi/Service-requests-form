@@ -61,7 +61,39 @@ if ( ! is_array( $old_variants ) ) {
 			<?php esc_html_e( 'Service', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 		</label>
 
-		<select id="srf-service" name="srf_service" required>
+		<?php if ( ! empty( $services ) ) : ?>
+			<!--
+				NOTE: Native <select> options cannot render images.
+				We render a visual picker (cards) and keep the real select for submission/compatibility.
+			-->
+			<div class="srf-service-cards" data-srf-service-cards>
+				<?php foreach ( $services as $service ) : ?>
+					<?php
+					$service_id    = isset( $service['id'] ) ? (int) $service['id'] : 0;
+					$service_title = isset( $service['title'] ) ? (string) $service['title'] : '';
+					$service_thumb = isset( $service['thumb'] ) ? (string) $service['thumb'] : '';
+					$is_active     = ( (int) $selected_service_id === (int) $service_id );
+					?>
+					<button
+						type="button"
+						class="srf-service-card<?php echo $is_active ? ' is-active' : ''; ?>"
+						data-srf-service-card
+						data-service-id="<?php echo esc_attr( $service_id ); ?>"
+					>
+						<span class="srf-service-card__thumb" aria-hidden="true">
+							<?php if ( ! empty( $service_thumb ) ) : ?>
+								<img src="<?php echo esc_url( $service_thumb ); ?>" alt="" loading="lazy" />
+							<?php else : ?>
+								<span class="srf-service-card__thumb--empty"></span>
+							<?php endif; ?>
+						</span>
+						<span class="srf-service-card__title"><?php echo esc_html( $service_title ); ?></span>
+					</button>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+
+		<select id="srf-service" name="srf_service" class="srf-service-select" required>
 			<option value=""><?php esc_html_e( 'Please choose a service', 'service-requests-form' ); ?></option>
 
 			<?php foreach ( $services as $service ) : ?>

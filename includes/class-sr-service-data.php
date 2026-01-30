@@ -28,9 +28,16 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
             $services = array();
 
             foreach ( $posts as $post ) {
+				// Featured image (thumbnail) for service picker UI.
+				$thumb_url = get_the_post_thumbnail_url( $post, 'medium' );
+				if ( ! $thumb_url ) {
+					$thumb_url = '';
+				}
+
                 $services[] = array(
                     'id'    => $post->ID,
-                    'title' => get_the_title( $post ),
+					'title' => get_the_title( $post ),
+					'thumb' => $thumb_url,
                 );
             }
 
@@ -56,6 +63,10 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
             }
 
             $title   = get_the_title( $post );
+			$thumb_url = get_the_post_thumbnail_url( $post, 'medium' );
+			if ( ! $thumb_url ) {
+				$thumb_url = '';
+			}
             
 
             $raw = $post->post_content;
@@ -133,6 +144,7 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
             return array(
                 'id'      => $service_id,
                 'title'   => $title,
+				'thumb'   => $thumb_url,
                 'content' => $content,
                 'images'  => $images,
                 'variants'=> $variant_groups,
