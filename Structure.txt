@@ -20,7 +20,6 @@ service-requests-form/
 │  ├─ frontend-list.php                (optional user request list)
 │  │
 │  └─ myaccount/
-│     ├─ service-requests.php          (NEW: My Account requests list template)
 │     └─ service-request.php           (NEW: My Account single request template)
 │
 ├─ assets/
