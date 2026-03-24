@@ -607,7 +607,7 @@ document.addEventListener('click', function (e) {
       if (dashboardUrl) {
         window.location.href = dashboardUrl;
       }
-    }, 2000);
+    }, 3000);
   }
 
   SRF_onReady(function () {
