@@ -23,6 +23,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 		public static function init() {
 			add_shortcode( 'service_request_form', array( __CLASS__, 'shortcode_service_request_form' ) );
+			add_shortcode( 'project_request_form', array( __CLASS__, 'shortcode_project_request_form' ) );
 			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		}
 
