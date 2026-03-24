@@ -62,38 +62,70 @@ if ( ! is_array( $old_variants ) ) {
 		</label>
 
 		<?php if ( ! empty( $services ) ) : ?>
-			<!--
-				NOTE: Native <select> options cannot render images.
-				We render a visual picker (cards) and keep the real select for submission/compatibility.
-			-->
-			<div class="srf-service-cards" data-srf-service-cards>
-				<?php foreach ( $services as $service ) : ?>
-					<?php
-					$service_id    = isset( $service['id'] ) ? (int) $service['id'] : 0;
-					$service_title = isset( $service['title'] ) ? (string) $service['title'] : '';
-					$service_thumb = isset( $service['thumb'] ) ? (string) $service['thumb'] : '';
-					$is_active     = ( (int) $selected_service_id === (int) $service_id );
-					?>
-					<button
-						type="button"
-						class="srf-service-card<?php echo $is_active ? ' is-active' : ''; ?>"
-						data-srf-service-card
-						data-service-id="<?php echo esc_attr( $service_id ); ?>"
-					>
-						<span class="srf-service-card__thumb" aria-hidden="true">
-							<?php if ( ! empty( $service_thumb ) ) : ?>
-								<img src="<?php echo esc_url( $service_thumb ); ?>" alt="" loading="lazy" />
-							<?php else : ?>
-								<span class="srf-service-card__thumb--empty"></span>
-							<?php endif; ?>
-						</span>
-						<span class="srf-service-card__title"><?php echo esc_html( $service_title ); ?></span>
-					</button>
-				<?php endforeach; ?>
+			<?php
+			$selected_service_title = __( 'Please choose a service', 'service-requests-form' );
+			$selected_service_thumb = '';
+			foreach ( $services as $service_item ) {
+				$service_item_id = isset( $service_item['id'] ) ? (int) $service_item['id'] : 0;
+				if ( $service_item_id === (int) $selected_service_id ) {
+					$selected_service_title = isset( $service_item['title'] ) ? (string) $service_item['title'] : $selected_service_title;
+					$selected_service_thumb = isset( $service_item['thumb'] ) ? (string) $service_item['thumb'] : '';
+					break;
+				}
+			}
+			?>
+			<div class="srf-service-dropdown" data-srf-service-dropdown>
+				<button
+					type="button"
+					class="srf-service-dropdown__trigger"
+					data-srf-service-trigger
+					aria-haspopup="listbox"
+					aria-expanded="false"
+				>
+					<span class="srf-service-dropdown__trigger-media" data-srf-service-trigger-media>
+						<?php if ( ! empty( $selected_service_thumb ) ) : ?>
+							<img src="<?php echo esc_url( $selected_service_thumb ); ?>" alt="" loading="lazy" />
+						<?php else : ?>
+							<span class="srf-service-dropdown__trigger-placeholder"></span>
+						<?php endif; ?>
+					</span>
+					<span class="srf-service-dropdown__trigger-text" data-srf-service-trigger-text><?php echo esc_html( $selected_service_title ); ?></span>
+					<span class="srf-service-dropdown__chevron" aria-hidden="true">&#9662;</span>
+				</button>
+
+				<div class="srf-service-dropdown__menu" data-srf-service-menu role="listbox" tabindex="-1" aria-label="<?php echo esc_attr__( 'Services', 'service-requests-form' ); ?>" hidden>
+					<?php foreach ( $services as $service ) : ?>
+						<?php
+						$service_id    = isset( $service['id'] ) ? (int) $service['id'] : 0;
+						$service_title = isset( $service['title'] ) ? (string) $service['title'] : '';
+						$service_thumb = isset( $service['thumb'] ) ? (string) $service['thumb'] : '';
+						$is_active     = ( (int) $selected_service_id === (int) $service_id );
+						?>
+						<button
+							type="button"
+							class="srf-service-dropdown__option<?php echo $is_active ? ' is-active' : ''; ?>"
+							data-srf-service-option
+							data-service-id="<?php echo esc_attr( $service_id ); ?>"
+							data-service-title="<?php echo esc_attr( $service_title ); ?>"
+							data-service-thumb="<?php echo esc_url( $service_thumb ); ?>"
+							role="option"
+							aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
+						>
+							<span class="srf-service-dropdown__option-media" aria-hidden="true">
+								<?php if ( ! empty( $service_thumb ) ) : ?>
+									<img src="<?php echo esc_url( $service_thumb ); ?>" alt="" loading="lazy" />
+								<?php else : ?>
+									<span class="srf-service-dropdown__option-placeholder"></span>
+								<?php endif; ?>
+							</span>
+							<span class="srf-service-dropdown__option-title"><?php echo esc_html( $service_title ); ?></span>
+						</button>
+					<?php endforeach; ?>
+				</div>
 			</div>
 		<?php endif; ?>
 
-		<select id="srf-service" name="srf_service" class="srf-service-select" required>
+		<select id="srf-service" name="srf_service" class="srf-service-select srf-service-select--native" required>
 			<option value=""><?php esc_html_e( 'Please choose a service', 'service-requests-form' ); ?></option>
 
 			<?php foreach ( $services as $service ) : ?>

@@ -325,3 +325,113 @@ document.addEventListener('click', function (e) {
     }
   });
 })();
+
+
+/* =========================================================
+   Custom service dropdown with images
+========================================================= */
+(function () {
+  'use strict';
+
+  function setTriggerMedia(container, thumb, title) {
+    var media = container.querySelector('[data-srf-service-trigger-media]');
+    if (!media) return;
+    if (thumb) {
+      media.innerHTML = '<img src="' + encodeURI(thumb) + '" alt="" loading="lazy">';
+    } else {
+      media.innerHTML = '<span class="srf-service-dropdown__trigger-placeholder"></span>';
+    }
+  }
+
+  function closeDropdown(container) {
+    var trigger = container.querySelector('[data-srf-service-trigger]');
+    var menu = container.querySelector('[data-srf-service-menu]');
+    if (!trigger || !menu) return;
+    trigger.setAttribute('aria-expanded', 'false');
+    menu.hidden = true;
+    container.classList.remove('is-open');
+  }
+
+  function openDropdown(container) {
+    var trigger = container.querySelector('[data-srf-service-trigger]');
+    var menu = container.querySelector('[data-srf-service-menu]');
+    if (!trigger || !menu) return;
+    trigger.setAttribute('aria-expanded', 'true');
+    menu.hidden = false;
+    container.classList.add('is-open');
+  }
+
+  function syncDropdownFromSelect(container, select) {
+    var value = String(select.value || '');
+    var textNode = container.querySelector('[data-srf-service-trigger-text]');
+    var selected = select.options[select.selectedIndex];
+    var activeTitle = selected ? selected.text : 'Please choose a service';
+    var activeThumb = '';
+    var options = container.querySelectorAll('[data-srf-service-option]');
+
+    for (var i = 0; i < options.length; i++) {
+      var option = options[i];
+      var isActive = option.getAttribute('data-service-id') === value;
+      option.classList.toggle('is-active', isActive);
+      option.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      if (isActive) {
+        activeTitle = option.getAttribute('data-service-title') || activeTitle;
+        activeThumb = option.getAttribute('data-service-thumb') || '';
+      }
+    }
+
+    if (textNode) textNode.textContent = activeTitle;
+    setTriggerMedia(container, activeThumb, activeTitle);
+  }
+
+  function initServiceDropdown(container) {
+    var select = document.getElementById('srf-service');
+    var trigger = container.querySelector('[data-srf-service-trigger]');
+    var options = container.querySelectorAll('[data-srf-service-option]');
+
+    if (!select || !trigger || !options.length) return;
+
+    syncDropdownFromSelect(container, select);
+
+    trigger.addEventListener('click', function () {
+      if (container.classList.contains('is-open')) {
+        closeDropdown(container);
+      } else {
+        openDropdown(container);
+      }
+    });
+
+    for (var i = 0; i < options.length; i++) {
+      options[i].addEventListener('click', function () {
+        var value = this.getAttribute('data-service-id') || '';
+        select.value = value;
+        syncDropdownFromSelect(container, select);
+        closeDropdown(container);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    select.addEventListener('change', function () {
+      syncDropdownFromSelect(container, select);
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!container.contains(event.target)) {
+        closeDropdown(container);
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeDropdown(container);
+      }
+    });
+  }
+
+  SRF_onReady(function () {
+    var dropdowns = document.querySelectorAll('[data-srf-service-dropdown]');
+    for (var i = 0; i < dropdowns.length; i++) {
+      initServiceDropdown(dropdowns[i]);
+    }
+  });
+})();
