@@ -263,7 +263,58 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		 * Handles uploads and returns [attachment_ids, total_uploaded_bytes].
 		 * Throws Exception on validation/quota errors.
 		 */
-		protected static function handle_request_uploads( $post_id ) {
+		protected static function current_user_is_business() {
+			if ( ! is_user_logged_in() ) {
+				return false;
+			}
+
+			$user  = wp_get_current_user();
+			$roles = is_array( $user->roles ) ? $user->roles : array();
+
+			return (bool) array_intersect( $roles, array( 'business_user', 'administrator' ) );
+		}
+
+		protected static function get_project_upload_limit_bytes() {
+			if ( self::current_user_is_business() ) {
+				return 10 * 1024 * 1024 * 1024;
+			}
+
+			return 1 * 1024 * 1024 * 1024;
+		}
+
+		protected static function get_current_user_request_profile_data() {
+			$user_id = get_current_user_id();
+			$user    = get_userdata( $user_id );
+
+			if ( ! $user ) {
+				return array(
+					'name'    => '',
+					'company' => '',
+					'email'   => '',
+					'phone'   => '',
+				);
+			}
+
+			$name = trim( get_user_meta( $user_id, 'billing_first_name', true ) . ' ' . get_user_meta( $user_id, 'billing_last_name', true ) );
+			if ( $name === '' ) {
+				$name = $user->display_name;
+			}
+
+			$company = (string) get_user_meta( $user_id, 'billing_company', true );
+			$email   = (string) $user->user_email;
+			$phone   = (string) get_user_meta( $user_id, 'billing_phone', true );
+
+			return array(
+				'name'    => $name,
+				'company' => $company,
+				'email'   => $email,
+				'phone'   => $phone,
+			);
+		}
+
+
+
+		protected static function handle_request_uploads( $post_id, $custom_max_bytes = 0 ) {
 			$post_id = (int) $post_id;
 
 			if ( empty( $_FILES['srf_files'] ) ) {
@@ -271,7 +322,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			}
 
 			$user_id = get_current_user_id();
-			$max     = self::get_max_file_bytes();
+			$max = (int) $custom_max_bytes > 0 ? (int) $custom_max_bytes : self::get_max_file_bytes();
 			$items   = self::normalize_files_array( $_FILES['srf_files'] );
 
 			$total_bytes = 0;
@@ -821,34 +872,140 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// ===============================
 
 		public static function shortcode_project_request_form() {
+
+			$errors   = array();
+			$old_data = array(
+				'title'       => '',
+				'description' => '',
+				'terms'       => '0',
+			);
+			$success = false;
+
+			$dashboard_url = '';
+			if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
+				$dashboard_url = SRF_MyAccount::url_list();
+			}
+
+			if ( isset( $_GET['srf_project_submitted'] ) && $_GET['srf_project_submitted'] === '1' ) {
+				$success = true;
+			}
+
+			if ( ! empty( $_POST['srf_project_form_submitted'] ) ) {
+
+				$old_data = array(
+					'title'       => isset( $_POST['srf_project_title'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_project_title'] ) ) : '',
+					'description' => isset( $_POST['srf_project_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_project_description'] ) ) : '',
+					'terms'       => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
+				);
+
+				if ( empty( $_POST['srf_project_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['srf_project_nonce'] ) ), 'srf_submit_project_request' ) ) {
+					$errors[] = __( 'Security check failed. Please refresh the page and try again.', 'service-requests-form' );
+				}
+
+				if ( ! is_user_logged_in() ) {
+					$errors[] = __( 'Please log in or register before continuing.', 'service-requests-form' );
+				}
+
+				if ( empty( $old_data['title'] ) ) {
+					$errors[] = __( 'Project title is required.', 'service-requests-form' );
+				}
+
+				if ( empty( $old_data['description'] ) ) {
+					$errors[] = __( 'Project description is required.', 'service-requests-form' );
+				}
+
+				if ( $old_data['terms'] !== '1' ) {
+					$errors[] = __( 'You must accept the Terms & Conditions.', 'service-requests-form' );
+				}
+
+				$names   = isset( $_FILES['srf_files']['name'] ) ? $_FILES['srf_files']['name'] : array();
+				$has_any = is_array( $names ) ? ( count( array_filter( $names ) ) > 0 ) : ! empty( $names );
+
+				if ( ! $has_any ) {
+					$errors[] = __( 'Please upload at least one file.', 'service-requests-form' );
+				}
+
+				if ( empty( $errors ) ) {
+					$user_id      = get_current_user_id();
+					$profile_data = self::get_current_user_request_profile_data();
+
+					$post_id = wp_insert_post(
+						array(
+							'post_type'    => 'service_request',
+							'post_status'  => 'publish',
+							'post_title'   => $old_data['title'],
+							'post_content' => $old_data['description'],
+							'post_author'  => $user_id,
+						),
+						true
+					);
+
+					if ( is_wp_error( $post_id ) ) {
+						$errors[] = __( 'Could not save your project request. Please try again.', 'service-requests-form' );
+					} else {
+						update_post_meta( $post_id, '_sr_request_type', 'project' );
+						update_post_meta( $post_id, '_sr_project_title', $old_data['title'] );
+						update_post_meta( $post_id, '_sr_service_title', 'Project Request' );
+						update_post_meta( $post_id, '_sr_description', $old_data['description'] );
+						update_post_meta( $post_id, '_sr_name', $profile_data['name'] );
+						update_post_meta( $post_id, '_sr_company', $profile_data['company'] );
+						update_post_meta( $post_id, '_sr_email', $profile_data['email'] );
+						update_post_meta( $post_id, '_sr_phone', $profile_data['phone'] );
+						update_post_meta( $post_id, '_sr_user_id', $user_id );
+						update_post_meta( $post_id, '_sr_status', 'new' );
+						update_post_meta( $post_id, '_sr_terms_accepted', 1 );
+						update_post_meta( $post_id, '_sr_no_file', 0 );
+
+						$attachment_ids = array();
+						$uploaded_bytes = 0;
+
+						try {
+							list( $attachment_ids, $uploaded_bytes ) = self::handle_request_uploads( $post_id, self::get_project_upload_limit_bytes() );
+							update_post_meta( $post_id, '_sr_file_ids', is_array( $attachment_ids ) ? $attachment_ids : array() );
+						} catch ( Exception $e ) {
+
+							if ( ! empty( $attachment_ids ) ) {
+								foreach ( $attachment_ids as $aid ) {
+									wp_delete_attachment( (int) $aid, true );
+								}
+							}
+
+							if ( $uploaded_bytes > 0 ) {
+								self::subtract_user_used_bytes( $user_id, $uploaded_bytes );
+							}
+
+							wp_delete_post( $post_id, true );
+							$errors[] = $e->getMessage();
+						}
+
+						if ( empty( $errors ) ) {
+							self::send_admin_new_request_email( $post_id );
+
+							$redirect_url = add_query_arg(
+								array(
+									'srf_project_submitted' => '1',
+								),
+								get_permalink()
+							);
+
+							self::safe_redirect( $redirect_url );
+						}
+					}
+				}
+			}
+
 			ob_start();
-			?>
-			<div class="srf-project-wrapper">
-				<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data">
-					<div class="srf-form__field">
-						<label for="srf-project-title">Project title *</label>
-						<input type="text" id="srf-project-title" name="srf_project_title" required />
-					</div>
-
-					<div class="srf-form__field">
-						<label for="srf-project-description">Description</label>
-						<textarea id="srf-project-description" name="srf_project_description" rows="6"></textarea>
-					</div>
-
-					<?php if ( ! is_user_logged_in() ) : ?>
-						<div class="srf-project-login-box">
-							<h3>Login or register</h3>
-							<p>You need an account before going to the next step.</p>
-							<?php echo do_shortcode( '[woocommerce_my_account]' ); ?>
-						</div>
-					<?php else : ?>
-						<div class="srf-project-login-box">
-							<p>You are logged in and can continue.</p>
-						</div>
-					<?php endif; ?>
-				</form>
-			</div>
-			<?php
+			self::load_template(
+				'project-form.php',
+				array(
+					'errors'        => $errors,
+					'old_data'      => $old_data,
+					'success'       => $success,
+					'dashboard_url' => $dashboard_url,
+					'upload_limit'  => size_format( self::get_project_upload_limit_bytes() ),
+					'is_business'   => self::current_user_is_business(),
+				)
+			);
 			return ob_get_clean();
 		}
 
