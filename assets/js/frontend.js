@@ -7,7 +7,7 @@ function SRF_onReady(fn) {
 }
 
 /* =========================================================
-   Slider (simple image switcher)
+   Slider + zoom popup
 ========================================================= */
 (function () {
   'use strict';
@@ -24,14 +24,80 @@ function SRF_onReady(fn) {
     }
   }
 
+  function getLightbox() {
+    var box = document.getElementById('srf-image-lightbox');
+    if (box) return box;
+
+    box = document.createElement('div');
+    box.id = 'srf-image-lightbox';
+    box.className = 'srf-image-lightbox';
+    box.innerHTML =
+      '<div class="srf-image-lightbox__inner">' +
+        '<button type="button" class="srf-image-lightbox__close" aria-label="Close">&times;</button>' +
+        '<img class="srf-image-lightbox__img" src="" alt="">' +
+      '</div>';
+
+    document.body.appendChild(box);
+
+    box.addEventListener('click', function (e) {
+      if (
+        e.target === box ||
+        e.target.classList.contains('srf-image-lightbox__close')
+      ) {
+        box.classList.remove('is-open');
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        box.classList.remove('is-open');
+      }
+    });
+
+    return box;
+  }
+
+  function openLightbox(src, alt) {
+    if (!src) return;
+    var box = getLightbox();
+    var img = box.querySelector('.srf-image-lightbox__img');
+    img.src = src;
+    img.alt = alt || '';
+    box.classList.add('is-open');
+  }
+
+  function ensureZoomButton(viewport) {
+    if (!viewport) return null;
+
+    var btn = viewport.querySelector('.srf-service-slider__zoom');
+    if (btn) return btn;
+
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'srf-service-slider__zoom';
+    btn.setAttribute('aria-label', 'View larger image');
+    btn.setAttribute('title', 'View larger image');
+    btn.innerHTML = '&#128269;';
+    viewport.appendChild(btn);
+
+    return btn;
+  }
+
   function initSlider(slider) {
-    var imgEl  = slider.querySelector('.srf-service-slider__image');
-    var prev   = slider.querySelector('.srf-service-slider__prev');
-    var next   = slider.querySelector('.srf-service-slider__next');
-    var images = parseImages(slider);
+    if (!slider || slider.getAttribute('data-srf-slider-ready') === '1') {
+      return;
+    }
 
-    if (!imgEl || !images.length) return;
+    var imgEl     = slider.querySelector('.srf-service-slider__image');
+    var viewport  = slider.querySelector('.srf-service-slider__viewport');
+    var prev      = slider.querySelector('.srf-service-slider__prev');
+    var next      = slider.querySelector('.srf-service-slider__next');
+    var nav       = slider.querySelector('.srf-service-slider__nav');
+    var images    = parseImages(slider);
 
+    if (!imgEl || !viewport || !images.length) return;
+
+    var zoomBtn = ensureZoomButton(viewport);
     var index = 0;
 
     function show(i) {
@@ -42,9 +108,10 @@ function SRF_onReady(fn) {
       imgEl.src = item.url;
       imgEl.alt = item.alt || '';
       imgEl.style.display = 'block';
+      viewport.setAttribute('data-current-src', item.url);
+      viewport.setAttribute('data-current-alt', item.alt || '');
     }
 
-    var nav = slider.querySelector('.srf-service-slider__nav');
     if (images.length <= 1) {
       if (nav) nav.style.display = 'none';
       if (prev) prev.style.display = 'none';
@@ -54,6 +121,7 @@ function SRF_onReady(fn) {
     if (prev) {
       prev.onclick = function (e) {
         e.preventDefault();
+        e.stopPropagation();
         show((index - 1 + images.length) % images.length);
       };
     }
@@ -61,17 +129,38 @@ function SRF_onReady(fn) {
     if (next) {
       next.onclick = function (e) {
         e.preventDefault();
+        e.stopPropagation();
         show((index + 1) % images.length);
       };
     }
 
+    if (zoomBtn) {
+      zoomBtn.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openLightbox(
+          viewport.getAttribute('data-current-src'),
+          viewport.getAttribute('data-current-alt')
+        );
+      };
+    }
+
+    viewport.addEventListener('click', function () {
+      openLightbox(
+        viewport.getAttribute('data-current-src'),
+        viewport.getAttribute('data-current-alt')
+      );
+    });
+
     show(0);
+    slider.setAttribute('data-srf-slider-ready', '1');
   }
 
   function initAll(scope) {
     var sliders = (scope || document).querySelectorAll(
       '.srf-service-slider[data-srf-slider="switcher"]'
     );
+
     for (var i = 0; i < sliders.length; i++) {
       initSlider(sliders[i]);
     }
