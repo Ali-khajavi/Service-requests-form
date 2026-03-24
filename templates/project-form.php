@@ -15,9 +15,10 @@ $old = function( $key, $default = '' ) use ( $old_data ) {
 	return isset( $old_data[ $key ] ) ? $old_data[ $key ] : $default;
 };
 
-$dashboard_url = isset( $dashboard_url ) ? (string) $dashboard_url : '';
-$upload_limit  = isset( $upload_limit ) ? (string) $upload_limit : '1 GB';
-$is_business   = ! empty( $is_business );
+$dashboard_url   = isset( $dashboard_url ) ? (string) $dashboard_url : '';
+$upload_limit    = isset( $upload_limit ) ? (string) $upload_limit : '1 GB';
+$is_business     = ! empty( $is_business );
+$allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
 ?>
 
 <div class="srf-project-wrapper">
@@ -112,31 +113,50 @@ $is_business   = ! empty( $is_business );
 		</div>
 
 		<div class="srf-project-panel srf-project-panel--step2" data-srf-step-panel="2">
-			<div class="srf-form__field srf-form__field--checkbox">
-				<label>
-					<input type="checkbox" name="srf_terms" value="1" <?php checked( $old( 'terms' ), '1' ); ?> required />
-					<?php esc_html_e( 'I accept the Terms & Conditions.', 'service-requests-form' ); ?>
+
+			<div class="srf-form__field srf-form__field--checkbox srf-project-check-field">
+				<label class="srf-project-checkbox-label" for="srf-terms">
+					<input type="checkbox" id="srf-terms" name="srf_terms" value="1" <?php checked( $old( 'terms' ), '1' ); ?> required />
+					<span><?php esc_html_e( 'I accept the Terms & Conditions.', 'service-requests-form' ); ?> <span class="srf-required">*</span></span>
 				</label>
 			</div>
 
-			<div class="srf-form__field">
+			<div class="srf-form__field srf-project-upload-field">
 				<label for="srf-files">
 					<?php esc_html_e( 'Upload file(s)', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 				</label>
-				<input type="file" id="srf-files" name="srf_files[]" multiple required />
-				<small class="srf-field__help">
+
+				<div class="srf-project-file-input-wrap">
+					<input type="file" id="srf-files" name="srf_files[]" multiple required />
+				</div>
+
+				<small class="srf-field__help srf-project-help">
 					<?php
 					echo esc_html(
 						sprintf(
-							__( 'Maximum upload size for your account: %s', 'service-requests-form' ),
+							__( 'Maximum upload size: %s', 'service-requests-form' ),
 							$upload_limit
 						)
 					);
 					?>
 				</small>
-				<small class="srf-field__help">
-					<?php echo esc_html( $is_business ? __( 'Business account detected: up to 10 GB.', 'service-requests-form' ) : __( 'Standard account detected: up to 1 GB.', 'service-requests-form' ) ); ?>
+
+				<small class="srf-field__help srf-project-help">
+					<?php echo esc_html( $is_business ? __( 'Business account limit: 10 GB.', 'service-requests-form' ) : __( 'Standard account limit: 1 GB.', 'service-requests-form' ) ); ?>
 				</small>
+
+				<?php if ( $allowed_formats !== '' ) : ?>
+					<small class="srf-field__help srf-project-help">
+						<?php
+						echo esc_html(
+							sprintf(
+								__( 'Accepted file formats: %s', 'service-requests-form' ),
+								$allowed_formats
+							)
+						);
+						?>
+					</small>
+				<?php endif; ?>
 			</div>
 
 			<div class="srf-project-final-note">
@@ -149,11 +169,11 @@ $is_business   = ! empty( $is_business );
 			<?php wp_nonce_field( 'srf_submit_project_request', 'srf_project_nonce' ); ?>
 
 			<div class="srf-form__actions srf-form__actions--project">
-				<button type="button" class="srf-button srf-button--secondary" data-srf-prev-step="2">
+				<button type="button" class="srf-button srf-button--secondary srf-project-btn srf-project-btn--back" data-srf-prev-step="2">
 					<?php esc_html_e( 'Back', 'service-requests-form' ); ?>
 				</button>
 
-				<button type="submit" class="srf-button">
+				<button type="submit" class="srf-button srf-project-btn srf-project-btn--submit">
 					<?php esc_html_e( 'Submit request', 'service-requests-form' ); ?>
 				</button>
 			</div>

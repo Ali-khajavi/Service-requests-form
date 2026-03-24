@@ -25,6 +25,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			add_shortcode( 'service_request_form', array( __CLASS__, 'shortcode_service_request_form' ) );
 			add_shortcode( 'project_request_form', array( __CLASS__, 'shortcode_project_request_form' ) );
 			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+			add_filter( 'upload_mimes', array( __CLASS__, 'allow_project_upload_mimes' ) );
 		}
 
 		public static function enqueue_assets() {
@@ -87,6 +88,81 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				. 'Object.assign(window.srfServiceData, ' . wp_json_encode( $js_service_map ) . ');',
 				'before'
 			);
+		}
+
+		protected static function get_project_upload_limit_label() {
+			return self::current_user_is_business() ? '10 GB' : '1 GB';
+		}
+
+		protected static function get_project_allowed_extensions() {
+			return array(
+				'stl',
+				'3mf',
+				'obj',
+				'step',
+				'stp',
+				'iges',
+				'igs',
+				'dxf',
+				'pdf',
+				'jpg',
+				'jpeg',
+				'png',
+				'zip',
+			);
+		}
+
+		protected static function get_project_allowed_extensions_label() {
+			return implode( ', ', self::get_project_allowed_extensions() );
+		}
+
+		public static function allow_project_upload_mimes( $mimes ) {
+			$mimes['stl']  = 'model/stl';
+			$mimes['3mf']  = 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml';
+			$mimes['obj']  = 'text/plain';
+			$mimes['step'] = 'application/step';
+			$mimes['stp']  = 'application/step';
+			$mimes['iges'] = 'model/iges';
+			$mimes['igs']  = 'model/iges';
+			$mimes['dxf']  = 'image/vnd.dxf';
+			$mimes['pdf']  = 'application/pdf';
+			$mimes['jpg']  = 'image/jpeg';
+			$mimes['jpeg'] = 'image/jpeg';
+			$mimes['png']  = 'image/png';
+			$mimes['zip']  = 'application/zip';
+
+			return $mimes;
+		}
+
+		protected static function validate_project_uploaded_file( $file ) {
+			$allowed_exts = self::get_project_allowed_extensions();
+
+			$filename = isset( $file['name'] ) ? (string) $file['name'] : '';
+			$ext      = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+
+			if ( ! $ext || ! in_array( $ext, $allowed_exts, true ) ) {
+				throw new Exception(
+					sprintf(
+						__( 'File type not allowed: %s. Allowed formats: %s', 'service-requests-form' ),
+						$filename,
+						self::get_project_allowed_extensions_label()
+					)
+				);
+			}
+
+			$checked = wp_check_filetype_and_ext(
+				isset( $file['tmp_name'] ) ? $file['tmp_name'] : '',
+				$filename
+			);
+
+			if ( empty( $checked['ext'] ) || empty( $checked['type'] ) ) {
+				throw new Exception(
+					sprintf(
+						__( 'Unsafe or invalid file detected: %s', 'service-requests-form' ),
+						$filename
+					)
+				);
+			}
 		}
 
 		// ===============================
@@ -383,7 +459,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'test_form' => false,
 					'mimes'     => null, // allow WP to decide; we enforce extension above
 				);
-
+				self::validate_project_uploaded_file( $file );
 				$uploaded = wp_handle_upload( $file, $overrides );
 
 				if ( ! is_array( $uploaded ) || ! empty( $uploaded['error'] ) ) {
@@ -998,12 +1074,14 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			self::load_template(
 				'project-form.php',
 				array(
-					'errors'        => $errors,
-					'old_data'      => $old_data,
-					'success'       => $success,
-					'dashboard_url' => $dashboard_url,
-					'upload_limit'  => size_format( self::get_project_upload_limit_bytes() ),
-					'is_business'   => self::current_user_is_business(),
+					'errors'             => $errors,
+					'old_data'           => $old_data,
+					'success'            => $success,
+					'dashboard_url'      => $dashboard_url,
+					'upload_limit'       => self::get_project_upload_limit_label(),
+					'upload_limit_bytes' => self::get_project_upload_limit_bytes(),
+					'allowed_formats'    => self::get_project_allowed_extensions_label(),
+					'is_business'        => self::current_user_is_business(),
 				)
 			);
 			return ob_get_clean();
