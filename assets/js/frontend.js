@@ -523,4 +523,95 @@ document.addEventListener('click', function (e) {
       initServiceDropdown(dropdowns[i]);
     }
   });
+
+})();
+
+(function () {
+  'use strict';
+
+  function projectFormInit() {
+    var form = document.querySelector('[data-srf-project-form]');
+    if (!form) return;
+
+    var step1Panel = form.querySelector('[data-srf-step-panel="1"]');
+    var step2Panel = form.querySelector('[data-srf-step-panel="2"]');
+    var step1Dot   = form.querySelector('.srf-project-step[data-step="1"]');
+    var step2Dot   = form.querySelector('.srf-project-step[data-step="2"]');
+    var step3Dot   = form.querySelector('.srf-project-step[data-step="3"]');
+
+    var nextBtn = form.querySelector('[data-srf-next-step="1"]');
+    var prevBtn = form.querySelector('[data-srf-prev-step="2"]');
+
+    var titleInput = form.querySelector('#srf-project-title');
+
+    function isLoggedIn() {
+      return document.body.classList.contains('logged-in');
+    }
+
+    function activateStep(step) {
+      if (step1Panel) step1Panel.classList.remove('is-active');
+      if (step2Panel) step2Panel.classList.remove('is-active');
+      if (step1Dot) step1Dot.classList.remove('is-active', 'is-done');
+      if (step2Dot) step2Dot.classList.remove('is-active', 'is-done');
+      if (step3Dot) step3Dot.classList.remove('is-active', 'is-done');
+
+      if (step === 1) {
+        if (step1Panel) step1Panel.classList.add('is-active');
+        if (step1Dot) step1Dot.classList.add('is-active');
+      }
+
+      if (step === 2) {
+        if (step1Dot) step1Dot.classList.add('is-done');
+        if (step2Panel) step2Panel.classList.add('is-active');
+        if (step2Dot) step2Dot.classList.add('is-active');
+      }
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function () {
+        var title = titleInput ? titleInput.value.trim() : '';
+
+        if (!title) {
+          alert('Please enter the project title first.');
+          if (titleInput) titleInput.focus();
+          return;
+        }
+
+        if (!isLoggedIn()) {
+          alert('Please log in or register first to continue to the upload step.');
+          return;
+        }
+
+        activateStep(2);
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function () {
+        activateStep(1);
+      });
+    }
+  }
+
+  function projectSuccessInit() {
+    var successBox = document.querySelector('[data-srf-project-success]');
+    if (!successBox) return;
+
+    var dashboardUrl = successBox.getAttribute('data-dashboard-url') || '';
+    var step3 = document.querySelector('.srf-project-step[data-step="3"]');
+    if (step3) {
+      step3.classList.add('is-active');
+    }
+
+    setTimeout(function () {
+      if (dashboardUrl) {
+        window.location.href = dashboardUrl;
+      }
+    }, 2000);
+  }
+
+  SRF_onReady(function () {
+    projectFormInit();
+    projectSuccessInit();
+  });
 })();
