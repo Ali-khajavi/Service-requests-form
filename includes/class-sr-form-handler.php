@@ -514,7 +514,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		}
 
 		// ===============================
-		// Shortcode
+		// Shortcode Detailed Form Handler
 		// ===============================
 		public static function shortcode_service_request_form() {
 
@@ -811,6 +811,42 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						?>
 					</div>
 				</div>
+			</div>
+			<?php
+			return ob_get_clean();
+		}
+
+		// ===============================
+		// Shortcode Project Request Form (simplified form for project submissions, without service selection and variants)
+		// ===============================
+
+		public static function shortcode_project_request_form() {
+			ob_start();
+			?>
+			<div class="srf-project-wrapper">
+				<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data">
+					<div class="srf-form__field">
+						<label for="srf-project-title">Project title *</label>
+						<input type="text" id="srf-project-title" name="srf_project_title" required />
+					</div>
+
+					<div class="srf-form__field">
+						<label for="srf-project-description">Description</label>
+						<textarea id="srf-project-description" name="srf_project_description" rows="6"></textarea>
+					</div>
+
+					<?php if ( ! is_user_logged_in() ) : ?>
+						<div class="srf-project-login-box">
+							<h3>Login or register</h3>
+							<p>You need an account before going to the next step.</p>
+							<?php echo do_shortcode( '[woocommerce_my_account]' ); ?>
+						</div>
+					<?php else : ?>
+						<div class="srf-project-login-box">
+							<p>You are logged in and can continue.</p>
+						</div>
+					<?php endif; ?>
+				</form>
 			</div>
 			<?php
 			return ob_get_clean();
