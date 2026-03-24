@@ -509,7 +509,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 			$to = (string) get_option( 'srf_admin_email', '' );
 			if ( empty( $to ) || ! is_email( $to ) ) {
-				$to = get_option( 'admin_email' );
+				$to = (string) get_option( 'admin_email' );
 			}
 			if ( empty( $to ) || ! is_email( $to ) ) {
 				return;
@@ -524,7 +524,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$description      = (string) get_post_meta( $post_id, '_sr_description', true );
 			$status           = (string) get_post_meta( $post_id, '_sr_status', true );
 			$file_ids         = get_post_meta( $post_id, '_sr_file_ids', true );
-			$variants        = get_post_meta( $post_id, '_sr_variants', true );
+			$variants         = get_post_meta( $post_id, '_sr_variants', true );
+			$request_type     = (string) get_post_meta( $post_id, '_sr_request_type', true );
 
 			if ( empty( $status ) ) {
 				$status = 'new';
@@ -542,9 +543,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$lines[] = __( 'A new Service Request has been submitted.', 'service-requests-form' );
 			$lines[] = '';
 			$lines[] = sprintf( __( 'Request ID: %d', 'service-requests-form' ), $post_id );
+			$lines[] = sprintf( __( 'Request Type: %s', 'service-requests-form' ), $request_type ? $request_type : 'service' );
 			$lines[] = sprintf( __( 'Status: %s', 'service-requests-form' ), $status );
-			$lines[] = sprintf( __( 'Service: %s', 'service-requests-form' ), $service_title );
+			$lines[] = sprintf( __( 'Service: %s', 'service-requests-form' ), $service_title ? $service_title : __( 'Project Request', 'service-requests-form' ) );
 			$lines[] = '';
+
 			$lines[] = __( 'Variants:', 'service-requests-form' );
 			if ( is_array( $variants ) && ! empty( $variants ) ) {
 				foreach ( $variants as $vk => $vv ) {
@@ -555,10 +558,10 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			}
 
 			$lines[] = '';
-			$lines[] = sprintf( __( 'Name: %s', 'service-requests-form' ), $name );
-			$lines[] = sprintf( __( 'Company: %s', 'service-requests-form' ), $company );
-			$lines[] = sprintf( __( 'Email: %s', 'service-requests-form' ), $email );
-			$lines[] = sprintf( __( 'Phone: %s', 'service-requests-form' ), $phone );
+			$lines[] = sprintf( __( 'Name: %s', 'service-requests-form' ), $name ? $name : '-' );
+			$lines[] = sprintf( __( 'Company: %s', 'service-requests-form' ), $company ? $company : '-' );
+			$lines[] = sprintf( __( 'Email: %s', 'service-requests-form' ), $email ? $email : '-' );
+			$lines[] = sprintf( __( 'Phone: %s', 'service-requests-form' ), $phone ? $phone : '-' );
 			$lines[] = '';
 			$lines[] = __( 'Shipping Address:', 'service-requests-form' );
 			$lines[] = $shipping_address ? $shipping_address : '-';
@@ -577,6 +580,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					if ( ! $aid ) {
 						continue;
 					}
+
 					$url   = wp_get_attachment_url( $aid );
 					$name2 = get_the_title( $aid );
 					if ( $url ) {
@@ -589,14 +593,27 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 			$message = implode( "\n", $lines );
 
+			$site_name  = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+			$from_email = (string) get_option( 'admin_email' );
+
 			$headers   = array();
 			$headers[] = 'Content-Type: text/plain; charset=UTF-8';
 
-			if ( $email && is_email( $email ) ) {
-				$headers[] = 'Reply-To: ' . $email;
+			if ( $from_email && is_email( $from_email ) ) {
+				$headers[] = 'From: ' . $site_name . ' <' . $from_email . '>';
 			}
 
-			wp_mail( $to, $subject, $message, $headers );
+			if ( $email && is_email( $email ) ) {
+				$reply_name = $name ? $name : __( 'Customer', 'service-requests-form' );
+				$headers[]  = 'Reply-To: ' . $reply_name . ' <' . $email . '>';
+			}
+
+			$sent = wp_mail( $to, $subject, $message, $headers );
+
+			update_post_meta( $post_id, '_sr_admin_email_to', $to );
+			update_post_meta( $post_id, '_sr_admin_email_subject', $subject );
+			update_post_meta( $post_id, '_sr_admin_email_sent', $sent ? '1' : '0' );
+			update_post_meta( $post_id, '_sr_admin_email_sent_at', current_time( 'mysql' ) );
 		}
 
 		// ===============================

@@ -807,59 +807,91 @@
 }
 
 /* ==========================================
-   Project form polish v8.3
+   Project form polish v8.3.1
 ========================================== */
 
-.srf-form__actions {
+.srf-form__actions,
+.srf-form__actions--project {
     margin-top: 28px;
 }
 
+.srf-project-panel--step1 .srf-form__actions,
+.srf-project-panel--step2 .srf-form__actions--project {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
 .srf-form__actions .srf-button,
-.srf-form__actions--project .srf-button {
-    appearance: none;
-    border: 0;
-    border-radius: 10px;
-    min-height: 48px;
-    padding: 0 22px;
-    font-weight: 700;
-    font-size: 15px;
-    line-height: 48px;
+.srf-form__actions--project .srf-button,
+.srf-project-btn,
+.srf-project-btn--back,
+.srf-project-btn--submit {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    min-width: 124px;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 22px !important;
+    margin: 0 !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
+    white-space: nowrap;
     cursor: pointer;
-    box-shadow: none;
+    box-shadow: none !important;
     transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
 }
 
 .srf-form__actions .srf-button:hover,
-.srf-form__actions--project .srf-button:hover {
+.srf-form__actions--project .srf-button:hover,
+.srf-project-btn:hover,
+.srf-project-btn--back:hover,
+.srf-project-btn--submit:hover {
     transform: translateY(-1px);
     opacity: 0.96;
 }
 
 .srf-form__actions .srf-button:active,
-.srf-form__actions--project .srf-button:active {
+.srf-form__actions--project .srf-button:active,
+.srf-project-btn:active,
+.srf-project-btn--back:active,
+.srf-project-btn--submit:active {
     transform: translateY(0);
 }
 
-.srf-form__actions .srf-button {
-    background: #2f6db7;
-    color: #fff;
-}
-
+.srf-form__actions .srf-button,
 .srf-project-btn--submit,
 .srf-form__actions--project .srf-button:not(.srf-button--secondary) {
-    background: #2f6db7;
-    color: #fff;
+    background: #2f6db7 !important;
+    color: #fff !important;
+}
+
+.srf-form__actions .srf-button:hover,
+.srf-project-btn--submit:hover,
+.srf-form__actions--project .srf-button:not(.srf-button--secondary):hover {
+    background: #255e9f !important;
+    color: #fff !important;
 }
 
 .srf-project-btn--back,
 .srf-button--secondary {
-    background: #6f7782;
-    color: #fff;
+    background: #6f7782 !important;
+    color: #fff !important;
 }
 
 .srf-project-btn--back:hover,
 .srf-button--secondary:hover {
-    background: #626a74;
+    background: #626a74 !important;
+    color: #fff !important;
 }
 
 .srf-project-check-field {
@@ -911,21 +943,6 @@
     margin-bottom: 8px;
 }
 
-.srf-project-panel--step2 .srf-form__actions--project {
-    margin-top: 26px;
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-
-.srf-project-panel--step1 .srf-form__actions {
-    margin-top: 30px;
-}
-
-.srf-project-panel--step1 .srf-form__actions .srf-button {
-    min-width: 110px;
-}
-
 .srf-project-step {
     min-height: 40px;
     display: inline-flex;
@@ -939,14 +956,14 @@
         max-width: 100%;
     }
 
+    .srf-project-panel--step1 .srf-form__actions,
     .srf-project-panel--step2 .srf-form__actions--project {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .srf-project-panel--step2 .srf-form__actions--project .srf-button,
-    .srf-project-panel--step1 .srf-form__actions .srf-button {
+    .srf-project-panel--step1 .srf-form__actions .srf-button,
+    .srf-project-panel--step2 .srf-form__actions--project .srf-button {
         width: 100%;
-        text-align: center;
     }
 }
