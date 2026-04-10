@@ -34,21 +34,21 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				return;
 			}
 
-			$css_ver = file_exists( SRF_PLUGIN_DIR . $css_rel ) ? filemtime( SRF_PLUGIN_DIR . $css_rel ) : SRF_VERSION;
-			$js_ver  = file_exists( SRF_PLUGIN_DIR . $js_rel ) ? filemtime( SRF_PLUGIN_DIR . $js_rel ) : SRF_VERSION;
+			$css_rel = 'assets/css/frontend.css';
+			$js_rel  = 'assets/js/frontend.js';
 
 			wp_enqueue_style(
 				'srf-frontend-css',
 				SRF_PLUGIN_URL . $css_rel,
 				array(),
-				$css_ver
+				SRF_VERSION
 			);
 
 			wp_enqueue_script(
 				'srf-frontend-js',
 				SRF_PLUGIN_URL . $js_rel,
 				array(),
-				$js_ver,
+				SRF_VERSION,
 				true
 			);
 
