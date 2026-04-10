@@ -23,6 +23,9 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		 * ]
 		 */
 		const META_VARIATIONS = '_sr_service_variations';
+		const META_VIDEO_URL  = '_sr_service_video_url';
+		const META_VIDEO_TITLE = '_sr_service_video_title';
+		const META_VIDEO_DESCRIPTION = '_sr_service_video_description';
 
 		/**
 		 * Hook everything.
@@ -96,6 +99,15 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				'sr_service_variations',
 				__( 'Service Variations', 'service-requests-form' ),
 				array( __CLASS__, 'render_variations_metabox' ),
+				'sr_service',
+				'normal',
+				'default'
+			);
+
+			add_meta_box(
+				'sr_service_video',
+				__( 'Service Video', 'service-requests-form' ),
+				array( __CLASS__, 'render_video_metabox' ),
 				'sr_service',
 				'normal',
 				'default'
@@ -267,6 +279,57 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		}
 
 		/**
+		 * Render service video meta box.
+		 *
+		 * @param WP_Post $post
+		 */
+		public static function render_video_metabox( $post ) {
+			wp_nonce_field( 'sr_service_video_nonce_action', 'sr_service_video_nonce' );
+
+			$video_url   = (string) get_post_meta( $post->ID, self::META_VIDEO_URL, true );
+			$video_title = (string) get_post_meta( $post->ID, self::META_VIDEO_TITLE, true );
+			$video_desc  = (string) get_post_meta( $post->ID, self::META_VIDEO_DESCRIPTION, true );
+			?>
+			<p class="description">
+				<?php esc_html_e( 'Add an optional service video that appears at the top of the service information area on the frontend.', 'service-requests-form' ); ?>
+			</p>
+
+			<p>
+				<label for="sr_service_video_url"><strong><?php esc_html_e( 'Video URL', 'service-requests-form' ); ?></strong></label><br />
+				<input
+					type="url"
+					id="sr_service_video_url"
+					name="sr_service_video_url"
+					value="<?php echo esc_attr( $video_url ); ?>"
+					placeholder="<?php echo esc_attr__( 'https://...', 'service-requests-form' ); ?>"
+					style="width:100%;max-width:680px;"
+				/>
+			</p>
+
+			<p>
+				<label for="sr_service_video_title"><strong><?php esc_html_e( 'Video title', 'service-requests-form' ); ?></strong></label><br />
+				<input
+					type="text"
+					id="sr_service_video_title"
+					name="sr_service_video_title"
+					value="<?php echo esc_attr( $video_title ); ?>"
+					style="width:100%;max-width:680px;"
+				/>
+			</p>
+
+			<p>
+				<label for="sr_service_video_description"><strong><?php esc_html_e( 'Video description', 'service-requests-form' ); ?></strong></label><br />
+				<textarea
+					id="sr_service_video_description"
+					name="sr_service_video_description"
+					rows="4"
+					style="width:100%;max-width:680px;"
+				><?php echo esc_textarea( $video_desc ); ?></textarea>
+			</p>
+			<?php
+		}
+
+		/**
 		 * Save service meta (gallery IDs + variations).
 		 *
 		 * @param int     $post_id
@@ -361,6 +424,39 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 					delete_post_meta( $post_id, self::META_VARIATIONS );
 				} else {
 					update_post_meta( $post_id, self::META_VARIATIONS, $clean );
+				}
+			}
+
+			/**
+			 * 3) Save service video fields
+			 */
+			if (
+				isset( $_POST['sr_service_video_nonce'] ) &&
+				wp_verify_nonce(
+					sanitize_text_field( wp_unslash( $_POST['sr_service_video_nonce'] ) ),
+					'sr_service_video_nonce_action'
+				)
+			) {
+				$video_url   = isset( $_POST['sr_service_video_url'] ) ? esc_url_raw( wp_unslash( $_POST['sr_service_video_url'] ) ) : '';
+				$video_title = isset( $_POST['sr_service_video_title'] ) ? sanitize_text_field( wp_unslash( $_POST['sr_service_video_title'] ) ) : '';
+				$video_desc  = isset( $_POST['sr_service_video_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['sr_service_video_description'] ) ) : '';
+
+				if ( $video_url !== '' ) {
+					update_post_meta( $post_id, self::META_VIDEO_URL, $video_url );
+				} else {
+					delete_post_meta( $post_id, self::META_VIDEO_URL );
+				}
+
+				if ( $video_title !== '' ) {
+					update_post_meta( $post_id, self::META_VIDEO_TITLE, $video_title );
+				} else {
+					delete_post_meta( $post_id, self::META_VIDEO_TITLE );
+				}
+
+				if ( $video_desc !== '' ) {
+					update_post_meta( $post_id, self::META_VIDEO_DESCRIPTION, $video_desc );
+				} else {
+					delete_post_meta( $post_id, self::META_VIDEO_DESCRIPTION );
 				}
 			}
 		}
@@ -492,6 +588,21 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		public static function get_variations( $service_id ) {
 			$vars = get_post_meta( $service_id, self::META_VARIATIONS, true );
 			return is_array( $vars ) ? $vars : array();
+		}
+
+		/**
+		 * Helper: get service video data.
+		 *
+		 * @param int $service_id
+		 *
+		 * @return array
+		 */
+		public static function get_video_data( $service_id ) {
+			return array(
+				'url'         => (string) get_post_meta( $service_id, self::META_VIDEO_URL, true ),
+				'title'       => (string) get_post_meta( $service_id, self::META_VIDEO_TITLE, true ),
+				'description' => (string) get_post_meta( $service_id, self::META_VIDEO_DESCRIPTION, true ),
+			);
 		}
 	}
 }

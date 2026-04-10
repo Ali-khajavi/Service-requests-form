@@ -79,6 +79,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'content'  => isset( $service['content'] ) ? (string) $service['content'] : '',
 					'images'   => isset( $service['images'] ) ? (array) $service['images'] : array(),
 					'variants' => isset( $service['variants'] ) ? (array) $service['variants'] : ( isset( $service['variations'] ) ? (array) $service['variations'] : array() ),
+					'video'    => isset( $service['video'] ) && is_array( $service['video'] ) ? array(
+						'url'         => isset( $service['video']['url'] ) ? (string) $service['video']['url'] : '',
+						'title'       => isset( $service['video']['title'] ) ? (string) $service['video']['title'] : '',
+						'description' => isset( $service['video']['description'] ) ? (string) $service['video']['description'] : '',
+						'embed'       => isset( $service['video']['embed'] ) ? (string) $service['video']['embed'] : '',
+					) : array(),
 				);
 			}
 

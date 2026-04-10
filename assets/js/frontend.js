@@ -192,6 +192,7 @@ function SRF_onReady(fn) {
     var title   = service.title || '';
     var content = service.content || '';
     var images  = Array.isArray(service.images) ? service.images : [];
+    var video   = service.video && typeof service.video === 'object' ? service.video : {};
 
     // Variant groups (optional)
     var variantsRaw  = service.variants || service.variations || [];
@@ -258,13 +259,24 @@ function SRF_onReady(fn) {
         '</div>';
     }
 
+    var videoHtml = '';
+    if (video.embed) {
+      videoHtml =
+        '<div class="srf-service-video">' +
+          '<div class="srf-service-video__frame">' + String(video.embed) + '</div>' +
+          (video.title ? '<h3 class="srf-service-video__title">' + escapeHtml(String(video.title)) + '</h3>' : '') +
+          (video.description ? '<p class="srf-service-video__desc">' + escapeHtml(String(video.description)) + '</p>' : '') +
+        '</div>';
+    }
+
     return (
       '<div class="srf-service-info" data-service-id="' + escapeAttr(service.id) + '">' +
+        videoHtml +
+        sliderHtml +
         '<h2 class="srf-service-info__title">' + escapeHtml(title) + '</h2>' +
         '<div class="srf-service-info__text is-collapsed" data-srf-collapsible="text">' + content + '</div>' +
         '<button type="button" class="srf-service-info__toggle" data-srf-toggle="text">Show more</button>' +
         variantsHtml +
-        sliderHtml +
       '</div>'
     );
   }

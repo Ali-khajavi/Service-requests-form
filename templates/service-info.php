@@ -28,6 +28,7 @@ if ( ! $data ) : ?>
 $title   = isset( $data['title'] ) ? (string) $data['title'] : '';
 $content = isset( $data['content'] ) ? (string) $data['content'] : '';
 $images  = ( isset( $data['images'] ) && is_array( $data['images'] ) ) ? $data['images'] : array();
+$video   = ( isset( $data['video'] ) && is_array( $data['video'] ) ) ? $data['video'] : array();
 
 // Variant groups: prefer 'variants' (new) but accept 'variations' (legacy) as fallback.
 $raw_variants = array();
@@ -90,9 +91,44 @@ foreach ( $images as $img ) {
 	}
 }
 $slider_json = ! empty( $slider_items ) ? wp_json_encode( $slider_items ) : '[]';
+
+$video_title = isset( $video['title'] ) ? (string) $video['title'] : '';
+$video_desc  = isset( $video['description'] ) ? (string) $video['description'] : '';
+$video_embed = isset( $video['embed'] ) ? (string) $video['embed'] : '';
 ?>
 
 <div class="srf-service-info">
+	<?php if ( $video_embed !== '' ) : ?>
+		<div class="srf-service-video">
+			<div class="srf-service-video__frame">
+				<?php echo wp_kses_post( $video_embed ); ?>
+			</div>
+			<?php if ( $video_title !== '' ) : ?>
+				<h3 class="srf-service-video__title"><?php echo esc_html( $video_title ); ?></h3>
+			<?php endif; ?>
+			<?php if ( $video_desc !== '' ) : ?>
+				<p class="srf-service-video__desc"><?php echo esc_html( $video_desc ); ?></p>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( ! empty( $slider_items ) ) : ?>
+		<div class="srf-service-slider"
+		     data-srf-slider="switcher"
+		     data-images="<?php echo esc_attr( $slider_json ); ?>">
+			<div class="srf-service-slider__viewport">
+				<img class="srf-service-slider__image"
+				     src="<?php echo esc_url( $slider_items[0]['url'] ); ?>"
+				     alt="<?php echo esc_attr( $slider_items[0]['alt'] ); ?>"
+				     loading="lazy" />
+			</div>
+			<div class="srf-service-slider__nav">
+				<button type="button" class="srf-service-slider__prev">&#10094;</button>
+				<button type="button" class="srf-service-slider__next">&#10095;</button>
+			</div>
+		</div>
+	<?php endif; ?>
+
 	<?php if ( $title !== '' ) : ?>
 		<h2 class="srf-service-info__title"><?php echo esc_html( $title ); ?></h2>
 	<?php else : ?>
@@ -117,23 +153,6 @@ $slider_json = ! empty( $slider_items ) ? wp_json_encode( $slider_items ) : '[]'
 					</li>
 				<?php endforeach; ?>
 			</ul>
-		</div>
-	<?php endif; ?>
-
-	<?php if ( ! empty( $slider_items ) ) : ?>
-		<div class="srf-service-slider"
-		     data-srf-slider="switcher"
-		     data-images="<?php echo esc_attr( $slider_json ); ?>">
-			<div class="srf-service-slider__viewport">
-				<img class="srf-service-slider__image"
-				     src="<?php echo esc_url( $slider_items[0]['url'] ); ?>"
-				     alt="<?php echo esc_attr( $slider_items[0]['alt'] ); ?>"
-				     loading="lazy" />
-			</div>
-			<div class="srf-service-slider__nav">
-				<button type="button" class="srf-service-slider__prev">&#10094;</button>
-				<button type="button" class="srf-service-slider__next">&#10095;</button>
-			</div>
 		</div>
 	<?php endif; ?>
 </div>

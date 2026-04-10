@@ -140,6 +140,32 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
 				}
 			}
 
+			$video_url         = '';
+			$video_title       = '';
+			$video_description = '';
+			$video_embed       = '';
+
+			if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_video_data' ) ) {
+				$video = SR_Services_CPT::get_video_data( $service_id );
+				if ( is_array( $video ) ) {
+					$video_url         = isset( $video['url'] ) ? (string) $video['url'] : '';
+					$video_title       = isset( $video['title'] ) ? (string) $video['title'] : '';
+					$video_description = isset( $video['description'] ) ? (string) $video['description'] : '';
+				}
+			}
+
+			if ( $video_url !== '' ) {
+				$oembed = wp_oembed_get( $video_url );
+				if ( is_string( $oembed ) && $oembed !== '' ) {
+					$video_embed = $oembed;
+				} else {
+					$video_path = wp_parse_url( $video_url, PHP_URL_PATH );
+					$ext = is_string( $video_path ) ? strtolower( pathinfo( $video_path, PATHINFO_EXTENSION ) ) : '';
+					if ( in_array( $ext, array( 'mp4', 'webm', 'ogg' ), true ) ) {
+						$video_embed = '<video controls preload="metadata" src="' . esc_url( $video_url ) . '"></video>';
+					}
+				}
+			}
 
             return array(
                 'id'      => $service_id,
@@ -148,6 +174,12 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
                 'content' => $content,
                 'images'  => $images,
                 'variants'=> $variant_groups,
+				'video'   => array(
+					'url'         => $video_url,
+					'title'       => $video_title,
+					'description' => $video_description,
+					'embed'       => $video_embed,
+				),
             );
         }
 

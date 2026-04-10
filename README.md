@@ -1,131 +1,78 @@
 # Service Requests Form
 
-A powerful WordPress plugin for collecting, managing, and fulfilling professional service requests — built for businesses that work with files, specifications, and custom services.
+WordPress plugin for collecting and managing service requests with a frontend form, per-service dynamic content, and an admin dashboard workflow.
 
----
+## What This Plugin Does
 
-## 🚀 Why Service Requests Form?
+- Adds a service request UI shortcode for customers.
+- Adds a project request UI shortcode for project-style submissions.
+- Lets admins manage requests, statuses, uploads, and service content from WP Admin.
+- Integrates with WooCommerce account/shipping data.
 
-Most contact forms are not designed for **real service workflows**.
+## Shortcodes
 
-**Service Requests Form** is built for businesses that need:
-- Structured service selection
-- File uploads
-- Customer-specific requests
-- Admin management
-- WooCommerce customer integration
+- `[service_request_form]`  
+  Main service form with dynamic service info panel.
 
-Perfect for manufacturing, sellers, engineering, labs, and professional service providers.
+- `[project_request_form]`  
+  Project submission flow without service selection.
 
----
+## Frontend Highlights (`[service_request_form]`)
 
-## ✨ Key Features
+- Two-column layout on desktop:
+  - Form area: 30%
+  - Service information area: 70%
+- Service information updates instantly when the selected service changes.
+- Media-first information panel order:
+  1. Service video (if configured)
+  2. Service image gallery/slider
+  3. Service title, description, and variants
+- Responsive fallback to single-column layout on smaller screens.
 
-### 🧾 Front-End Service Request Form
-- Simple shortcode placement
-- Professional, clean UI
-- Mobile-friendly layout
+## Service Content Managed in WP Dashboard
 
-### 🔁 Dynamic Service Information
-- Service description updates instantly when selected
-- Image slider per service
-- Optional service variants and details
-- No page reloads
+Each `Service` (`sr_service` post type) can now configure:
 
-### 📁 Secure File Uploads
-- Upload PDFs, images, ZIP files, CAD / 3D files
-- File size limits
-- Per-user storage quota
-- Secure storage (no public access)
+- Main content (title + editor content)
+- Gallery/slider images
+- Variant groups (key + values)
+- Video URL
+- Video title
+- Video description
 
-### 👤 Business-Only Submissions
-- Restrict submissions to approved user roles
-- Friendly popup for non-authorized users
-- Prevents invalid or unwanted requests
+Video behavior:
 
-### 🛒 WooCommerce Integration
-- Auto-fills customer shipping address
-- Dedicated **My Account** area:
-  - View submitted requests
-  - Access uploaded files securely
-  - Track request status
+- If URL is an oEmbed source (for example YouTube/Vimeo), the embed is rendered automatically.
+- If URL is a direct media file (`.mp4`, `.webm`, `.ogg`), an HTML5 video player is rendered.
+- Video switches automatically when the user selects another service.
 
-### 🧑‍💼 Admin Management Dashboard
-- Central dashboard for all service requests
-- View request details and files
-- Change request status (e.g. New → Done)
-- Storage overview and cleanup tools
+## Request Workflow
 
-### 📧 Email Notifications
-- Automatic email on new request submission
-- Includes all request details and file links
+1. User chooses a service.
+2. Related service information and media update instantly.
+3. User submits request details and optional files.
+4. Admin receives a notification email.
+5. Admin manages the request in the dashboard.
+6. User can review requests in My Account.
 
-### 🔐 Security & Reliability
-- WordPress-standard security practices
-- Server-side validation
-- Protected file access
-- No exposed URLs
+## Security and Validation
 
----
+- Nonce checks and server-side validation.
+- File type and size validation.
+- Per-user storage tracking/quota handling.
+- Business-role submission gating for service requests.
 
-## 🧩 How It Works (Simple Overview)
-
-1. Customer selects a service
-2. Relevant service details and images appear instantly
-3. Customer submits request with optional files
-4. Admin receives notification
-5. Request is managed from the dashboard
-6. Customer can view the request in their account
-
----
-
-## ⚙️ Setup
-
-1. Install and activate the plugin
-2. Create your services in the admin area
-3. Place the shortcode on any page:
-[service_request_form]
-
-4. Start receiving professional service requests
-
----
-
-## 📱 Responsive & Theme-Friendly
-
-- Works with any modern WordPress theme
-- Responsive layout for desktop, tablet, and mobile
-- Clean default styling, easy to customize
-
----
-
-## 🧪 Tested & Compatible With
+## Compatibility
 
 - WordPress 6.x+
-- WooCommerce (optional but recommended)
+- WooCommerce (recommended)
 - PHP 8.0+
-- Modern browsers
 
----
+## License
 
-## 🏭 Ideal For
+Commercial License. All rights reserved.
 
-- Manufacturing companies
-- 3D printing services
-- Dental & medical labs
-- Engineering firms
-- Custom production businesses
-- Any service that requires files and specifications
+## Author
 
----
-
-## 📄 License
-
-Commercial License  
-© All rights reserved
-
----
-
-## 👨‍💻 Author
-
-**Ali Khajavi**  
+Ali Khajavi  
 https://semlingerpro.de
