@@ -908,22 +908,21 @@
 .srf-project-btn,
 .srf-project-btn--back,
 .srf-project-btn--submit {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: inline-grid !important;
+    place-items: center !important;
     vertical-align: middle;
     appearance: none !important;
     -webkit-appearance: none !important;
     border: 0 !important;
     border-radius: 10px !important;
     min-width: 124px;
-    height: 48px !important;
     min-height: 48px !important;
-    padding: 0 22px !important;
+    padding: 12px 22px !important;
     margin: 0 !important;
     font-weight: 700 !important;
     font-size: 15px !important;
-    line-height: 1 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
     text-decoration: none !important;
     white-space: nowrap;
     cursor: pointer;
