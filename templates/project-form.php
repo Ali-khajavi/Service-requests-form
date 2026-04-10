@@ -106,13 +106,14 @@ $google_error_map = array(
 				</div>
 
 				<div class="srf-project-auth">
+					<!-- Step 1 auth panel: local login + optional Google login/register -->
 					<?php if ( is_user_logged_in() ) : ?>
-						<div class="srf-project-auth__box srf-project-auth__box--loggedin">
+						<div class="srf-project-auth__box srf-project-auth__box--loggedin" data-srf-auth-state="logged-in">
 							<h3><?php esc_html_e( 'Account verified', 'service-requests-form' ); ?></h3>
 							<p><?php esc_html_e( 'You are logged in and can continue to the next step.', 'service-requests-form' ); ?></p>
 						</div>
 					<?php else : ?>
-						<div class="srf-project-auth__box">
+						<div class="srf-project-auth__box" data-srf-auth-state="guest">
 							<h3><?php esc_html_e( 'Sign in to continue', 'service-requests-form' ); ?></h3>
 							<p><?php esc_html_e( 'Use a simple login or continue directly with Google.', 'service-requests-form' ); ?></p>
 
