@@ -54,12 +54,15 @@ $allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
 
 	<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
 		<div class="srf-project-steps">
-			<div class="srf-project-step is-active" data-step="1">1. Details</div>
-			<div class="srf-project-step" data-step="2">2. Terms & Upload</div>
+			<div class="srf-project-step is-active" data-step="1">1. Project Title</div>
+			<div class="srf-project-step" data-step="2">2. Terms & Upload 3D Model</div>
 			<div class="srf-project-step" data-step="3">3. Confirmed</div>
 		</div>
 
 		<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
+			<h2 class="srf-project-panel__title"><?php esc_html_e( 'Project Title', 'service-requests-form' ); ?></h2>
+			<p class="srf-project-panel__intro"><?php esc_html_e( 'Enter the project name and optional details so our team can understand your request quickly.', 'service-requests-form' ); ?></p>
+
 			<div class="srf-project-grid">
 				<div class="srf-project-main">
 					<div class="srf-form__field">
@@ -105,7 +108,7 @@ $allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
 				</div>
 			</div>
 
-			<div class="srf-form__actions">
+			<div class="srf-form__actions srf-form__actions--project-step1">
 				<button type="button" class="srf-button" data-srf-next-step="1">
 					<?php esc_html_e( 'Next', 'service-requests-form' ); ?>
 				</button>
@@ -113,17 +116,19 @@ $allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
 		</div>
 
 		<div class="srf-project-panel srf-project-panel--step2" data-srf-step-panel="2">
+			<h2 class="srf-project-panel__title"><?php esc_html_e( 'Terms & Upload 3D Model', 'service-requests-form' ); ?></h2>
+			<p class="srf-project-panel__intro"><?php esc_html_e( 'Accept the terms and upload your 3D files before submitting the request.', 'service-requests-form' ); ?></p>
 
-			<div class="srf-form__field srf-form__field--checkbox srf-project-check-field">
+			<div class="srf-form__field srf-form__field--checkbox srf-project-check-field srf-project-card">
 				<label class="srf-project-checkbox-label" for="srf-terms">
 					<input type="checkbox" id="srf-terms" name="srf_terms" value="1" <?php checked( $old( 'terms' ), '1' ); ?> required />
 					<span><?php esc_html_e( 'I accept the Terms & Conditions.', 'service-requests-form' ); ?> <span class="srf-required">*</span></span>
 				</label>
 			</div>
 
-			<div class="srf-form__field srf-project-upload-field">
+			<div class="srf-form__field srf-project-upload-field srf-project-card">
 				<label for="srf-files">
-					<?php esc_html_e( 'Upload file(s)', 'service-requests-form' ); ?> <span class="srf-required">*</span>
+					<?php esc_html_e( 'Upload 3D model file(s)', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 				</label>
 
 				<div class="srf-project-file-input-wrap">

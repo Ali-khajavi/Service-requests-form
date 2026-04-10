@@ -690,43 +690,67 @@
     margin: 2rem 0;
 }
 
+.srf-project-form {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
 .srf-project-steps {
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
     flex-wrap: wrap;
 }
 
 .srf-project-step {
-    padding: 0.65rem 1rem;
+    padding: 0.72rem 1rem;
     border-radius: 999px;
-    background: #eef2f6;
-    color: #5b6570;
-    font-weight: 600;
+    background: #f1f4f8;
+    color: #475467;
+    font-weight: 700;
     font-size: 14px;
+    border: 1px solid #d8dee8;
 }
 
 .srf-project-step.is-active {
-    background: #2271b1;
+    background: #1d4e89;
     color: #fff;
+    border-color: #1d4e89;
 }
 
 .srf-project-step.is-done {
-    background: #dff3e7;
-    color: #0f5132;
+    background: #e9f7ef;
+    color: #1d6f42;
+    border-color: #b9e4ca;
 }
 
 .srf-project-panel {
     display: none;
+    background: #ffffff;
+    border: 1px solid #dde3ec;
+    border-radius: 14px;
+    padding: 1.35rem;
 }
 
 .srf-project-panel.is-active {
     display: block;
 }
 
+.srf-project-panel__title {
+    margin: 0 0 0.3rem;
+    font-size: 1.3rem;
+    line-height: 1.2;
+}
+
+.srf-project-panel__intro {
+    margin: 0 0 1.1rem;
+    color: #5f6c7b;
+    font-size: 0.95rem;
+}
+
 .srf-project-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
     gap: 1.5rem;
     align-items: start;
 }
@@ -738,10 +762,10 @@
 }
 
 .srf-project-auth__box {
-    border: 1px solid #e1e1e1;
-    border-radius: 8px;
-    background: #f8f9fa;
-    padding: 1rem;
+    border: 1px solid #dbe2ea;
+    border-radius: 12px;
+    background: #f7f9fc;
+    padding: 1.15rem;
 }
 
 .srf-project-auth__box h3 {
@@ -750,8 +774,15 @@
 }
 
 .srf-project-auth__box--loggedin {
-    background: #f3fbf5;
-    border-color: #cfe8d6;
+    background: #edf8f0;
+    border-color: #c6e5d0;
+}
+
+.srf-project-card {
+    border: 1px solid #dbe2ea;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 1rem;
 }
 
 .srf-project-final-note {
@@ -865,6 +896,11 @@
     gap: 14px;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
+}
+
+.srf-form__actions--project-step1 {
+    justify-content: flex-end !important;
 }
 
 .srf-form__actions .srf-button,
@@ -961,12 +997,38 @@
 .srf-project-upload-field input[type="file"] {
     display: block;
     width: 100%;
-    max-width: 520px;
-    padding: 12px 14px;
-    border: 1px solid #ccd3db;
+    max-width: 100%;
+    padding: 12px;
+    border: 1px dashed #b8c2d0;
     border-radius: 10px;
     background: #fff;
     font-size: 14px;
+    color: #2e3a48;
+    min-height: 54px;
+}
+
+.srf-project-upload-field input[type="file"]::file-selector-button {
+    appearance: none;
+    border: 0;
+    border-radius: 8px;
+    background: #2f6db7;
+    color: #fff;
+    padding: 10px 14px;
+    margin-right: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.srf-project-upload-field input[type="file"]::-webkit-file-upload-button {
+    appearance: none;
+    border: 0;
+    border-radius: 8px;
+    background: #2f6db7;
+    color: #fff;
+    padding: 10px 14px;
+    margin-right: 14px;
+    font-weight: 700;
+    cursor: pointer;
 }
 
 .srf-project-file-input-wrap {
@@ -996,6 +1058,10 @@
 }
 
 @media (max-width: 900px) {
+    .srf-project-panel {
+        padding: 1rem;
+    }
+
     .srf-project-upload-field input[type="file"] {
         max-width: 100%;
     }
