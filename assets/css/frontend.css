@@ -1226,3 +1226,80 @@
     content: none !important;
     display: none !important;
 }
+
+
+
+/* step 1 hard reset */
+.srf-project-panel--step1 .srf-project-grid{
+    align-items:start !important;
+}
+
+.srf-project-panel--step1 .srf-project-main,
+.srf-project-panel--step1 .srf-project-auth{
+    align-self:start !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+.srf-project-panel--step1 .srf-project-main .srf-project-panel__title{
+    margin:0 0 6px !important;
+}
+
+.srf-project-panel--step1 .srf-project-main .srf-project-panel__intro{
+    margin:0 0 18px !important;
+}
+
+.srf-project-panel--step1 .srf-project-main .srf-form__field{
+    margin:0 0 28px !important;
+}
+
+.srf-project-panel--step1 .srf-project-main .srf-form__field > label{
+    display:block !important;
+    margin:0 0 8px !important;
+    padding:0 !important;
+    line-height:1.35 !important;
+}
+
+.srf-project-panel--step1 .srf-project-main .srf-form__field > input[type="text"],
+.srf-project-panel--step1 .srf-project-main .srf-form__field > textarea{
+    margin:0 !important;
+}
+
+.srf-project-panel--step1 .srf-project-auth__box,
+.srf-project-panel--step1 .srf-project-auth__box--loggedin{
+    margin:0 !important;
+    padding:18px !important;
+}
+
+.srf-project-panel--step1 .srf-project-auth__box > h3,
+.srf-project-panel--step1 .srf-project-auth__box--loggedin > h3{
+    margin:0 0 10px !important;
+    line-height:1.2 !important;
+}
+
+.srf-project-panel--step1 .srf-project-auth__box > p,
+.srf-project-panel--step1 .srf-project-auth__box--loggedin > p{
+    margin:0 0 14px !important;
+}
+
+.srf-project-panel--step1 .srf-form__actions--project-step1{
+    display:flex !important;
+    justify-content:flex-end !important;
+    align-items:center !important;
+}
+
+.srf-project-panel--step1 .srf-form__actions--project-step1 .srf-button{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    height:48px !important;
+    min-height:48px !important;
+    padding:0 22px !important;
+    line-height:48px !important;
+}
+
+.srf-project-panel--step1 .srf-form__actions--project-step1 .srf-button__label{
+    display:block !important;
+    line-height:1 !important;
+    transform:translateY(-1px);
+}
