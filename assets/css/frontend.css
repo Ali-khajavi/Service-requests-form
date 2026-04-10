@@ -1034,8 +1034,9 @@
 .srf-project-btn,
 .srf-project-btn--back,
 .srf-project-btn--submit {
-    display: inline-grid !important;
-    place-items: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     vertical-align: middle;
     appearance: none !important;
     -webkit-appearance: none !important;
@@ -1201,4 +1202,27 @@
     .srf-project-panel--step2 .srf-form__actions--project .srf-button {
         width: 100%;
     }
+}
+
+
+/* Force perfect vertical centering for project form buttons */
+.srf-project-panel--step1 .srf-form__actions .srf-button,
+.srf-project-panel--step2 .srf-form__actions--project .srf-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 22px !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+}
+
+.srf-project-panel--step1 .srf-form__actions .srf-button::before,
+.srf-project-panel--step1 .srf-form__actions .srf-button::after,
+.srf-project-panel--step2 .srf-form__actions--project .srf-button::before,
+.srf-project-panel--step2 .srf-form__actions--project .srf-button::after {
+    content: none !important;
+    display: none !important;
 }
