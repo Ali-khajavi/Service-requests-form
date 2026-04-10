@@ -19,6 +19,21 @@ $dashboard_url   = isset( $dashboard_url ) ? (string) $dashboard_url : '';
 $upload_limit    = isset( $upload_limit ) ? (string) $upload_limit : '1 GB';
 $is_business     = ! empty( $is_business );
 $allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
+$request_uri     = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+$current_url     = esc_url_raw( home_url( $request_uri ) );
+$my_account_url  = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url();
+$google_error    = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash( $_GET['srf_google_error'] ) ) : '';
+
+$google_error_map = array(
+	'google_disabled'      => __( 'Google login is currently unavailable.', 'service-requests-form' ),
+	'google_missing_code'  => __( 'Google login was canceled or incomplete.', 'service-requests-form' ),
+	'google_invalid_state' => __( 'Google login security validation failed. Please try again.', 'service-requests-form' ),
+	'google_token_failed'  => __( 'Could not complete Google login. Please try again.', 'service-requests-form' ),
+	'google_token_missing' => __( 'Could not verify your Google account. Please try again.', 'service-requests-form' ),
+	'google_userinfo_failed' => __( 'Could not fetch your Google profile. Please try again.', 'service-requests-form' ),
+	'google_profile_invalid' => __( 'Google account email is missing or not verified.', 'service-requests-form' ),
+	'google_user_failed'   => __( 'Could not create or sign in your account. Please try again.', 'service-requests-form' ),
+);
 ?>
 
 <div class="srf-project-wrapper">
@@ -98,10 +113,42 @@ $allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
 						</div>
 					<?php else : ?>
 						<div class="srf-project-auth__box">
-							<h3><?php esc_html_e( 'Login or register', 'service-requests-form' ); ?></h3>
-							<p><?php esc_html_e( 'To continue to the upload step, you need an account.', 'service-requests-form' ); ?></p>
-							<div class="srf-project-auth__form">
-								<?php echo do_shortcode( '[woocommerce_my_account]' ); ?>
+							<h3><?php esc_html_e( 'Sign in to continue', 'service-requests-form' ); ?></h3>
+							<p><?php esc_html_e( 'Use a simple login or continue directly with Google.', 'service-requests-form' ); ?></p>
+
+							<?php if ( $google_error && isset( $google_error_map[ $google_error ] ) ) : ?>
+								<div class="srf-project-auth__notice"><?php echo esc_html( $google_error_map[ $google_error ] ); ?></div>
+							<?php endif; ?>
+
+							<div class="srf-project-auth__form srf-project-auth__form--login">
+								<?php
+								wp_login_form(
+									array(
+										'echo'           => true,
+										'redirect'       => esc_url( remove_query_arg( 'srf_google_error', $current_url ) ),
+										'form_id'        => 'srf-project-login-form',
+										'label_username' => __( 'Email or username', 'service-requests-form' ),
+										'label_password' => __( 'Password', 'service-requests-form' ),
+										'label_remember' => __( 'Remember me', 'service-requests-form' ),
+										'label_log_in'   => __( 'Login', 'service-requests-form' ),
+										'remember'       => true,
+									)
+								);
+								?>
+							</div>
+
+							<?php if ( class_exists( 'SRF_Google_Auth' ) && SRF_Google_Auth::is_enabled() ) : ?>
+								<div class="srf-project-auth__divider"><span><?php esc_html_e( 'or', 'service-requests-form' ); ?></span></div>
+								<div class="srf-project-auth__google-actions">
+									<?php
+									echo SRF_Google_Auth::render_google_button( $current_url, 'login', __( 'Continue with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+									echo SRF_Google_Auth::render_google_button( $current_url, 'register', __( 'Register with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+									?>
+								</div>
+							<?php endif; ?>
+
+							<div class="srf-project-auth__register-link">
+								<a href="<?php echo esc_url( $my_account_url ); ?>"><?php esc_html_e( 'Visit registration form', 'service-requests-form' ); ?></a>
 							</div>
 						</div>
 					<?php endif; ?>

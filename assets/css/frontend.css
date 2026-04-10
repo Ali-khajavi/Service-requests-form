@@ -773,6 +773,132 @@
     margin-bottom: 0.75rem;
 }
 
+.srf-project-auth__notice {
+    margin: 0.7rem 0 0.9rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid #f0b3b3;
+    background: #fff4f4;
+    color: #8a1f1f;
+    font-size: 0.88rem;
+}
+
+.srf-project-auth__form--login .login-username,
+.srf-project-auth__form--login .login-password,
+.srf-project-auth__form--login .login-remember {
+    margin: 0 0 0.7rem;
+}
+
+.srf-project-auth__form--login label {
+    display: block;
+    margin-bottom: 0.22rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.srf-project-auth__form--login input[type="text"],
+.srf-project-auth__form--login input[type="password"] {
+    width: 100%;
+    max-width: none;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid #c9d2de;
+    font-size: 0.92rem;
+}
+
+.srf-project-auth__form--login .login-submit {
+    margin: 0.2rem 0 0;
+}
+
+.srf-project-auth__form--login .button,
+.srf-project-auth__form--login .button-primary,
+.srf-project-auth__form--login input[type="submit"] {
+    width: 100%;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: #2f6db7 !important;
+    color: #fff !important;
+    min-height: 42px;
+    font-weight: 700;
+}
+
+.srf-project-auth__divider {
+    position: relative;
+    margin: 0.9rem 0;
+    text-align: center;
+}
+
+.srf-project-auth__divider::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: #d3dbe6;
+}
+
+.srf-project-auth__divider span {
+    position: relative;
+    display: inline-block;
+    padding: 0 0.6rem;
+    background: #f7f9fc;
+    color: #6b7280;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.srf-project-auth__google-actions {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.srf-google-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid #cfd6e1;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #1f2937;
+    background: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.srf-google-btn:hover {
+    background: #f8fafc;
+    border-color: #bcc7d5;
+}
+
+.srf-google-btn__icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #ea4335;
+    font-weight: 800;
+    border: 1px solid #dfe5ee;
+}
+
+.srf-project-auth__register-link {
+    margin-top: 0.8rem;
+    text-align: center;
+}
+
+.srf-project-auth__register-link a {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 .srf-project-auth__box--loggedin {
     background: #edf8f0;
     border-color: #c6e5d0;
