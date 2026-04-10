@@ -223,11 +223,11 @@ $google_error_map = array(
 
 			<div class="srf-form__actions srf-form__actions--project">
 				<button type="button" class="srf-button srf-button--secondary srf-project-btn srf-project-btn--back" data-srf-prev-step="2">
-					<?php esc_html_e( 'Back', 'service-requests-form' ); ?>
+					<span class="srf-button__label"><?php esc_html_e( 'Back', 'service-requests-form' ); ?></span>
 				</button>
 
 				<button type="submit" class="srf-button srf-project-btn srf-project-btn--submit">
-					<?php esc_html_e( 'Submit request', 'service-requests-form' ); ?>
+					<span class="srf-button__label"><?php esc_html_e( 'Submit request', 'service-requests-form' ); ?></span>
 				</button>
 			</div>
 		</div>
