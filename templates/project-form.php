@@ -106,7 +106,52 @@ $google_error_map = array(
 				</div>
 
 				<div class="srf-project-auth">
-					...
+					<?php if ( is_user_logged_in() ) : ?>
+						<div class="srf-project-auth__box srf-project-auth__box--loggedin">
+							<h3><?php esc_html_e( 'Account verified', 'service-requests-form' ); ?></h3>
+							<p><?php esc_html_e( 'You are logged in and can continue to the next step.', 'service-requests-form' ); ?></p>
+						</div>
+					<?php else : ?>
+						<div class="srf-project-auth__box">
+							<h3><?php esc_html_e( 'Sign in to continue', 'service-requests-form' ); ?></h3>
+							<p><?php esc_html_e( 'Use a simple login or continue directly with Google.', 'service-requests-form' ); ?></p>
+
+							<?php if ( $google_error && isset( $google_error_map[ $google_error ] ) ) : ?>
+								<div class="srf-project-auth__notice"><?php echo esc_html( $google_error_map[ $google_error ] ); ?></div>
+							<?php endif; ?>
+
+							<div class="srf-project-auth__form srf-project-auth__form--login">
+								<?php
+								wp_login_form(
+									array(
+										'echo'           => true,
+										'redirect'       => esc_url( remove_query_arg( 'srf_google_error', $current_url ) ),
+										'form_id'        => 'srf-project-login-form',
+										'label_username' => __( 'Email or username', 'service-requests-form' ),
+										'label_password' => __( 'Password', 'service-requests-form' ),
+										'label_remember' => __( 'Remember me', 'service-requests-form' ),
+										'label_log_in'   => __( 'Login', 'service-requests-form' ),
+										'remember'       => true,
+									)
+								);
+								?>
+							</div>
+
+							<?php if ( class_exists( 'SRF_Google_Auth' ) && SRF_Google_Auth::is_enabled() ) : ?>
+								<div class="srf-project-auth__divider"><span><?php esc_html_e( 'or', 'service-requests-form' ); ?></span></div>
+								<div class="srf-project-auth__google-actions">
+									<?php
+									echo SRF_Google_Auth::render_google_button( $current_url, 'login', __( 'Continue with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+									echo SRF_Google_Auth::render_google_button( $current_url, 'register', __( 'Register with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+									?>
+								</div>
+							<?php endif; ?>
+
+							<div class="srf-project-auth__register-link">
+								<a href="<?php echo esc_url( $my_account_url ); ?>"><?php esc_html_e( 'Visit registration form', 'service-requests-form' ); ?></a>
+							</div>
+						</div>
+					<?php endif; ?>
 				</div>
 			</div>
 
