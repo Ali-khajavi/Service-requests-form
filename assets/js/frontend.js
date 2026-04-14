@@ -627,3 +627,95 @@ document.addEventListener('click', function (e) {
     projectSuccessInit();
   });
 })();
+
+
+function init3DQuotePage() {
+  var form = document.querySelector('.tpq-shortcode-form');
+  if (!form) return;
+
+  var state = {
+    model: null
+  };
+
+  function formatSize(bytes) {
+    if (!bytes) return '';
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+    return (bytes / 1024).toFixed(1) + ' KB';
+  }
+
+  function collectInputs() {
+    var data = {};
+    var formData = new FormData(form);
+
+    formData.forEach(function(value, key) {
+      data[key] = value;
+    });
+
+    if (state.model) {
+      data.model_url = state.model.url || '';
+      data.model_name = state.model.name || '';
+      data.model_size = state.model.size || 0;
+    }
+
+    return data;
+  }
+
+  function refreshQuote() {
+    var breakdown = document.querySelector('.tpq-quote-breakdown');
+    if (!breakdown) return;
+
+    var data = collectInputs();
+
+    if (window.tpqCalculator && typeof window.tpqCalculator.calculate === 'function') {
+      var result = window.tpqCalculator.calculate(data);
+
+      var total = breakdown.querySelector('[data-quote="total"]');
+      if (total) {
+        total.textContent = result.total_formatted || '€0.00';
+      }
+    }
+  }
+
+  function debounce(fn, delay) {
+    var timeout;
+    return function() {
+      var args = arguments;
+      var ctx = this;
+      clearTimeout(timeout);
+      timeout = setTimeout(function() {
+        fn.apply(ctx, args);
+      }, delay);
+    };
+  }
+
+  var debouncedRefresh = debounce(refreshQuote, 200);
+
+  form.addEventListener('input', debouncedRefresh);
+  form.addEventListener('change', debouncedRefresh);
+
+  form.addEventListener('submit', function(e) {
+    if (!state.model || !state.model.url) {
+      e.preventDefault();
+      alert('Please upload a 3D model first.');
+      return;
+    }
+  });
+
+  document.addEventListener('tpqModelUploaded', function(event) {
+    state.model = event.detail || null;
+
+    var status = document.querySelector('.tpq-upload-status');
+    if (status && state.model) {
+      status.textContent = (state.model.name || 'Model uploaded') +
+        (state.model.size ? ' (' + formatSize(state.model.size) + ')' : '');
+    }
+
+    refreshQuote();
+  });
+
+  refreshQuote();
+}
+
+SRF_onReady(function () {
+  init3DQuotePage();
+});

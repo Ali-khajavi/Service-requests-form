@@ -8,13 +8,11 @@
         $('#sr-service-gallery-button').on('click', function(e){
             e.preventDefault();
 
-            // If the media frame already exists, reopen it.
-            if ( frame ) {
+            if (frame) {
                 frame.open();
                 return;
             }
 
-            // Create the media frame.
             frame = wp.media({
                 title: 'Select Service Images',
                 button: {
@@ -23,11 +21,10 @@
                 multiple: true
             });
 
-            // When images are selected, run this callback.
             frame.on('select', function(){
                 var selection = frame.state().get('selection');
-                var ids       = [];
-                var preview   = $('#sr-service-gallery-preview');
+                var ids = [];
+                var preview = $('#sr-service-gallery-preview');
 
                 preview.empty();
 
@@ -50,12 +47,28 @@
                     }
                 });
 
-                // Save IDs to hidden field
                 $('#sr-service-gallery-ids').val(ids.join(','));
             });
 
-            // Finally, open the modal
             frame.open();
+        });
+
+        document.querySelectorAll('.tpq-confirm-delete').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                if (!confirm(button.dataset.tpqMessage || 'Are you sure?')) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-tpq-toggle]').forEach(function(field) {
+            field.addEventListener('change', function(event) {
+                var selector = event.target.dataset.tpqToggle;
+                if (!selector) return;
+                var target = document.querySelector(selector);
+                if (!target) return;
+                target.classList.toggle('tpq-is-hidden', !event.target.checked);
+            });
         });
 
     });
