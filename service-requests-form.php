@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.9.4
+ * Version:     0.9.5
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -20,7 +20,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.9.4';
+	public $version = '0.9.5';
 
 	private function __construct() {}
 	private function __clone() {}
@@ -71,6 +71,7 @@ final class Service_Requests_Form {
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-status.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-storage.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-materials.php';
 
 		// Main
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-form-handler.php';
@@ -80,6 +81,8 @@ final class Service_Requests_Form {
 	}
 
 	private function init_hooks() {
+
+		
 
 		// Translations
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ), 0 );
@@ -106,6 +109,9 @@ final class Service_Requests_Form {
 		}
 		if ( class_exists( 'SRF_Admin_Storage' ) ) {
 			SRF_Admin_Storage::init();
+		}
+		if ( class_exists( 'SRF_Admin_Materials' ) ) {
+			SRF_Admin_Materials::init();
 		}
 
 		// Frontend form
