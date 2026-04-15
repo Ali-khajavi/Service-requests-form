@@ -24,11 +24,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		public static function init() {
 			add_shortcode( 'service_request_form', array( __CLASS__, 'shortcode_service_request_form' ) );
 			add_shortcode( 'project_request_form', array( __CLASS__, 'shortcode_project_request_form' ) );
-			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+			add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
 			add_filter( 'upload_mimes', array( __CLASS__, 'allow_project_upload_mimes' ) );
 		}
 
-		public static function enqueue_assets() {
+		public static function register_assets() {
 
 			if ( ! defined( 'SRF_PLUGIN_URL' ) || ! defined( 'SRF_PLUGIN_DIR' ) || ! defined( 'SRF_VERSION' ) ) {
 				return;
@@ -37,20 +37,53 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$css_rel = 'assets/css/frontend.css';
 			$js_rel  = 'assets/js/frontend.js';
 
-			wp_enqueue_style(
+			wp_register_style(
 				'srf-frontend-css',
 				SRF_PLUGIN_URL . $css_rel,
 				array(),
 				SRF_VERSION
 			);
 
-			wp_enqueue_script(
+			wp_register_script(
 				'srf-frontend-js',
 				SRF_PLUGIN_URL . $js_rel,
 				array(),
 				SRF_VERSION,
 				true
 			);
+		}
+
+		protected static function enqueue_frontend_base_assets() {
+
+			if ( ! wp_style_is( 'srf-frontend-css', 'registered' ) ) {
+				self::register_assets();
+			}
+
+			if ( ! wp_script_is( 'srf-frontend-js', 'registered' ) ) {
+				self::register_assets();
+			}
+
+			wp_enqueue_style( 'srf-frontend-css' );
+			wp_enqueue_script( 'srf-frontend-js' );
+		}
+
+		protected static function enqueue_service_request_assets() {
+			self::enqueue_frontend_base_assets();
+			self::localize_frontend_script();
+			self::inject_service_data();
+		}
+
+		protected static function enqueue_project_request_assets() {
+			self::enqueue_frontend_base_assets();
+			self::localize_frontend_script();
+		}
+
+		protected static function localize_frontend_script() {
+			static $localized = false;
+
+			if ( $localized ) {
+				return;
+			}
 
 			$can_submit = self::current_user_can_submit();
 
@@ -65,7 +98,16 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				)
 			);
 
-			// Service data for right panel (if you use it in JS)
+			$localized = true;
+		}
+
+		protected static function inject_service_data() {
+			static $injected = false;
+
+			if ( $injected ) {
+				return;
+			}
+
 			$services_data = array();
 			if ( class_exists( 'SR_Service_Data' ) ) {
 				$services_data = SR_Service_Data::get_all_services_data();
@@ -94,6 +136,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				. 'Object.assign(window.srfServiceData, ' . wp_json_encode( $js_service_map ) . ');',
 				'before'
 			);
+
+			$injected = true;
 		}
 
 		protected static function get_project_upload_limit_label() {
@@ -667,6 +711,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// Shortcode Detailed Form Handler
 		// ===============================
 		public static function shortcode_service_request_form() {
+			self::enqueue_service_request_assets();
 
 			$errors   = array();
 			$old_data = array();
@@ -971,7 +1016,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// ===============================
 
 		public static function shortcode_project_request_form() {
-
+			self::enqueue_project_request_assets();
+			
 			$errors   = array();
 			$old_data = array(
 				'title'       => '',
