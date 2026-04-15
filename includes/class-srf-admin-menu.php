@@ -5,7 +5,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SRF_Admin_Menu {
 
-	const PARENT_SLUG = 'srf-main';
+	const PARENT_SLUG       = 'srf-main';
+	const MATERIALS_SLUG    = 'srf-materials';
+	const PRINTERS_SLUG     = 'srf-printers';
+	const QUOTE_ORDERS_SLUG = 'srf-quote-orders';
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_parent_menu' ), 9 );
@@ -14,7 +17,6 @@ class SRF_Admin_Menu {
 
 	public static function register_parent_menu() {
 
-		// Parent menu
 		add_menu_page(
 			__( 'Service and Subscription', 'service-requests-form' ),
 			__( 'Service and Subscription', 'service-requests-form' ),
@@ -25,7 +27,6 @@ class SRF_Admin_Menu {
 			26
 		);
 
-		// Submenus that point to CPT screens
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'Dashboard', 'service-requests-form' ),
@@ -33,7 +34,6 @@ class SRF_Admin_Menu {
 			'edit_posts',
 			self::PARENT_SLUG
 		);
-
 
 		add_submenu_page(
 			self::PARENT_SLUG,
@@ -43,7 +43,6 @@ class SRF_Admin_Menu {
 			'post-new.php?post_type=service_request'
 		);
 
-
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'Add New Service', 'service-requests-form' ),
@@ -52,25 +51,62 @@ class SRF_Admin_Menu {
 			'post-new.php?post_type=sr_service'
 		);
 
-		// NOTE: Storage submenu is registered by SRF_Admin_Storage under this parent slug.
-		// Settings submenu can be added similarly if you have a settings page.
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Materials', 'service-requests-form' ),
+			__( 'Materials', 'service-requests-form' ),
+			'manage_options',
+			self::MATERIALS_SLUG,
+			array( __CLASS__, 'render_materials_page' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Printers', 'service-requests-form' ),
+			__( 'Printers', 'service-requests-form' ),
+			'manage_options',
+			self::PRINTERS_SLUG,
+			array( __CLASS__, 'render_printers_page' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Orders', 'service-requests-form' ),
+			__( 'Orders', 'service-requests-form' ),
+			'edit_posts',
+			self::QUOTE_ORDERS_SLUG,
+			array( __CLASS__, 'render_quote_orders_page' )
+		);
+
+		// Storage submenu is registered by SRF_Admin_Storage under this parent slug.
+		// Settings submenu is registered by SR_Settings under this parent slug.
 	}
 
 	public static function enqueue_admin_assets( $hook ) {
-		// Only load on our dashboard page
-		if ( 'toplevel_page_' . self::PARENT_SLUG !== $hook ) {
+		$allowed_hooks = array(
+			'toplevel_page_' . self::PARENT_SLUG,
+			'service-and-subscription_page_' . self::MATERIALS_SLUG,
+			'service-and-subscription_page_' . self::PRINTERS_SLUG,
+			'service-and-subscription_page_' . self::QUOTE_ORDERS_SLUG,
+			'service-and-subscription_page_srf-settings',
+			'service-and-subscription_page_srf-storage',
+		);
+
+		if ( ! in_array( $hook, $allowed_hooks, true ) ) {
 			return;
 		}
 
-		// We use small inline CSS in render_dashboard(). No external CSS required.
+		// Inline styles remain in page renderers for now.
 	}
 
 	protected static function get_counts() {
 
-		// Total requests
-		$total_requests = (int) wp_count_posts( 'service_request' )->publish;
+		$total_requests = 0;
+		$request_counts = wp_count_posts( 'service_request' );
+		if ( $request_counts && isset( $request_counts->publish ) ) {
+			$total_requests = (int) $request_counts->publish;
+		}
 
-		// Status counts (meta _sr_status)
 		global $wpdb;
 		$meta_key = '_sr_status';
 
@@ -96,50 +132,58 @@ class SRF_Admin_Menu {
 			'done'        => 0,
 		);
 
-		foreach ( $rows as $r ) {
-			$key = (string) $r['status'];
+		foreach ( $rows as $row ) {
+			$key = (string) $row['status'];
 			if ( isset( $status_counts[ $key ] ) ) {
-				$status_counts[ $key ] = (int) $r['cnt'];
+				$status_counts[ $key ] = (int) $row['cnt'];
 			}
 		}
 
-		// Services count
 		$total_services = 0;
-		$svc_counts = wp_count_posts( 'sr_service' );
-		if ( $svc_counts && isset( $svc_counts->publish ) ) {
-			$total_services = (int) $svc_counts->publish;
+		$service_counts = wp_count_posts( 'sr_service' );
+		if ( $service_counts && isset( $service_counts->publish ) ) {
+			$total_services = (int) $service_counts->publish;
 		}
 
-		// Total storage used by all users (sum user meta)
 		$total_storage = 0;
-		$users = get_users( array(
-			'fields'     => array( 'ID' ),
-			'number'     => 500,
-			'orderby'    => 'ID',
-			'order'      => 'ASC',
-		) );
+		$users = get_users(
+			array(
+				'fields'  => array( 'ID' ),
+				'number'  => 500,
+				'orderby' => 'ID',
+				'order'   => 'ASC',
+			)
+		);
 
-		foreach ( $users as $u ) {
-			$total_storage += (int) get_user_meta( $u->ID, '_srf_storage_used_bytes', true );
+		foreach ( $users as $user ) {
+			$total_storage += (int) get_user_meta( $user->ID, '_srf_storage_used_bytes', true );
+		}
+
+		$total_materials = 0;
+		$total_printers  = 0;
+
+		if ( class_exists( 'SRF_Quote_DB' ) ) {
+			$db = new SRF_Quote_DB();
+
+			$materials = $db->get_materials();
+			$printers  = $db->get_printers();
+
+			$total_materials = is_array( $materials ) ? count( $materials ) : 0;
+			$total_printers  = is_array( $printers ) ? count( $printers ) : 0;
 		}
 
 		return array(
-			'total_requests' => $total_requests,
-			'new'            => $status_counts['new'],
-			'in_progress'    => $status_counts['in_progress'],
-			'done'           => $status_counts['done'],
-			'total_services' => $total_services,
-			'total_storage'  => max( 0, (int) $total_storage ),
+			'total_requests'  => $total_requests,
+			'new'             => $status_counts['new'],
+			'in_progress'     => $status_counts['in_progress'],
+			'done'            => $status_counts['done'],
+			'total_services'  => $total_services,
+			'total_storage'   => max( 0, (int) $total_storage ),
+			'total_materials' => $total_materials,
+			'total_printers'  => $total_printers,
 		);
 	}
 
-
-	/**
-	 * Get total uploaded bytes for a specific request (sum attachment file sizes).
-	 *
-	 * @param int $request_id
-	 * @return int
-	 */
 	protected static function get_request_upload_bytes( $request_id ) {
 		$request_id = (int) $request_id;
 		if ( $request_id <= 0 ) {
@@ -152,9 +196,10 @@ class SRF_Admin_Menu {
 		}
 
 		$total = 0;
-		foreach ( $file_ids as $aid ) {
-			$aid  = (int) $aid;
-			$path = $aid ? get_attached_file( $aid ) : '';
+		foreach ( $file_ids as $attachment_id ) {
+			$attachment_id = (int) $attachment_id;
+			$path          = $attachment_id ? get_attached_file( $attachment_id ) : '';
+
 			if ( $path && file_exists( $path ) ) {
 				$size = @filesize( $path );
 				if ( false !== $size ) {
@@ -166,10 +211,11 @@ class SRF_Admin_Menu {
 		return max( 0, (int) $total );
 	}
 
-
 	protected static function badge_html( $status ) {
 		$status = (string) $status;
-		if ( $status === '' ) $status = 'new';
+		if ( '' === $status ) {
+			$status = 'new';
+		}
 
 		$label = ucfirst( str_replace( '_', ' ', $status ) );
 		$class = 'srf-badge srf-badge--' . sanitize_html_class( $status );
@@ -184,32 +230,35 @@ class SRF_Admin_Menu {
 
 		$counts = self::get_counts();
 
-		$requests_url     = admin_url( 'edit.php?post_type=service_request' );
-		$new_request_url  = admin_url( 'post-new.php?post_type=service_request' );
-		$services_url     = admin_url( 'edit.php?post_type=sr_service' );
-		$new_service_url  = admin_url( 'post-new.php?post_type=sr_service' );
+		$requests_url    = admin_url( 'edit.php?post_type=service_request' );
+		$new_request_url = admin_url( 'post-new.php?post_type=service_request' );
+		$services_url    = admin_url( 'edit.php?post_type=sr_service' );
+		$new_service_url = admin_url( 'post-new.php?post_type=sr_service' );
+		$materials_url   = admin_url( 'admin.php?page=' . self::MATERIALS_SLUG );
+		$printers_url    = admin_url( 'admin.php?page=' . self::PRINTERS_SLUG );
+		$orders_url      = admin_url( 'admin.php?page=' . self::QUOTE_ORDERS_SLUG );
+		$settings_url    = admin_url( 'admin.php?page=srf-settings' );
 
 		$storage_url = '';
 		if ( class_exists( 'SRF_Admin_Storage' ) ) {
-			// Storage is a submenu under our parent slug
 			$storage_url = admin_url( 'admin.php?page=srf-storage' );
 		}
 
-		// Recent requests
-		$recent = get_posts( array(
-			'post_type'      => 'service_request',
-			'post_status'    => 'publish',
-			'numberposts'    => 10,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-		) );
-
+		$recent = get_posts(
+			array(
+				'post_type'   => 'service_request',
+				'post_status' => 'publish',
+				'numberposts' => 10,
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+			)
+		);
 		?>
 		<div class="wrap srf-dashboard">
 			<style>
 				.srf-dashboard .srf-header{
 					display:flex; align-items:center; justify-content:space-between;
-					margin: 10px 0 18px;
+					margin:10px 0 18px; gap:14px; flex-wrap:wrap;
 				}
 				.srf-dashboard .srf-title{
 					display:flex; align-items:center; gap:12px;
@@ -224,26 +273,26 @@ class SRF_Admin_Menu {
 					display:flex; gap:8px; flex-wrap:wrap;
 				}
 				.srf-dashboard .srf-actions .button{
-					padding: 6px 12px;
+					padding:6px 12px;
 				}
 				.srf-dashboard .srf-grid{
 					display:grid;
-					grid-template-columns: repeat(6, minmax(0,1fr));
+					grid-template-columns:repeat(8, minmax(0,1fr));
 					gap:12px;
-					margin: 10px 0 18px;
+					margin:10px 0 18px;
 				}
-				@media (max-width: 1300px){
-					.srf-dashboard .srf-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+				@media (max-width: 1400px){
+					.srf-dashboard .srf-grid{ grid-template-columns:repeat(4, minmax(0,1fr)); }
 				}
 				@media (max-width: 782px){
-					.srf-dashboard .srf-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+					.srf-dashboard .srf-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
 				}
 				.srf-card{
 					background:#fff;
 					border:1px solid #e5e7eb;
 					border-radius:12px;
 					padding:14px 14px 12px;
-					box-shadow: 0 1px 2px rgba(16,24,40,.06);
+					box-shadow:0 1px 2px rgba(16,24,40,.06);
 				}
 				.srf-card .srf-card__label{
 					color:#667085;
@@ -261,10 +310,10 @@ class SRF_Admin_Menu {
 					margin-top:8px;
 				}
 				.srf-section{
-					margin-top: 16px;
+					margin-top:16px;
 				}
 				.srf-section h2{
-					margin: 0 0 10px;
+					margin:0 0 10px;
 				}
 				.srf-table{
 					background:#fff;
@@ -293,7 +342,7 @@ class SRF_Admin_Menu {
 				.srf-badge{
 					display:inline-flex;
 					align-items:center;
-					padding: 3px 8px;
+					padding:3px 8px;
 					border-radius:999px;
 					font-size:12px;
 					font-weight:600;
@@ -312,7 +361,7 @@ class SRF_Admin_Menu {
 					<div>
 						<h1 style="margin:0;"><?php esc_html_e( 'Service and Subscription', 'service-requests-form' ); ?></h1>
 						<div class="srf-subtitle">
-							<?php echo esc_html__( 'Manage services, requests, files, and storage in one place.', 'service-requests-form' ); ?>
+							<?php esc_html_e( 'Manage services, requests, files, storage, and 3D quote resources in one place.', 'service-requests-form' ); ?>
 						</div>
 					</div>
 				</div>
@@ -329,6 +378,18 @@ class SRF_Admin_Menu {
 					</a>
 					<a class="button" href="<?php echo esc_url( $services_url ); ?>">
 						<?php esc_html_e( 'View Services', 'service-requests-form' ); ?>
+					</a>
+					<a class="button" href="<?php echo esc_url( $materials_url ); ?>">
+						<?php esc_html_e( 'Materials', 'service-requests-form' ); ?>
+					</a>
+					<a class="button" href="<?php echo esc_url( $printers_url ); ?>">
+						<?php esc_html_e( 'Printers', 'service-requests-form' ); ?>
+					</a>
+					<a class="button" href="<?php echo esc_url( $orders_url ); ?>">
+						<?php esc_html_e( 'Orders', 'service-requests-form' ); ?>
+					</a>
+					<a class="button" href="<?php echo esc_url( $settings_url ); ?>">
+						<?php esc_html_e( 'Settings', 'service-requests-form' ); ?>
 					</a>
 					<?php if ( $storage_url ) : ?>
 						<a class="button" href="<?php echo esc_url( $storage_url ); ?>">
@@ -370,6 +431,18 @@ class SRF_Admin_Menu {
 				</div>
 
 				<div class="srf-card">
+					<div class="srf-card__label"><?php esc_html_e( 'Materials', 'service-requests-form' ); ?></div>
+					<div class="srf-card__value"><?php echo esc_html( number_format_i18n( $counts['total_materials'] ) ); ?></div>
+					<div class="srf-card__hint srf-muted"><?php esc_html_e( '3D quote materials', 'service-requests-form' ); ?></div>
+				</div>
+
+				<div class="srf-card">
+					<div class="srf-card__label"><?php esc_html_e( 'Printers', 'service-requests-form' ); ?></div>
+					<div class="srf-card__value"><?php echo esc_html( number_format_i18n( $counts['total_printers'] ) ); ?></div>
+					<div class="srf-card__hint srf-muted"><?php esc_html_e( '3D quote printers', 'service-requests-form' ); ?></div>
+				</div>
+
+				<div class="srf-card">
 					<div class="srf-card__label"><?php esc_html_e( 'Total Storage Used', 'service-requests-form' ); ?></div>
 					<div class="srf-card__value"><?php echo esc_html( size_format( $counts['total_storage'] ) ); ?></div>
 					<div class="srf-card__hint srf-muted"><?php esc_html_e( 'Sum of all users usage', 'service-requests-form' ); ?></div>
@@ -397,24 +470,27 @@ class SRF_Admin_Menu {
 									<td colspan="6" class="srf-muted"><?php esc_html_e( 'No requests yet.', 'service-requests-form' ); ?></td>
 								</tr>
 							<?php else : ?>
-								<?php foreach ( $recent as $p ) :
-									$rid     = (int) $p->ID;
-									$service = (string) get_post_meta( $rid, '_sr_service_title', true );
-									$status  = (string) get_post_meta( $rid, '_sr_status', true );
-									if ( '' === $status ) $status = 'new';
-									$edit_url = get_edit_post_link( $rid, 'raw' );
+								<?php foreach ( $recent as $post_item ) : ?>
+									<?php
+									$request_id    = (int) $post_item->ID;
+									$service_title = (string) get_post_meta( $request_id, '_sr_service_title', true );
+									$status        = (string) get_post_meta( $request_id, '_sr_status', true );
+									if ( '' === $status ) {
+										$status = 'new';
+									}
+									$edit_url = get_edit_post_link( $request_id, 'raw' );
 									?>
 									<tr>
 										<td>
-											<strong><?php echo esc_html( $p->post_title ); ?></strong><br>
-											<span class="srf-muted">#<?php echo esc_html( $rid ); ?></span>
+											<strong><?php echo esc_html( $post_item->post_title ); ?></strong><br>
+											<span class="srf-muted">#<?php echo esc_html( $request_id ); ?></span>
 										</td>
-										<td><?php echo esc_html( $service ); ?></td>
+										<td><?php echo esc_html( $service_title ); ?></td>
 										<td><?php echo self::badge_html( $status ); ?></td>
-										<td><?php echo esc_html( get_date_from_gmt( $p->post_date_gmt, 'Y-m-d H:i' ) ); ?></td>
+										<td><?php echo esc_html( get_date_from_gmt( $post_item->post_date_gmt, 'Y-m-d H:i' ) ); ?></td>
 										<td>
 											<?php
-											$uploads_bytes = self::get_request_upload_bytes( $rid );
+											$uploads_bytes = self::get_request_upload_bytes( $request_id );
 											echo $uploads_bytes > 0 ? esc_html( size_format( $uploads_bytes ) ) : '&mdash;';
 											?>
 										</td>
@@ -431,7 +507,80 @@ class SRF_Admin_Menu {
 						</tbody>
 					</table>
 				</div>
+			</div>
+		</div>
+		<?php
+	}
 
+	public static function render_materials_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( class_exists( 'SRF_Admin_Materials' ) && method_exists( 'SRF_Admin_Materials', 'render_page' ) ) {
+			SRF_Admin_Materials::render_page();
+			return;
+		}
+
+		self::render_placeholder_page(
+			__( 'Materials', 'service-requests-form' ),
+			__( 'The menu is now connected. The next merge step will add the full materials CRUD page here using the new SRF quote database tables.', 'service-requests-form' )
+		);
+	}
+
+	public static function render_printers_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( class_exists( 'SRF_Admin_Printers' ) && method_exists( 'SRF_Admin_Printers', 'render_page' ) ) {
+			SRF_Admin_Printers::render_page();
+			return;
+		}
+
+		self::render_placeholder_page(
+			__( 'Printers', 'service-requests-form' ),
+			__( 'The menu is now connected. The next merge step will add the full printers CRUD page here using the new SRF quote database tables.', 'service-requests-form' )
+		);
+	}
+
+	public static function render_quote_orders_page() {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return;
+		}
+
+		$requests_url = admin_url( 'edit.php?post_type=service_request' );
+		$settings_url = admin_url( 'admin.php?page=srf-settings' );
+
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Orders', 'service-requests-form' ); ?></h1>
+			<p><?php esc_html_e( 'During the merge, quote/order handling stays connected to the Service Requests workflow and WooCommerce My Account request area.', 'service-requests-form' ); ?></p>
+
+			<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;max-width:900px;">
+				<p style="margin-top:0;">
+					<?php esc_html_e( 'Use the existing Service Requests list as the current order/request management screen. The dedicated quote-order table integration can be merged after materials, printers, and pricing are wired into SRF.', 'service-requests-form' ); ?>
+				</p>
+
+				<p style="margin-bottom:0;">
+					<a class="button button-primary" href="<?php echo esc_url( $requests_url ); ?>">
+						<?php esc_html_e( 'Open Service Requests', 'service-requests-form' ); ?>
+					</a>
+					<a class="button" href="<?php echo esc_url( $settings_url ); ?>">
+						<?php esc_html_e( 'Open Settings', 'service-requests-form' ); ?>
+					</a>
+				</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	protected static function render_placeholder_page( $title, $message ) {
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html( $title ); ?></h1>
+			<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;max-width:900px;">
+				<p style="margin:0;"><?php echo esc_html( $message ); ?></p>
 			</div>
 		</div>
 		<?php
