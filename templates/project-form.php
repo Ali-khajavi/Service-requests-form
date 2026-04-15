@@ -25,14 +25,14 @@ $my_account_url  = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_perm
 $google_error    = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash( $_GET['srf_google_error'] ) ) : '';
 
 $google_error_map = array(
-	'google_disabled'      => __( 'Google login is currently unavailable.', 'service-requests-form' ),
-	'google_missing_code'  => __( 'Google login was canceled or incomplete.', 'service-requests-form' ),
-	'google_invalid_state' => __( 'Google login security validation failed. Please try again.', 'service-requests-form' ),
-	'google_token_failed'  => __( 'Could not complete Google login. Please try again.', 'service-requests-form' ),
-	'google_token_missing' => __( 'Could not verify your Google account. Please try again.', 'service-requests-form' ),
+	'google_disabled'        => __( 'Google login is currently unavailable.', 'service-requests-form' ),
+	'google_missing_code'    => __( 'Google login was canceled or incomplete.', 'service-requests-form' ),
+	'google_invalid_state'   => __( 'Google login security validation failed. Please try again.', 'service-requests-form' ),
+	'google_token_failed'    => __( 'Could not complete Google login. Please try again.', 'service-requests-form' ),
+	'google_token_missing'   => __( 'Could not verify your Google account. Please try again.', 'service-requests-form' ),
 	'google_userinfo_failed' => __( 'Could not fetch your Google profile. Please try again.', 'service-requests-form' ),
 	'google_profile_invalid' => __( 'Google account email is missing or not verified.', 'service-requests-form' ),
-	'google_user_failed'   => __( 'Could not create or sign in your account. Please try again.', 'service-requests-form' ),
+	'google_user_failed'     => __( 'Could not create or sign in your account. Please try again.', 'service-requests-form' ),
 );
 ?>
 
@@ -210,6 +210,79 @@ $google_error_map = array(
 						?>
 					</small>
 				<?php endif; ?>
+
+				<div class="srf-3d-viewer srf-project-card" data-srf-3d-viewer>
+					<div class="srf-3d-viewer__header">
+						<h3 class="srf-3d-viewer__title"><?php esc_html_e( '3D Preview', 'service-requests-form' ); ?></h3>
+						<p class="srf-3d-viewer__intro"><?php esc_html_e( 'After selecting a supported 3D file, the preview will appear here.', 'service-requests-form' ); ?></p>
+					</div>
+
+					<div class="srf-3d-viewer__canvas-wrap" aria-live="polite">
+						<canvas
+							class="srf-3d-viewer__canvas"
+							role="img"
+							aria-label="<?php esc_attr_e( '3D model preview canvas', 'service-requests-form' ); ?>"
+						></canvas>
+						<div class="srf-3d-viewer__placeholder" data-srf-3d-placeholder>
+							<?php esc_html_e( 'No model loaded yet.', 'service-requests-form' ); ?>
+						</div>
+					</div>
+
+					<div class="srf-3d-viewer__toolbar">
+						<div class="srf-3d-viewer__status" data-srf-3d-status data-state="info">
+							<?php esc_html_e( 'Viewer ready. Upload an STL or OBJ file to preview it.', 'service-requests-form' ); ?>
+						</div>
+
+						<div class="srf-3d-viewer__controls" aria-label="<?php esc_attr_e( '3D viewer controls', 'service-requests-form' ); ?>">
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="zoom-in">
+								<?php esc_html_e( 'Zoom In', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="zoom-out">
+								<?php esc_html_e( 'Zoom Out', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-front">
+								<?php esc_html_e( 'Front', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-left">
+								<?php esc_html_e( 'Left', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-right">
+								<?php esc_html_e( 'Right', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-top">
+								<?php esc_html_e( 'Top', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-iso">
+								<?php esc_html_e( 'Iso', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="fit-view">
+								<?php esc_html_e( 'Fit View', 'service-requests-form' ); ?>
+							</button>
+							<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="reset-view">
+								<?php esc_html_e( 'Reset View', 'service-requests-form' ); ?>
+							</button>
+						</div>
+					</div>
+
+					<div class="srf-3d-viewer__meta">
+						<div class="srf-3d-viewer__meta-item">
+							<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'File', 'service-requests-form' ); ?></span>
+							<strong data-field="filename">—</strong>
+						</div>
+						<div class="srf-3d-viewer__meta-item">
+							<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Format', 'service-requests-form' ); ?></span>
+							<strong data-field="format">—</strong>
+						</div>
+						<div class="srf-3d-viewer__meta-item">
+							<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Triangles', 'service-requests-form' ); ?></span>
+							<strong data-field="triangles">—</strong>
+						</div>
+						<div class="srf-3d-viewer__meta-item">
+							<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Bounds', 'service-requests-form' ); ?></span>
+							<strong data-field="bounds">—</strong>
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<div class="srf-project-final-note">

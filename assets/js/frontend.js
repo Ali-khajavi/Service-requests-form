@@ -538,8 +538,827 @@ document.addEventListener('click', function (e) {
 
 })();
 
+
 (function () {
   'use strict';
+
+  var DEG = Math.PI / 180;
+
+  function SRFProjectViewer(root, input) {
+    this.root = root;
+    this.input = input;
+    this.canvas = root ? root.querySelector('.srf-3d-viewer__canvas') : null;
+    this.placeholder = root ? root.querySelector('[data-srf-3d-placeholder]') : null;
+    this.status = root ? root.querySelector('[data-srf-3d-status]') : null;
+    this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+    this.pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    this.mesh = null;
+    this.objectUrl = null;
+    this.resizeObserver = null;
+
+    this.stats = {
+      filename: root ? root.querySelector('[data-field="filename"]') : null,
+      format: root ? root.querySelector('[data-field="format"]') : null,
+      triangles: root ? root.querySelector('[data-field="triangles"]') : null,
+      bounds: root ? root.querySelector('[data-field="bounds"]') : null
+    };
+
+    this.state = {
+      yaw: -25 * DEG,
+      pitch: -18 * DEG,
+      zoom: 1.85,
+      panX: 0,
+      panY: 0,
+      isDragging: false,
+      dragMode: 'rotate',
+      lastX: 0,
+      lastY: 0
+    };
+
+    if (!this.root || !this.canvas || !this.ctx || !this.input) {
+      return;
+    }
+
+    this.bindEvents();
+    this.resize(true);
+    this.drawEmpty();
+    this.updatePlaceholder('No model loaded yet.', true);
+    this.updateStatus('Viewer ready. Upload an STL or OBJ file to preview it.', 'info');
+    this.updateStats({});
+  }
+
+  SRFProjectViewer.prototype.bindEvents = function () {
+    var self = this;
+
+    this.handleResize = function () {
+      if (self.resize()) {
+        self.render();
+      }
+    };
+
+    window.addEventListener('resize', this.handleResize);
+
+    var resizeTarget = this.canvas.parentElement || this.root;
+    if ('ResizeObserver' in window && resizeTarget) {
+      this.resizeObserver = new ResizeObserver(function () {
+        if (self.resize()) {
+          self.render();
+        }
+      });
+      this.resizeObserver.observe(resizeTarget);
+    }
+
+    this.input.addEventListener('change', function () {
+      self.handleFileSelection();
+    });
+
+    this.canvas.addEventListener('pointerdown', function (event) {
+      self.state.isDragging = true;
+      self.state.dragMode = event.shiftKey ? 'pan' : 'rotate';
+      self.state.lastX = event.clientX;
+      self.state.lastY = event.clientY;
+      if (self.canvas.setPointerCapture) {
+        self.canvas.setPointerCapture(event.pointerId);
+      }
+    });
+
+    this.canvas.addEventListener('pointermove', function (event) {
+      if (!self.state.isDragging) return;
+
+      var deltaX = event.clientX - self.state.lastX;
+      var deltaY = event.clientY - self.state.lastY;
+
+      self.state.lastX = event.clientX;
+      self.state.lastY = event.clientY;
+
+      if (self.state.dragMode === 'pan') {
+        self.state.panX += deltaX * 0.004;
+        self.state.panY -= deltaY * 0.004;
+      } else {
+        self.state.yaw += deltaX * 0.012;
+        self.state.pitch += deltaY * 0.012;
+        self.state.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, self.state.pitch));
+      }
+
+      self.render();
+    });
+
+    function releasePointer(event) {
+      self.state.isDragging = false;
+      if (
+        event &&
+        self.canvas.releasePointerCapture &&
+        self.canvas.hasPointerCapture &&
+        self.canvas.hasPointerCapture(event.pointerId)
+      ) {
+        self.canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    this.canvas.addEventListener('pointerup', releasePointer);
+    this.canvas.addEventListener('pointercancel', releasePointer);
+    this.canvas.addEventListener('pointerleave', function () {
+      self.state.isDragging = false;
+    });
+
+    this.canvas.addEventListener('wheel', function (event) {
+      event.preventDefault();
+      self.applyZoom(event.deltaY > 0 ? -0.12 : 0.12);
+    }, { passive: false });
+
+    this.root.querySelectorAll('[data-action]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var action = button.getAttribute('data-action');
+        if (action === 'reset-view') {
+          self.resetCamera();
+        } else if (action === 'fit-view') {
+          self.fitView();
+        } else if (action === 'zoom-in') {
+          self.applyZoom(-0.16);
+        } else if (action === 'zoom-out') {
+          self.applyZoom(0.16);
+        } else if (action && action.indexOf('view-') === 0) {
+          self.setPresetView(action.replace('view-', ''));
+        }
+      });
+    });
+  };
+
+  SRFProjectViewer.prototype.handleFileSelection = function () {
+    var file = this.findPreviewableFile();
+
+    if (!file) {
+      this.clearModel();
+      this.updateStatus('Preview is available for STL and OBJ files. Other files can still be uploaded.', 'warning');
+      return;
+    }
+
+    this.loadLocalFile(file);
+  };
+
+  SRFProjectViewer.prototype.findPreviewableFile = function () {
+    if (!this.input || !this.input.files || !this.input.files.length) {
+      return null;
+    }
+
+    for (var i = 0; i < this.input.files.length; i++) {
+      var file = this.input.files[i];
+      var ext = this.detectExtension(file.name || '');
+      if (ext === 'stl' || ext === 'obj') {
+        return file;
+      }
+    }
+
+    return null;
+  };
+
+  SRFProjectViewer.prototype.clearModel = function () {
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = null;
+    }
+
+    this.mesh = null;
+    this.drawEmpty();
+    this.updatePlaceholder('No model loaded yet.', true);
+    this.updateStats({});
+  };
+
+  SRFProjectViewer.prototype.resize = function (force) {
+    if (!this.canvas || !this.ctx) {
+      return false;
+    }
+
+    var host = this.canvas.parentElement || this.root;
+    var hostRect = host ? host.getBoundingClientRect() : null;
+    var canvasRect = this.canvas.getBoundingClientRect();
+
+    var width = Math.max(
+      320,
+      Math.round(
+        (hostRect && hostRect.width) ||
+        canvasRect.width ||
+        this.canvas.clientWidth ||
+        640
+      )
+    );
+
+    var height = Math.max(
+      280,
+      Math.round(
+        canvasRect.height ||
+        this.canvas.clientHeight ||
+        (hostRect && hostRect.height) ||
+        420
+      )
+    );
+
+    var pixelWidth = Math.round(width * this.pixelRatio);
+    var pixelHeight = Math.round(height * this.pixelRatio);
+
+    if (!force && this.canvas.width === pixelWidth && this.canvas.height === pixelHeight) {
+      return false;
+    }
+
+    this.canvas.width = pixelWidth;
+    this.canvas.height = pixelHeight;
+    this.canvas.style.width = width + 'px';
+    this.canvas.style.height = height + 'px';
+    this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+
+    return true;
+  };
+
+  SRFProjectViewer.prototype.resetCamera = function () {
+    this.state.yaw = -25 * DEG;
+    this.state.pitch = -18 * DEG;
+    this.state.zoom = 1.85;
+    this.state.panX = 0;
+    this.state.panY = 0;
+    this.render();
+  };
+
+  SRFProjectViewer.prototype.fitView = function () {
+    this.state.panX = 0;
+    this.state.panY = 0;
+    this.state.zoom = this.mesh && this.mesh.radius > 0 ? 1.95 : 1.85;
+    this.render();
+  };
+
+  SRFProjectViewer.prototype.applyZoom = function (delta) {
+    var factor = delta > 0 ? 1.1 : 0.9;
+    var intensity = 1 + Math.abs(delta);
+
+    this.state.zoom = this.state.zoom * Math.pow(factor, intensity);
+
+    if (this.state.zoom < 0.05) this.state.zoom = 0.05;
+    if (this.state.zoom > 100) this.state.zoom = 100;
+
+    this.render();
+  };
+
+  SRFProjectViewer.prototype.setPresetView = function (view) {
+    this.state.panX = 0;
+    this.state.panY = 0;
+
+    if (view === 'front') {
+      this.state.yaw = 0;
+      this.state.pitch = 0;
+    } else if (view === 'left') {
+      this.state.yaw = -90 * DEG;
+      this.state.pitch = 0;
+    } else if (view === 'right') {
+      this.state.yaw = 90 * DEG;
+      this.state.pitch = 0;
+    } else if (view === 'top') {
+      this.state.yaw = 0;
+      this.state.pitch = 90 * DEG;
+    } else if (view === 'iso') {
+      this.state.yaw = -25 * DEG;
+      this.state.pitch = -18 * DEG;
+    }
+
+    this.fitView();
+  };
+
+  SRFProjectViewer.prototype.updatePlaceholder = function (message, isVisible) {
+    if (!this.placeholder) return;
+    this.placeholder.textContent = message || '';
+    this.placeholder.hidden = !isVisible;
+  };
+
+  SRFProjectViewer.prototype.updateStatus = function (message, type) {
+    if (!this.status) return;
+    this.status.textContent = message || '';
+    this.status.setAttribute('data-state', type || 'info');
+  };
+
+  SRFProjectViewer.prototype.updateStats = function (data) {
+    if (!this.stats.filename) return;
+    this.stats.filename.textContent = data.filename || '—';
+    this.stats.format.textContent = data.format || '—';
+    this.stats.triangles.textContent = data.triangles ? this.formatNumber(data.triangles) : '—';
+    this.stats.bounds.textContent = data.bounds || '—';
+  };
+
+  SRFProjectViewer.prototype.formatNumber = function (value) {
+    return new Intl.NumberFormat().format(value);
+  };
+
+  SRFProjectViewer.prototype.detectExtension = function (name) {
+    var raw = String(name || '');
+    var clean = raw.split('?')[0].split('#')[0];
+    var parts = clean.split('.');
+    return parts.length > 1 ? parts.pop().toLowerCase() : '';
+  };
+
+  SRFProjectViewer.prototype.loadLocalFile = function (file) {
+    var self = this;
+    var extension = this.detectExtension(file.name || '');
+
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = null;
+    }
+
+    this.updatePlaceholder('', false);
+    this.updateStatus('Loading 3D preview…', 'loading');
+
+    if (extension !== 'stl' && extension !== 'obj') {
+      this.mesh = null;
+      this.drawEmpty();
+      this.updateStats({
+        filename: file.name || '—',
+        format: extension ? extension.toUpperCase() : '—',
+        triangles: 0,
+        bounds: '—'
+      });
+      this.updateStatus('Preview is currently available for STL and OBJ files.', 'warning');
+      return;
+    }
+
+    var reader = new FileReader();
+
+    reader.onload = function (event) {
+      try {
+        var mesh;
+
+        if (extension === 'stl') {
+          mesh = parseSTL(event.target.result);
+          mesh.format = 'STL';
+        } else {
+          mesh = parseOBJ(event.target.result);
+          mesh.format = 'OBJ';
+        }
+
+        mesh.filename = file.name || 'Model';
+        self.mesh = mesh;
+        self.resetCamera();
+        self.fitView();
+        self.updateStats({
+          filename: mesh.filename,
+          format: mesh.format,
+          triangles: mesh.triangleCount,
+          bounds: formatBounds(mesh.bounds)
+        });
+        self.updateStatus('3D preview ready. Drag to rotate, use Shift+drag to pan, and use the wheel or zoom buttons.', 'success');
+        self.render();
+      } catch (error) {
+        self.mesh = null;
+        self.drawEmpty();
+        self.updateStats({
+          filename: file.name || '—',
+          format: extension.toUpperCase(),
+          triangles: 0,
+          bounds: '—'
+        });
+        self.updateStatus('The viewer could not load this model.', 'error');
+        self.updatePlaceholder((error && error.message) ? error.message : 'Preview failed.', true);
+      }
+    };
+
+    reader.onerror = function () {
+      self.mesh = null;
+      self.drawEmpty();
+      self.updateStats({
+        filename: file.name || '—',
+        format: extension.toUpperCase(),
+        triangles: 0,
+        bounds: '—'
+      });
+      self.updateStatus('The viewer could not load this model.', 'error');
+      self.updatePlaceholder('Preview failed.', true);
+    };
+
+    if (extension === 'stl') {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
+  };
+
+  SRFProjectViewer.prototype.drawEmpty = function () {
+    var width = this.canvas.clientWidth || 640;
+    var height = this.canvas.clientHeight || 420;
+    this.ctx.clearRect(0, 0, width, height);
+    this.drawBackground(width, height);
+    this.drawGrid(width, height);
+    this.drawAxes(width, height);
+  };
+
+  SRFProjectViewer.prototype.render = function () {
+    var width = this.canvas.clientWidth || 640;
+    var height = this.canvas.clientHeight || 420;
+
+    this.ctx.clearRect(0, 0, width, height);
+    this.drawBackground(width, height);
+    this.drawGrid(width, height);
+    this.drawAxes(width, height);
+
+    if (!this.mesh || !this.mesh.triangles.length) {
+      return;
+    }
+
+    var projected = [];
+    var cosY = Math.cos(this.state.yaw);
+    var sinY = Math.sin(this.state.yaw);
+    var cosX = Math.cos(this.state.pitch);
+    var sinX = Math.sin(this.state.pitch);
+    var cx = width / 2 + this.state.panX * width * 0.6;
+    var cy = height / 2 - this.state.panY * height * 0.6;
+    var baseScale = Math.min(width, height) * 0.31 * this.state.zoom;
+    var distance = 4.2;
+    var light = normalizeVector({ x: -0.35, y: -0.45, z: 1 });
+
+    for (var i = 0; i < this.mesh.triangles.length; i++) {
+      var tri = this.mesh.triangles[i];
+      var vertices = tri.vertices.map(function (vertex) {
+        var centered = {
+          x: (vertex.x - this.mesh.center.x) / this.mesh.radius,
+          y: (vertex.y - this.mesh.center.y) / this.mesh.radius,
+          z: (vertex.z - this.mesh.center.z) / this.mesh.radius
+        };
+
+        var yawed = {
+          x: centered.x * cosY + centered.z * sinY,
+          y: centered.y,
+          z: -centered.x * sinY + centered.z * cosY
+        };
+
+        var pitched = {
+          x: yawed.x,
+          y: yawed.y * cosX - yawed.z * sinX,
+          z: yawed.y * sinX + yawed.z * cosX
+        };
+
+        var perspective = baseScale / (distance - pitched.z);
+        return {
+          x: cx + pitched.x * perspective,
+          y: cy - pitched.y * perspective,
+          z: pitched.z
+        };
+      }, this);
+
+      var v1 = subtract(vertices[1], vertices[0]);
+      var v2 = subtract(vertices[2], vertices[0]);
+      var normal = normalizeVector(cross(v1, v2));
+
+      if (normal.z <= 0) {
+        continue;
+      }
+
+      var shade = Math.max(0.18, dot(normal, light));
+      var depth = (vertices[0].z + vertices[1].z + vertices[2].z) / 3;
+
+      projected.push({
+        vertices: vertices,
+        shade: shade,
+        depth: depth
+      });
+    }
+
+    projected.sort(function (a, b) {
+      return a.depth - b.depth;
+    });
+
+    for (var j = 0; j < projected.length; j++) {
+      var p = projected[j];
+      var fill = Math.round(80 + p.shade * 135);
+      var edge = Math.round(55 + p.shade * 110);
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(p.vertices[0].x, p.vertices[0].y);
+      this.ctx.lineTo(p.vertices[1].x, p.vertices[1].y);
+      this.ctx.lineTo(p.vertices[2].x, p.vertices[2].y);
+      this.ctx.closePath();
+
+      this.ctx.fillStyle = 'rgb(' + fill + ',' + (fill + 12) + ',' + Math.min(255, fill + 30) + ')';
+      this.ctx.strokeStyle = 'rgba(' + edge + ',' + edge + ',' + Math.min(255, edge + 20) + ',0.38)';
+      this.ctx.lineWidth = 0.9;
+      this.ctx.fill();
+      this.ctx.stroke();
+    }
+  };
+
+  SRFProjectViewer.prototype.drawBackground = function (width, height) {
+    var gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#101b34');
+    gradient.addColorStop(1, '#050915');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, width, height);
+  };
+
+  SRFProjectViewer.prototype.drawGrid = function (width, height) {
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    this.ctx.lineWidth = 1;
+    var step = Math.max(26, Math.round(width / 16));
+
+    for (var x = 0; x <= width; x += step) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, height);
+      this.ctx.stroke();
+    }
+
+    for (var y = 0; y <= height; y += step) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(width, y);
+      this.ctx.stroke();
+    }
+
+    this.ctx.restore();
+  };
+
+  SRFProjectViewer.prototype.drawAxes = function (width, height) {
+    var originX = 56;
+    var originY = height - 46;
+
+    this.ctx.save();
+    this.ctx.lineWidth = 2;
+
+    this.ctx.strokeStyle = 'rgba(255,96,96,0.85)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX, originY);
+    this.ctx.lineTo(originX + 28, originY);
+    this.ctx.stroke();
+
+    this.ctx.strokeStyle = 'rgba(96,255,160,0.85)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX, originY);
+    this.ctx.lineTo(originX, originY - 28);
+    this.ctx.stroke();
+
+    this.ctx.strokeStyle = 'rgba(120,180,255,0.85)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(originX, originY);
+    this.ctx.lineTo(originX - 18, originY + 18);
+    this.ctx.stroke();
+
+    this.ctx.restore();
+  };
+
+  function subtract(a, b) {
+    return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+  }
+
+  function cross(a, b) {
+    return {
+      x: a.y * b.z - a.z * b.y,
+      y: a.z * b.x - a.x * b.z,
+      z: a.x * b.y - a.y * b.x
+    };
+  }
+
+  function dot(a, b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  }
+
+  function normalizeVector(vector) {
+    var length = Math.sqrt(
+      vector.x * vector.x +
+      vector.y * vector.y +
+      vector.z * vector.z
+    ) || 1;
+
+    return {
+      x: vector.x / length,
+      y: vector.y / length,
+      z: vector.z / length
+    };
+  }
+
+  function formatBounds(bounds) {
+    if (!bounds) {
+      return '—';
+    }
+
+    return [bounds.x, bounds.y, bounds.z].map(function (value) {
+      return value.toFixed(2);
+    }).join(' × ');
+  }
+
+  function parseSTL(buffer) {
+    if (looksLikeBinarySTL(buffer)) {
+      return parseBinarySTL(buffer);
+    }
+
+    return parseASCIISTL(new TextDecoder().decode(buffer));
+  }
+
+  function looksLikeBinarySTL(buffer) {
+    if (buffer.byteLength < 84) {
+      return false;
+    }
+
+    var view = new DataView(buffer);
+    var faces = view.getUint32(80, true);
+    var expectedLength = 84 + (faces * 50);
+
+    if (expectedLength === buffer.byteLength) {
+      return true;
+    }
+
+    var header = new TextDecoder().decode(buffer.slice(0, 80)).trim().toLowerCase();
+    return header.indexOf('solid') !== 0;
+  }
+
+  function parseBinarySTL(buffer) {
+    var view = new DataView(buffer);
+    var faces = view.getUint32(80, true);
+    var offset = 84;
+    var triangles = [];
+    var bounds = createBounds();
+
+    for (var i = 0; i < faces; i++) {
+      offset += 12;
+      var vertices = [];
+
+      for (var j = 0; j < 3; j++) {
+        var vertex = {
+          x: view.getFloat32(offset, true),
+          y: view.getFloat32(offset + 4, true),
+          z: view.getFloat32(offset + 8, true)
+        };
+        vertices.push(vertex);
+        expandBounds(bounds, vertex);
+        offset += 12;
+      }
+
+      triangles.push({ vertices: vertices });
+      offset += 2;
+    }
+
+    return buildMesh(triangles, bounds);
+  }
+
+  function parseASCIISTL(text) {
+    var pattern = /vertex\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)/ig;
+    var vertices = [];
+    var match;
+
+    while ((match = pattern.exec(text)) !== null) {
+      vertices.push({
+        x: parseFloat(match[1]),
+        y: parseFloat(match[2]),
+        z: parseFloat(match[3])
+      });
+    }
+
+    if (!vertices.length || vertices.length % 3 !== 0) {
+      throw new Error('This STL file could not be parsed.');
+    }
+
+    var bounds = createBounds();
+    var triangles = [];
+
+    for (var i = 0; i < vertices.length; i += 3) {
+      var triVertices = [vertices[i], vertices[i + 1], vertices[i + 2]];
+      for (var j = 0; j < triVertices.length; j++) {
+        expandBounds(bounds, triVertices[j]);
+      }
+      triangles.push({ vertices: triVertices });
+    }
+
+    return buildMesh(triangles, bounds);
+  }
+
+  function parseOBJ(text) {
+    var lines = text.split(/\r?\n/);
+    var sourceVertices = [];
+    var bounds = createBounds();
+    var triangles = [];
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line || line.charAt(0) === '#') {
+        continue;
+      }
+
+      var parts = line.split(/\s+/);
+
+      if (parts[0] === 'v' && parts.length >= 4) {
+        var vertex = {
+          x: parseFloat(parts[1]),
+          y: parseFloat(parts[2]),
+          z: parseFloat(parts[3])
+        };
+
+        if ([vertex.x, vertex.y, vertex.z].some(function (value) { return Number.isNaN(value); })) {
+          continue;
+        }
+
+        sourceVertices.push(vertex);
+        expandBounds(bounds, vertex);
+      } else if (parts[0] === 'f' && parts.length >= 4) {
+        var faceIndexes = parts
+          .slice(1)
+          .map(function (token) {
+            return parseOBJVertexIndex(token, sourceVertices.length);
+          })
+          .filter(function (index) {
+            return index >= 0;
+          });
+
+        if (faceIndexes.length < 3) {
+          continue;
+        }
+
+        for (var j = 1; j < faceIndexes.length - 1; j++) {
+          var a = sourceVertices[faceIndexes[0]];
+          var b = sourceVertices[faceIndexes[j]];
+          var c = sourceVertices[faceIndexes[j + 1]];
+
+          if (!a || !b || !c) {
+            continue;
+          }
+
+          triangles.push({
+            vertices: [
+              { x: a.x, y: a.y, z: a.z },
+              { x: b.x, y: b.y, z: b.z },
+              { x: c.x, y: c.y, z: c.z }
+            ]
+          });
+        }
+      }
+    }
+
+    if (!sourceVertices.length || !triangles.length) {
+      throw new Error('This OBJ file could not be parsed.');
+    }
+
+    return buildMesh(triangles, bounds);
+  }
+
+  function parseOBJVertexIndex(token, total) {
+    var raw = String(token).split('/')[0];
+    var index = parseInt(raw, 10);
+
+    if (Number.isNaN(index) || !index) {
+      return -1;
+    }
+
+    return index > 0 ? index - 1 : total + index;
+  }
+
+  function createBounds() {
+    return {
+      minX: Infinity,
+      minY: Infinity,
+      minZ: Infinity,
+      maxX: -Infinity,
+      maxY: -Infinity,
+      maxZ: -Infinity
+    };
+  }
+
+  function expandBounds(bounds, vertex) {
+    bounds.minX = Math.min(bounds.minX, vertex.x);
+    bounds.minY = Math.min(bounds.minY, vertex.y);
+    bounds.minZ = Math.min(bounds.minZ, vertex.z);
+    bounds.maxX = Math.max(bounds.maxX, vertex.x);
+    bounds.maxY = Math.max(bounds.maxY, vertex.y);
+    bounds.maxZ = Math.max(bounds.maxZ, vertex.z);
+  }
+
+  function buildMesh(triangles, rawBounds) {
+    var bounds = {
+      x: rawBounds.maxX - rawBounds.minX,
+      y: rawBounds.maxY - rawBounds.minY,
+      z: rawBounds.maxZ - rawBounds.minZ
+    };
+
+    var center = {
+      x: (rawBounds.minX + rawBounds.maxX) / 2,
+      y: (rawBounds.minY + rawBounds.maxY) / 2,
+      z: (rawBounds.minZ + rawBounds.maxZ) / 2
+    };
+
+    var radius = Math.max(bounds.x, bounds.y, bounds.z) || 1;
+
+    return {
+      triangles: triangles,
+      triangleCount: triangles.length,
+      center: center,
+      radius: radius,
+      bounds: bounds
+    };
+  }
+
+  function initProjectViewer(form) {
+    if (!form) return null;
+
+    var viewerRoot = form.querySelector('[data-srf-3d-viewer]');
+    var fileInput = form.querySelector('#srf-files');
+
+    if (!viewerRoot || !fileInput) {
+      return null;
+    }
+
+    return new SRFProjectViewer(viewerRoot, fileInput);
+  }
 
   function projectFormInit() {
     var form = document.querySelector('[data-srf-project-form]');
@@ -555,6 +1374,8 @@ document.addEventListener('click', function (e) {
     var prevBtn = form.querySelector('[data-srf-prev-step="2"]');
 
     var titleInput = form.querySelector('#srf-project-title');
+
+    initProjectViewer(form);
 
     function isLoggedIn() {
       return document.body.classList.contains('logged-in');
