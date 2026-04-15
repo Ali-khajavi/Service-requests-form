@@ -1331,3 +1331,199 @@
     content: none !important;
     display: none !important;
 }
+
+
+/* =========================================================
+   Project form 3D viewer
+   Scoped only to [project_request_form]
+   Does not affect the normal service request shortcode
+   ========================================================= */
+
+.srf-project-form .srf-3d-viewer {
+    margin-top: 1rem;
+    background: #101828;
+    border-radius: 1rem;
+    padding: 1rem;
+    min-height: 320px;
+    color: #fff;
+    display: grid;
+    gap: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-sizing: border-box;
+}
+
+.srf-project-form .srf-3d-viewer__header {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.srf-project-form .srf-3d-viewer__title {
+    margin: 0;
+    color: #fff;
+    font-size: 1.1rem;
+    line-height: 1.3;
+}
+
+.srf-project-form .srf-3d-viewer__intro {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.srf-project-form .srf-3d-viewer__canvas-wrap {
+    width: 100%;
+    height: 420px;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #0b1224, #1f2335);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.srf-project-form .srf-3d-viewer__canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+}
+
+.srf-project-form .srf-3d-viewer__canvas:active {
+    cursor: grabbing;
+}
+
+.srf-project-form .srf-3d-viewer__placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.95rem;
+    pointer-events: none;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.srf-project-form .srf-3d-viewer__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.srf-project-form .srf-3d-viewer__status {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.srf-project-form .srf-3d-viewer__status[data-state="success"] {
+    color: #b6f7d2;
+}
+
+.srf-project-form .srf-3d-viewer__status[data-state="warning"] {
+    color: #ffe7a3;
+}
+
+.srf-project-form .srf-3d-viewer__status[data-state="error"] {
+    color: #ffb4b4;
+}
+
+.srf-project-form .srf-3d-viewer__status[data-state="loading"] {
+    color: #b9d5ff;
+}
+
+.srf-project-form .srf-3d-viewer__controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.srf-project-form .srf-3d-viewer__button {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.6rem 0.95rem;
+    font-size: 0.85rem;
+    line-height: 1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+.srf-project-form .srf-3d-viewer__button:hover,
+.srf-project-form .srf-3d-viewer__button:focus {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    box-shadow: none;
+}
+
+.srf-project-form .srf-3d-viewer__meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.srf-project-form .srf-3d-viewer__meta-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.85rem;
+    padding: 0.75rem 0.9rem;
+    min-width: 0;
+}
+
+.srf-project-form .srf-3d-viewer__meta-item strong {
+    display: block;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+
+.srf-project-form .srf-3d-viewer__meta-label {
+    display: block;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 0.3rem;
+}
+
+@media (max-width: 782px) {
+    .srf-project-form .srf-3d-viewer__canvas-wrap {
+        height: 340px;
+    }
+
+    .srf-project-form .srf-3d-viewer__meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .srf-project-form .srf-3d-viewer__toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .srf-project-form .srf-3d-viewer__controls {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 520px) {
+    .srf-project-form .srf-3d-viewer {
+        padding: 0.85rem;
+    }
+
+    .srf-project-form .srf-3d-viewer__canvas-wrap {
+        height: 280px;
+    }
+
+    .srf-project-form .srf-3d-viewer__meta {
+        grid-template-columns: 1fr;
+    }
+
+    .srf-project-form .srf-3d-viewer__button {
+        width: 100%;
+        justify-content: center;
+    }
+}
