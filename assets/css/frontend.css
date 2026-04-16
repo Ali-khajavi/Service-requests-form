@@ -1527,3 +1527,158 @@
         justify-content: center;
     }
 }
+
+/* =========================================================
+   Project step 2 workspace layout
+========================================================= */
+
+.srf-project-form .srf-project-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+    gap: 1rem;
+    align-items: start;
+    margin-top: 1rem;
+}
+
+.srf-project-form .srf-project-workspace__viewer,
+.srf-project-form .srf-project-workspace__sidebar {
+    min-width: 0;
+}
+
+.srf-project-form .srf-project-workspace__sidebar {
+    display: grid;
+    gap: 1rem;
+}
+
+.srf-project-form .srf-project-quote-options,
+.srf-project-form .srf-project-quote-summary {
+    margin-top: 0;
+}
+
+.srf-project-form .srf-project-quote-options__header {
+    display: grid;
+    gap: 0.25rem;
+    margin-bottom: 0.85rem;
+}
+
+.srf-project-form .srf-project-quote-options__title,
+.srf-project-form .srf-project-quote-summary__title {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.3;
+}
+
+.srf-project-form .srf-project-quote-options__intro,
+.srf-project-form .srf-project-quote-summary__note {
+    margin: 0;
+    color: #667085;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.srf-project-form .srf-project-quote-options__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem 1rem;
+}
+
+.srf-project-form .srf-project-quote-options .srf-form__field {
+    margin-bottom: 0;
+}
+
+.srf-project-form .srf-project-quote-options .srf-form__field:not(.srf-form__field--half) {
+    grid-column: 1 / -1;
+}
+
+.srf-project-form .srf-project-quote-summary__rows {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.srf-project-form .srf-project-quote-summary__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.srf-project-form .srf-project-quote-summary__row:last-child {
+    border-bottom: 0;
+}
+
+.srf-project-form .srf-project-quote-summary__row span {
+    color: #667085;
+}
+
+.srf-project-form .srf-project-quote-summary__row strong {
+    color: #101828;
+    text-align: right;
+}
+
+.srf-project-form .srf-3d-viewer__canvas-wrap {
+    height: 520px;
+}
+
+.srf-project-form .srf-3d-viewer__controls {
+    justify-content: flex-start;
+}
+
+.srf-project-form .srf-3d-viewer__button {
+    min-width: 72px;
+}
+
+.srf-project-form .srf-project-upload-field > .srf-project-help {
+    display: block;
+}
+
+.srf-project-form .srf-project-upload-field .srf-project-help + .srf-project-help {
+    margin-top: 0.25rem;
+}
+
+.srf-project-form .srf-project-workspace [hidden] {
+    display: none !important;
+}
+
+@media (max-width: 1100px) {
+    .srf-project-form .srf-project-workspace {
+        grid-template-columns: minmax(0, 1.35fr) minmax(290px, 0.95fr);
+    }
+
+    .srf-project-form .srf-3d-viewer__canvas-wrap {
+        height: 460px;
+    }
+}
+
+@media (max-width: 900px) {
+    .srf-project-form .srf-project-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .srf-project-form .srf-project-workspace__sidebar {
+        order: 2;
+    }
+
+    .srf-project-form .srf-project-workspace__viewer {
+        order: 1;
+    }
+
+    .srf-project-form .srf-3d-viewer__canvas-wrap {
+        height: 380px;
+    }
+}
+
+@media (max-width: 640px) {
+    .srf-project-form .srf-project-quote-options__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .srf-project-form .srf-project-quote-options .srf-form__field--half {
+        grid-column: 1 / -1;
+    }
+
+    .srf-project-form .srf-3d-viewer__canvas-wrap {
+        height: 300px;
+    }
+}

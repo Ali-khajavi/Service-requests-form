@@ -1537,6 +1537,144 @@ function init3DQuotePage() {
   refreshQuote();
 }
 
+/* =========================================================
+   Project form: material/printer filtering + summary
+========================================================= */
+(function () {
+  'use strict';
+
+  function parseSupportedMaterials(option) {
+    if (!option) return [];
+    var raw = option.getAttribute('data-supported-materials') || '[]';
+
+    try {
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.map(function (id) {
+        return parseInt(id, 10);
+      }).filter(function (id) {
+        return !Number.isNaN(id) && id > 0;
+      }) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function getSelectedOption(select) {
+    if (!select) return null;
+    return select.options[select.selectedIndex] || null;
+  }
+
+  function updateProjectSummary(form) {
+    if (!form) return;
+
+    var materialSelect = form.querySelector('#srf-material-id');
+    var printerSelect  = form.querySelector('#srf-printer-id');
+    var layerInput     = form.querySelector('#srf-layer-height');
+    var quantityInput  = form.querySelector('#srf-quantity');
+
+    var materialOut = form.querySelector('[data-srf-summary-material]');
+    var printerOut  = form.querySelector('[data-srf-summary-printer]');
+    var layerOut    = form.querySelector('[data-srf-summary-layer]');
+    var quantityOut = form.querySelector('[data-srf-summary-quantity]');
+
+    var materialOpt = getSelectedOption(materialSelect);
+    var printerOpt  = getSelectedOption(printerSelect);
+
+    if (materialOut) {
+      materialOut.textContent = materialOpt && materialOpt.value ? materialOpt.textContent.trim() : '—';
+    }
+
+    if (printerOut) {
+      printerOut.textContent = printerOpt && printerOpt.value ? printerOpt.textContent.trim() : '—';
+    }
+
+    if (layerOut) {
+      layerOut.textContent = layerInput && layerInput.value ? (layerInput.value + ' mm') : '—';
+    }
+
+    if (quantityOut) {
+      quantityOut.textContent = quantityInput && quantityInput.value ? quantityInput.value : '—';
+    }
+  }
+
+  function filterPrintersByMaterial(form) {
+    if (!form) return;
+
+    var materialSelect = form.querySelector('#srf-material-id');
+    var printerSelect  = form.querySelector('#srf-printer-id');
+
+    if (!materialSelect || !printerSelect) return;
+
+    var selectedMaterial = parseInt(materialSelect.value || '0', 10);
+    var hasSelectedPrinterStillValid = false;
+
+    Array.prototype.forEach.call(printerSelect.options, function (option, index) {
+      if (index === 0) {
+        option.hidden = false;
+        option.disabled = false;
+        return;
+      }
+
+      var supported = parseSupportedMaterials(option);
+      var isAllowed = !selectedMaterial || !supported.length || supported.indexOf(selectedMaterial) !== -1;
+
+      option.hidden = !isAllowed;
+      option.disabled = !isAllowed;
+
+      if (isAllowed && option.value === printerSelect.value) {
+        hasSelectedPrinterStillValid = true;
+      }
+    });
+
+    if (printerSelect.value && !hasSelectedPrinterStillValid) {
+      printerSelect.value = '';
+    }
+
+    updateProjectSummary(form);
+  }
+
+  function initProjectQuoteOptions() {
+    var form = document.querySelector('[data-srf-project-form]');
+    if (!form) return;
+
+    var materialSelect = form.querySelector('#srf-material-id');
+    var printerSelect  = form.querySelector('#srf-printer-id');
+    var layerInput     = form.querySelector('#srf-layer-height');
+    var quantityInput  = form.querySelector('#srf-quantity');
+
+    if (!materialSelect || !printerSelect) return;
+
+    materialSelect.addEventListener('change', function () {
+      filterPrintersByMaterial(form);
+    });
+
+    printerSelect.addEventListener('change', function () {
+      updateProjectSummary(form);
+    });
+
+    if (layerInput) {
+      layerInput.addEventListener('input', function () {
+        updateProjectSummary(form);
+      });
+    }
+
+    if (quantityInput) {
+      quantityInput.addEventListener('input', function () {
+        updateProjectSummary(form);
+      });
+    }
+
+    filterPrintersByMaterial(form);
+    updateProjectSummary(form);
+  }
+
+  SRF_onReady(function () {
+    initProjectQuoteOptions();
+  });
+})();
+
+
 SRF_onReady(function () {
   init3DQuotePage();
 });
+
