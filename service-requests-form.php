@@ -72,6 +72,7 @@ final class Service_Requests_Form {
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-status.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-storage.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-materials.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-printers.php';
 
 		// Main
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-form-handler.php';
@@ -112,6 +113,9 @@ final class Service_Requests_Form {
 		}
 		if ( class_exists( 'SRF_Admin_Materials' ) ) {
 			SRF_Admin_Materials::init();
+		}
+		if ( class_exists( 'SRF_Admin_Printers' ) ) {
+			SRF_Admin_Printers::init();
 		}
 
 		// Frontend form
