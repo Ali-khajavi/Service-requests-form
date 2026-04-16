@@ -252,6 +252,27 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			return $printer;
 		}
 
+		protected static function get_project_quote_settings() {
+			$defaults = array(
+				'currency'        => 'EUR',
+				'currency_symbol' => '€',
+				'tax_rate'        => 0,
+				'service_fee'     => 5,
+				'setup_fee'       => 0,
+				'profit_margin'   => 20,
+			);
+
+			if ( class_exists( 'SR_Settings' ) && method_exists( 'SR_Settings', 'get_quote_settings' ) ) {
+				$settings = SR_Settings::get_quote_settings();
+
+				if ( is_array( $settings ) ) {
+					return wp_parse_args( $settings, $defaults );
+				}
+			}
+
+			return $defaults;
+		}
+
 		public static function allow_project_upload_mimes( $mimes ) {
 			$mimes['stl']  = 'model/stl';
 			$mimes['3mf']  = 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml';
@@ -1299,6 +1320,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'is_business'        => self::current_user_is_business(),
 					'materials'          => $materials,
 					'printers'           => $printers,
+					'quote_settings'     => self::get_project_quote_settings(),
 				)
 			);
 			return ob_get_clean();

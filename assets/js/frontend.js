@@ -1674,6 +1674,211 @@ function init3DQuotePage() {
 })();
 
 
+/* =========================================================
+   Project form: live estimate preview
+========================================================= */
+(function () {
+  'use strict';
+
+  function toNumber(value, fallback) {
+    var n = parseFloat(value);
+    return Number.isFinite(n) ? n : (fallback || 0);
+  }
+
+  function getSelectedOption(select) {
+    if (!select) return null;
+    return select.options[select.selectedIndex] || null;
+  }
+
+  function formatMoney(amount, symbol) {
+    var n = Number.isFinite(amount) ? amount : 0;
+    return (symbol || '€') + n.toFixed(2);
+  }
+
+  function formatVolume(value) {
+    var n = Number.isFinite(value) ? value : 0;
+    return n.toFixed(2) + ' cm3';
+  }
+
+  function getMaterialVolumeFromViewer(form) {
+    var boundsNode = form ? form.querySelector('[data-field="bounds"]') : null;
+    if (!boundsNode) return 0;
+
+    var raw = (boundsNode.textContent || '').trim();
+    if (!raw || raw === '—') return 0;
+
+    var parts = raw.split('×').map(function (item) {
+      return toNumber(item.trim(), 0);
+    }).filter(function (n) {
+      return n > 0;
+    });
+
+    if (parts.length !== 3) return 0;
+
+    var mm3 = parts[0] * parts[1] * parts[2];
+    var cm3 = mm3 / 1000;
+
+    return cm3 > 0 ? cm3 : 0;
+  }
+
+  function calculateLiveEstimate(form) {
+    if (!form) return null;
+
+    var summary = form.querySelector('[data-srf-quote-summary]');
+    var materialSelect = form.querySelector('#srf-material-id');
+    var printerSelect  = form.querySelector('#srf-printer-id');
+    var layerInput     = form.querySelector('#srf-layer-height');
+    var infillInput    = form.querySelector('#srf-infill');
+    var shellSelect    = form.querySelector('#srf-shell-mode');
+    var scaleInput     = form.querySelector('#srf-scale');
+    var quantityInput  = form.querySelector('#srf-quantity');
+
+    if (!summary || !materialSelect || !printerSelect) return null;
+
+    var materialOption = getSelectedOption(materialSelect);
+    var printerOption  = getSelectedOption(printerSelect);
+
+    if (!materialOption || !materialOption.value || !printerOption || !printerOption.value) {
+      return null;
+    }
+
+    var currencySymbol = summary.getAttribute('data-currency-symbol') || '€';
+    var taxRate        = toNumber(summary.getAttribute('data-tax-rate'), 0);
+    var serviceFee     = toNumber(summary.getAttribute('data-service-fee'), 0);
+    var setupFee       = toNumber(summary.getAttribute('data-setup-fee'), 0);
+    var profitMargin   = toNumber(summary.getAttribute('data-profit-margin'), 0);
+
+    var pricePerGram   = toNumber(materialOption.getAttribute('data-price-per-gram'), 0);
+    var pricePerCm3    = toNumber(materialOption.getAttribute('data-price-per-cm3'), 0);
+    var density        = toNumber(materialOption.getAttribute('data-density'), 0);
+    var machineFactor  = toNumber(materialOption.getAttribute('data-machine-factor'), 1) || 1;
+    var surfaceFactor  = toNumber(materialOption.getAttribute('data-surface-factor'), 1) || 1;
+    var wastageFactor  = toNumber(materialOption.getAttribute('data-wastage-factor'), 1) || 1;
+
+    var hourlyCost     = toNumber(printerOption.getAttribute('data-hourly-cost'), 0);
+    var defaultSpeed   = toNumber(printerOption.getAttribute('data-default-speed'), 1);
+
+    var layerHeight    = Math.max(0.01, toNumber(layerInput && layerInput.value, 0.2));
+    var infill         = Math.max(0, Math.min(100, toNumber(infillInput && infillInput.value, 20)));
+    var scale          = Math.max(10, toNumber(scaleInput && scaleInput.value, 100));
+    var quantity       = Math.max(1, parseInt((quantityInput && quantityInput.value) || '1', 10) || 1);
+    var shellMode      = shellSelect ? shellSelect.value : 'solid';
+
+    var baseVolumeCm3  = getMaterialVolumeFromViewer(form);
+    if (!baseVolumeCm3) {
+      baseVolumeCm3 = 8;
+    }
+
+    var scaleFactor = Math.pow(scale / 100, 3);
+    var shellFactor = shellMode === 'hollow' ? 0.55 : 1;
+    var infillFactor = 0.2 + (infill / 100) * 0.8;
+    var effectiveVolumeCm3 = baseVolumeCm3 * scaleFactor * shellFactor * infillFactor;
+    var adjustedVolumeCm3 = effectiveVolumeCm3 * wastageFactor;
+
+    var materialCostFromVolume = adjustedVolumeCm3 * pricePerCm3;
+    var materialCostFromWeight = 0;
+
+    if (density > 0 && pricePerGram > 0) {
+      var estimatedGrams = adjustedVolumeCm3 * density;
+      materialCostFromWeight = estimatedGrams * pricePerGram;
+    }
+
+    var materialCost = Math.max(materialCostFromVolume, materialCostFromWeight);
+    materialCost *= surfaceFactor;
+
+    var estimatedHours = (adjustedVolumeCm3 / Math.max(defaultSpeed, 1)) * machineFactor * (0.2 / layerHeight);
+    var printerCost = estimatedHours * hourlyCost;
+
+    var unitSubtotal = materialCost + printerCost + serviceFee + setupFee;
+    var marginAmount = unitSubtotal * (profitMargin / 100);
+    var subtotalWithMargin = unitSubtotal + marginAmount;
+    var subtotal = subtotalWithMargin * quantity;
+    var taxAmount = subtotal * (taxRate / 100);
+    var total = subtotal + taxAmount;
+
+    return {
+      currencySymbol: currencySymbol,
+      estimatedVolume: adjustedVolumeCm3,
+      materialCost: materialCost * quantity,
+      printerCost: printerCost * quantity,
+      serviceFee: serviceFee * quantity,
+      setupFee: setupFee,
+      taxAmount: taxAmount,
+      total: total
+    };
+  }
+
+  function setText(form, selector, value) {
+    var node = form ? form.querySelector(selector) : null;
+    if (node) {
+      node.textContent = value;
+    }
+  }
+
+  function updateLiveEstimate(form) {
+    if (!form) return;
+
+    var estimate = calculateLiveEstimate(form);
+
+    if (!estimate) {
+      setText(form, '[data-srf-price-volume]', '—');
+      setText(form, '[data-srf-price-material]', '—');
+      setText(form, '[data-srf-price-printer]', '—');
+      setText(form, '[data-srf-price-service]', '—');
+      setText(form, '[data-srf-price-setup]', '—');
+      setText(form, '[data-srf-price-tax]', '—');
+      setText(form, '[data-srf-price-total]', '—');
+      return;
+    }
+
+    setText(form, '[data-srf-price-volume]', formatVolume(estimate.estimatedVolume));
+    setText(form, '[data-srf-price-material]', formatMoney(estimate.materialCost, estimate.currencySymbol));
+    setText(form, '[data-srf-price-printer]', formatMoney(estimate.printerCost, estimate.currencySymbol));
+    setText(form, '[data-srf-price-service]', formatMoney(estimate.serviceFee, estimate.currencySymbol));
+    setText(form, '[data-srf-price-setup]', formatMoney(estimate.setupFee, estimate.currencySymbol));
+    setText(form, '[data-srf-price-tax]', formatMoney(estimate.taxAmount, estimate.currencySymbol));
+    setText(form, '[data-srf-price-total]', formatMoney(estimate.total, estimate.currencySymbol));
+  }
+
+  function initProjectLiveEstimate() {
+    var form = document.querySelector('[data-srf-project-form]');
+    if (!form) return;
+
+    [
+      '#srf-material-id',
+      '#srf-printer-id',
+      '#srf-layer-height',
+      '#srf-infill',
+      '#srf-shell-mode',
+      '#srf-scale',
+      '#srf-quantity',
+      '#srf-files'
+    ].forEach(function (selector) {
+      var field = form.querySelector(selector);
+      if (!field) return;
+
+      field.addEventListener('change', function () {
+        updateLiveEstimate(form);
+      });
+
+      field.addEventListener('input', function () {
+        updateLiveEstimate(form);
+      });
+    });
+
+    updateLiveEstimate(form);
+
+    setTimeout(function () {
+      updateLiveEstimate(form);
+    }, 300);
+  }
+
+  SRF_onReady(function () {
+    initProjectLiveEstimate();
+  });
+})();
+
+
 SRF_onReady(function () {
   init3DQuotePage();
 });

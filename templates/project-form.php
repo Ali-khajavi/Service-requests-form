@@ -26,6 +26,15 @@ $google_error    = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash
 $materials       = isset( $materials ) && is_array( $materials ) ? $materials : array();
 $printers        = isset( $printers ) && is_array( $printers ) ? $printers : array();
 
+$quote_settings  = isset( $quote_settings ) && is_array( $quote_settings ) ? $quote_settings : array();
+
+$currency_symbol = isset( $quote_settings['currency_symbol'] ) ? (string) $quote_settings['currency_symbol'] : '€';
+$tax_rate        = isset( $quote_settings['tax_rate'] ) ? (float) $quote_settings['tax_rate'] : 0;
+$service_fee     = isset( $quote_settings['service_fee'] ) ? (float) $quote_settings['service_fee'] : 5;
+$setup_fee       = isset( $quote_settings['setup_fee'] ) ? (float) $quote_settings['setup_fee'] : 0;
+$profit_margin   = isset( $quote_settings['profit_margin'] ) ? (float) $quote_settings['profit_margin'] : 20;
+
+
 $google_error_map = array(
 	'google_disabled'        => __( 'Google login is currently unavailable.', 'service-requests-form' ),
 	'google_missing_code'    => __( 'Google login was canceled or incomplete.', 'service-requests-form' ),
@@ -196,10 +205,6 @@ $google_error_map = array(
 					?>
 				</small>
 
-				<small class="srf-field__help srf-project-help">
-					<?php echo esc_html( $is_business ? __( 'Business account limit: 10 GB.', 'service-requests-form' ) : __( 'Standard account limit: 1 GB.', 'service-requests-form' ) ); ?>
-				</small>
-
 				<?php if ( $allowed_formats !== '' ) : ?>
 					<small class="srf-field__help srf-project-help">
 						<?php
@@ -286,7 +291,16 @@ $google_error_map = array(
 									<select id="srf-material-id" name="srf_material_id" required>
 										<option value=""><?php esc_html_e( 'Select material', 'service-requests-form' ); ?></option>
 										<?php foreach ( $materials as $material ) : ?>
-											<option value="<?php echo esc_attr( (int) $material->id ); ?>" <?php selected( $old( 'material_id' ), (string) (int) $material->id ); ?>>
+											<option
+												value="<?php echo esc_attr( (int) $material->id ); ?>"
+												data-price-per-gram="<?php echo esc_attr( (float) $material->price_per_gram ); ?>"
+												data-price-per-cm3="<?php echo esc_attr( (float) $material->price_per_cm3 ); ?>"
+												data-density="<?php echo esc_attr( (float) $material->density ); ?>"
+												data-machine-factor="<?php echo esc_attr( (float) $material->machine_time_factor ); ?>"
+												data-surface-factor="<?php echo esc_attr( (float) $material->surface_quality_factor ); ?>"
+												data-wastage-factor="<?php echo esc_attr( (float) $material->wastage_factor ); ?>"
+												<?php selected( $old( 'material_id' ), (string) (int) $material->id ); ?>
+											>
 												<?php echo esc_html( $material->name ); ?>
 											</option>
 										<?php endforeach; ?>
@@ -309,6 +323,10 @@ $google_error_map = array(
 											<option
 												value="<?php echo esc_attr( (int) $printer->id ); ?>"
 												data-supported-materials="<?php echo esc_attr( wp_json_encode( $supported_ids ) ); ?>"
+												data-hourly-cost="<?php echo esc_attr( (float) $printer->hourly_cost ); ?>"
+												data-default-speed="<?php echo esc_attr( (float) $printer->default_speed ); ?>"
+												data-min-layer-height="<?php echo esc_attr( (float) $printer->min_layer_height ); ?>"
+												data-max-layer-height="<?php echo esc_attr( (float) $printer->max_layer_height ); ?>"
 												<?php selected( $old( 'printer_id' ), (string) (int) $printer->id ); ?>
 											>
 												<?php echo esc_html( $printer->name ); ?>
@@ -352,9 +370,18 @@ $google_error_map = array(
 							</div>
 						</div>
 
-						<div class="srf-project-quote-summary srf-project-card" data-srf-quote-summary>
+						<div
+							class="srf-project-quote-summary srf-project-card"
+							data-srf-quote-summary
+							data-currency-symbol="<?php echo esc_attr( $currency_symbol ); ?>"
+							data-tax-rate="<?php echo esc_attr( $tax_rate ); ?>"
+							data-service-fee="<?php echo esc_attr( $service_fee ); ?>"
+							data-setup-fee="<?php echo esc_attr( $setup_fee ); ?>"
+							data-profit-margin="<?php echo esc_attr( $profit_margin ); ?>"
+						>
 							<h3 class="srf-project-quote-summary__title"><?php esc_html_e( 'Quote summary', 'service-requests-form' ); ?></h3>
-							<div class="srf-project-quote-summary__rows">
+
+							<div class="srf-project-quote-summary__rows srf-project-quote-summary__rows--meta">
 								<div class="srf-project-quote-summary__row">
 									<span><?php esc_html_e( 'Material', 'service-requests-form' ); ?></span>
 									<strong data-srf-summary-material>—</strong>
@@ -372,8 +399,40 @@ $google_error_map = array(
 									<strong data-srf-summary-quantity>—</strong>
 								</div>
 							</div>
+
+							<div class="srf-project-quote-summary__rows srf-project-quote-summary__rows--pricing">
+								<div class="srf-project-quote-summary__row">
+									<span><?php esc_html_e( 'Estimated volume', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-volume>—</strong>
+								</div>
+								<div class="srf-project-quote-summary__row">
+									<span><?php esc_html_e( 'Estimated material cost', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-material>—</strong>
+								</div>
+								<div class="srf-project-quote-summary__row">
+									<span><?php esc_html_e( 'Estimated printer cost', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-printer>—</strong>
+								</div>
+								<div class="srf-project-quote-summary__row">
+									<span><?php esc_html_e( 'Service fee', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-service>—</strong>
+								</div>
+								<div class="srf-project-quote-summary__row">
+									<span><?php esc_html_e( 'Setup fee', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-setup>—</strong>
+								</div>
+								<div class="srf-project-quote-summary__row">
+									<span><?php esc_html_e( 'Tax', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-tax>—</strong>
+								</div>
+								<div class="srf-project-quote-summary__row srf-project-quote-summary__row--total">
+									<span><?php esc_html_e( 'Estimated total', 'service-requests-form' ); ?></span>
+									<strong data-srf-price-total>—</strong>
+								</div>
+							</div>
+
 							<p class="srf-project-quote-summary__note">
-								<?php esc_html_e( 'Live price calculation will be added in the next step.', 'service-requests-form' ); ?>
+								<?php esc_html_e( 'This is a live estimate preview. Final pricing logic will be finalized in the backend next.', 'service-requests-form' ); ?>
 							</p>
 						</div>
 					</aside>
