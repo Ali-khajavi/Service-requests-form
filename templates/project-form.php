@@ -369,73 +369,68 @@ $google_error_map = array(
 								<textarea id="srf-quote-notes" name="srf_quote_notes" rows="5"><?php echo esc_textarea( $old( 'notes' ) ); ?></textarea>
 							</div>
 						</div>
-
-						<div
-							class="srf-project-quote-summary srf-project-card"
-							data-srf-quote-summary
-							data-currency-symbol="<?php echo esc_attr( $currency_symbol ); ?>"
-							data-tax-rate="<?php echo esc_attr( $tax_rate ); ?>"
-							data-service-fee="<?php echo esc_attr( $service_fee ); ?>"
-							data-setup-fee="<?php echo esc_attr( $setup_fee ); ?>"
-							data-profit-margin="<?php echo esc_attr( $profit_margin ); ?>"
-						>
-							<h3 class="srf-project-quote-summary__title"><?php esc_html_e( 'Quote summary', 'service-requests-form' ); ?></h3>
-
-							<div class="srf-project-quote-summary__rows srf-project-quote-summary__rows--meta">
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Material', 'service-requests-form' ); ?></span>
-									<strong data-srf-summary-material>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Printer', 'service-requests-form' ); ?></span>
-									<strong data-srf-summary-printer>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Layer height', 'service-requests-form' ); ?></span>
-									<strong data-srf-summary-layer>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></span>
-									<strong data-srf-summary-quantity>—</strong>
-								</div>
-							</div>
-
-							<div class="srf-project-quote-summary__rows srf-project-quote-summary__rows--pricing">
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Estimated volume', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-volume>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Estimated material cost', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-material>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Estimated printer cost', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-printer>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Service fee', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-service>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Setup fee', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-setup>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row">
-									<span><?php esc_html_e( 'Tax', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-tax>—</strong>
-								</div>
-								<div class="srf-project-quote-summary__row srf-project-quote-summary__row--total">
-									<span><?php esc_html_e( 'Estimated total', 'service-requests-form' ); ?></span>
-									<strong data-srf-price-total>—</strong>
-								</div>
-							</div>
-
-							<p class="srf-project-quote-summary__note">
-								<?php esc_html_e( 'This is a live estimate preview. Final pricing logic will be finalized in the backend next.', 'service-requests-form' ); ?>
-							</p>
-						</div>
 					</aside>
+				</div>
+
+				<div
+					class="srf-project-summary srf-project-card"
+					data-srf-quote-summary
+					data-currency-symbol="<?php echo esc_attr( $currency_symbol ); ?>"
+					data-tax-rate="<?php echo esc_attr( $tax_rate ); ?>"
+					data-service-fee="<?php echo esc_attr( $service_fee ); ?>"
+					data-setup-fee="<?php echo esc_attr( $setup_fee ); ?>"
+					data-profit-margin="<?php echo esc_attr( $profit_margin ); ?>"
+				>
+					<h3 class="srf-project-summary__title"><?php esc_html_e( 'Summary', 'service-requests-form' ); ?></h3>
+
+					<div class="srf-project-summary__grid">
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Material', 'service-requests-form' ); ?></span>
+							<strong data-srf-summary-material>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Printer', 'service-requests-form' ); ?></span>
+							<strong data-srf-summary-printer>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Layer height', 'service-requests-form' ); ?></span>
+							<strong data-srf-summary-layer>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></span>
+							<strong data-srf-summary-quantity>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Estimated volume', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-volume>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Estimated material cost', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-material>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Estimated printer cost', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-printer>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Service fee', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-service>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Setup fee', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-setup>—</strong>
+						</div>
+						<div class="srf-project-summary__item">
+							<span><?php esc_html_e( 'Tax', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-tax>—</strong>
+						</div>
+						<div class="srf-project-summary__item srf-project-summary__item--total">
+							<span><?php esc_html_e( 'Estimated total', 'service-requests-form' ); ?></span>
+							<strong data-srf-price-total>—</strong>
+						</div>
+					</div>
+				</div>
+
 				</div>
 			</div>
 
