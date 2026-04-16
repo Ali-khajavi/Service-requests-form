@@ -23,6 +23,8 @@ $request_uri     = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SER
 $current_url     = esc_url_raw( home_url( $request_uri ) );
 $my_account_url  = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url();
 $google_error    = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash( $_GET['srf_google_error'] ) ) : '';
+$materials       = isset( $materials ) && is_array( $materials ) ? $materials : array();
+$printers        = isset( $printers ) && is_array( $printers ) ? $printers : array();
 
 $google_error_map = array(
 	'google_disabled'        => __( 'Google login is currently unavailable.', 'service-requests-form' ),
@@ -281,6 +283,124 @@ $google_error_map = array(
 							<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Bounds', 'service-requests-form' ); ?></span>
 							<strong data-field="bounds">—</strong>
 						</div>
+					</div>
+				</div>
+
+				<div class="srf-project-quote-options srf-project-card" data-srf-quote-options>
+					<div class="srf-project-quote-options__header">
+						<h3 class="srf-project-quote-options__title"><?php esc_html_e( 'Print settings', 'service-requests-form' ); ?></h3>
+						<p class="srf-project-quote-options__intro"><?php esc_html_e( 'Choose the material, printer, and print parameters for this 3D request.', 'service-requests-form' ); ?></p>
+					</div>
+
+					<div class="srf-project-quote-options__grid">
+						<div class="srf-form__field">
+							<label for="srf-material-id">
+								<?php esc_html_e( 'Material', 'service-requests-form' ); ?> <span class="srf-required">*</span>
+							</label>
+							<select id="srf-material-id" name="srf_material_id" required>
+								<option value=""><?php esc_html_e( 'Select material', 'service-requests-form' ); ?></option>
+								<?php foreach ( $materials as $material ) : ?>
+									<option value="<?php echo esc_attr( (int) $material->id ); ?>" <?php selected( $old( 'material_id' ), (string) (int) $material->id ); ?>>
+										<?php echo esc_html( $material->name ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-printer-id">
+								<?php esc_html_e( 'Printer', 'service-requests-form' ); ?> <span class="srf-required">*</span>
+							</label>
+							<select id="srf-printer-id" name="srf_printer_id" required>
+								<option value=""><?php esc_html_e( 'Select printer', 'service-requests-form' ); ?></option>
+								<?php foreach ( $printers as $printer ) : ?>
+									<?php
+									$supported_ids = array();
+									if ( ! empty( $printer->supported_material_ids ) && is_array( $printer->supported_material_ids ) ) {
+										$supported_ids = array_map( 'intval', $printer->supported_material_ids );
+									}
+									?>
+									<option
+										value="<?php echo esc_attr( (int) $printer->id ); ?>"
+										data-supported-materials="<?php echo esc_attr( wp_json_encode( $supported_ids ) ); ?>"
+										<?php selected( $old( 'printer_id' ), (string) (int) $printer->id ); ?>
+									>
+										<?php echo esc_html( $printer->name ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-layer-height"><?php esc_html_e( 'Layer height (mm)', 'service-requests-form' ); ?></label>
+							<input
+								type="number"
+								min="0"
+								step="0.01"
+								id="srf-layer-height"
+								name="srf_layer_height"
+								value="<?php echo esc_attr( $old( 'layer_height', '0.20' ) ); ?>"
+							/>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-infill"><?php esc_html_e( 'Infill (%)', 'service-requests-form' ); ?></label>
+							<input
+								type="number"
+								min="0"
+								max="100"
+								step="1"
+								id="srf-infill"
+								name="srf_infill"
+								value="<?php echo esc_attr( $old( 'infill', '20' ) ); ?>"
+							/>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-shell-mode"><?php esc_html_e( 'Structure', 'service-requests-form' ); ?></label>
+							<select id="srf-shell-mode" name="srf_shell_mode">
+								<option value="solid" <?php selected( $old( 'shell_mode', 'solid' ), 'solid' ); ?>>
+									<?php esc_html_e( 'Solid', 'service-requests-form' ); ?>
+								</option>
+								<option value="hollow" <?php selected( $old( 'shell_mode', 'solid' ), 'hollow' ); ?>>
+									<?php esc_html_e( 'Hollow', 'service-requests-form' ); ?>
+								</option>
+							</select>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-scale"><?php esc_html_e( 'Scale (%)', 'service-requests-form' ); ?></label>
+							<input
+								type="number"
+								min="10"
+								max="500"
+								step="1"
+								id="srf-scale"
+								name="srf_scale"
+								value="<?php echo esc_attr( $old( 'scale', '100' ) ); ?>"
+							/>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-quantity"><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></label>
+							<input
+								type="number"
+								min="1"
+								step="1"
+								id="srf-quantity"
+								name="srf_quantity"
+								value="<?php echo esc_attr( $old( 'quantity', '1' ) ); ?>"
+							/>
+						</div>
+					</div>
+
+					<div class="srf-form__field">
+						<label for="srf-quote-notes"><?php esc_html_e( 'Print notes', 'service-requests-form' ); ?></label>
+						<textarea
+							id="srf-quote-notes"
+							name="srf_quote_notes"
+							rows="5"
+						><?php echo esc_textarea( $old( 'notes' ) ); ?></textarea>
 					</div>
 				</div>
 			</div>

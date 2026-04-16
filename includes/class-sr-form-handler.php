@@ -166,6 +166,92 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			return implode( ', ', self::get_project_allowed_extensions() );
 		}
 
+		protected static function get_project_active_materials() {
+			if ( ! class_exists( 'SRF_Quote_DB' ) ) {
+				return array();
+			}
+
+			$db        = new SRF_Quote_DB();
+			$materials = $db->get_materials( array( 'status' => 'active' ) );
+
+			return is_array( $materials ) ? $materials : array();
+		}
+
+		protected static function get_project_active_printers() {
+			if ( ! class_exists( 'SRF_Quote_DB' ) ) {
+				return array();
+			}
+
+			$db       = new SRF_Quote_DB();
+			$printers = $db->get_printers( array( 'status' => 'active' ) );
+
+			if ( ! is_array( $printers ) ) {
+				return array();
+			}
+
+			foreach ( $printers as $printer ) {
+				$printer->supported_material_ids = array();
+
+				if ( ! empty( $printer->supported_materials ) ) {
+					$decoded = json_decode( (string) $printer->supported_materials, true );
+					if ( is_array( $decoded ) ) {
+						$printer->supported_material_ids = array_values(
+							array_filter(
+								array_map( 'absint', $decoded )
+							)
+						);
+					}
+				}
+			}
+
+			return $printers;
+		}
+
+		protected static function get_project_material_by_id( $material_id ) {
+			$material_id = (int) $material_id;
+			if ( $material_id <= 0 || ! class_exists( 'SRF_Quote_DB' ) ) {
+				return null;
+			}
+
+			$db       = new SRF_Quote_DB();
+			$material = $db->get_material( $material_id );
+
+			if ( ! $material || empty( $material->id ) || 'active' !== (string) $material->status ) {
+				return null;
+			}
+
+			return $material;
+		}
+
+		protected static function get_project_printer_by_id( $printer_id ) {
+			$printer_id = (int) $printer_id;
+			if ( $printer_id <= 0 || ! class_exists( 'SRF_Quote_DB' ) ) {
+				return null;
+			}
+
+			$db      = new SRF_Quote_DB();
+			$printer = $db->get_printer( $printer_id );
+
+			if ( ! $printer || empty( $printer->id ) || 'active' !== (string) $printer->status ) {
+				return null;
+			}
+
+			$printer->supported_material_ids = array();
+
+			if ( ! empty( $printer->supported_materials ) ) {
+				$decoded = json_decode( (string) $printer->supported_materials, true );
+				if ( is_array( $decoded ) ) {
+					$printer->supported_material_ids = array_values(
+						array_filter(
+							array_map( 'absint', $decoded )
+						)
+					);
+				}
+			}
+
+			return $printer;
+		}
+
 		public static function allow_project_upload_mimes( $mimes ) {
 			$mimes['stl']  = 'model/stl';
 			$mimes['3mf']  = 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml';
@@ -851,6 +937,32 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				if ( $old_data['terms'] !== '1' ) {
 					$errors[] = __( 'You must accept the Terms & Conditions.', 'service-requests-form' );
 				}
+				$selected_material = null;
+				$selected_printer  = null;
+
+				if ( empty( $old_data['material_id'] ) ) {
+					$errors[] = __( 'Please select a material.', 'service-requests-form' );
+				} else {
+					$selected_material = self::get_project_material_by_id( (int) $old_data['material_id'] );
+					if ( ! $selected_material ) {
+						$errors[] = __( 'The selected material is not available.', 'service-requests-form' );
+					}
+				}
+
+				if ( empty( $old_data['printer_id'] ) ) {
+					$errors[] = __( 'Please select a printer.', 'service-requests-form' );
+				} else {
+					$selected_printer = self::get_project_printer_by_id( (int) $old_data['printer_id'] );
+					if ( ! $selected_printer ) {
+						$errors[] = __( 'The selected printer is not available.', 'service-requests-form' );
+					}
+				}
+
+				if ( $selected_material && $selected_printer && ! empty( $selected_printer->supported_material_ids ) ) {
+					if ( ! in_array( (int) $selected_material->id, $selected_printer->supported_material_ids, true ) ) {
+						$errors[] = __( 'The selected printer does not support the selected material.', 'service-requests-form' );
+					}
+				}
 
 				// Shipping address (hidden input from template)
 				$shipping_address = isset( $_POST['srf_shipping_address'] )
@@ -1020,9 +1132,17 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			
 			$errors   = array();
 			$old_data = array(
-				'title'       => '',
-				'description' => '',
-				'terms'       => '0',
+				'title'        => '',
+				'description'  => '',
+				'terms'        => '0',
+				'material_id'  => '',
+				'printer_id'   => '',
+				'layer_height' => '0.20',
+				'infill'       => '20',
+				'shell_mode'   => 'solid',
+				'scale'        => '100',
+				'quantity'     => '1',
+				'notes'        => '',
 			);
 			$success = false;
 
@@ -1030,6 +1150,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
 				$dashboard_url = SRF_MyAccount::url_list();
 			}
+			$materials = self::get_project_active_materials();
+			$printers  = self::get_project_active_printers();
 
 			if ( isset( $_GET['srf_project_submitted'] ) && $_GET['srf_project_submitted'] === '1' ) {
 				$success = true;
@@ -1038,9 +1160,17 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( ! empty( $_POST['srf_project_form_submitted'] ) ) {
 
 				$old_data = array(
-					'title'       => isset( $_POST['srf_project_title'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_project_title'] ) ) : '',
-					'description' => isset( $_POST['srf_project_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_project_description'] ) ) : '',
-					'terms'       => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
+					'title'        => isset( $_POST['srf_project_title'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_project_title'] ) ) : '',
+					'description'  => isset( $_POST['srf_project_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_project_description'] ) ) : '',
+					'terms'        => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
+					'material_id'  => isset( $_POST['srf_material_id'] ) ? (string) absint( $_POST['srf_material_id'] ) : '',
+					'printer_id'   => isset( $_POST['srf_printer_id'] ) ? (string) absint( $_POST['srf_printer_id'] ) : '',
+					'layer_height' => isset( $_POST['srf_layer_height'] ) ? (string) max( 0, (float) wp_unslash( $_POST['srf_layer_height'] ) ) : '0.20',
+					'infill'       => isset( $_POST['srf_infill'] ) ? (string) max( 0, min( 100, (int) wp_unslash( $_POST['srf_infill'] ) ) ) : '20',
+					'shell_mode'   => isset( $_POST['srf_shell_mode'] ) && 'hollow' === sanitize_key( wp_unslash( $_POST['srf_shell_mode'] ) ) ? 'hollow' : 'solid',
+					'scale'        => isset( $_POST['srf_scale'] ) ? (string) max( 10, min( 500, (int) wp_unslash( $_POST['srf_scale'] ) ) ) : '100',
+					'quantity'     => isset( $_POST['srf_quantity'] ) ? (string) max( 1, (int) wp_unslash( $_POST['srf_quantity'] ) ) : '1',
+					'notes'        => isset( $_POST['srf_quote_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_quote_notes'] ) ) : '',
 				);
 
 				if ( empty( $_POST['srf_project_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['srf_project_nonce'] ) ), 'srf_submit_project_request' ) ) {
@@ -1100,6 +1230,22 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_status', 'new' );
 						update_post_meta( $post_id, '_sr_terms_accepted', 1 );
 						update_post_meta( $post_id, '_sr_no_file', 0 );
+						update_post_meta( $post_id, '_sr_material_id', (int) $old_data['material_id'] );
+						update_post_meta( $post_id, '_sr_printer_id', (int) $old_data['printer_id'] );
+						update_post_meta( $post_id, '_sr_layer_height', (float) $old_data['layer_height'] );
+						update_post_meta( $post_id, '_sr_infill', (int) $old_data['infill'] );
+						update_post_meta( $post_id, '_sr_shell_mode', $old_data['shell_mode'] );
+						update_post_meta( $post_id, '_sr_scale', (int) $old_data['scale'] );
+						update_post_meta( $post_id, '_sr_quantity', (int) $old_data['quantity'] );
+						update_post_meta( $post_id, '_sr_quote_notes', $old_data['notes'] );
+
+						if ( ! empty( $selected_material ) ) {
+							update_post_meta( $post_id, '_sr_material_name', (string) $selected_material->name );
+						}
+
+						if ( ! empty( $selected_printer ) ) {
+							update_post_meta( $post_id, '_sr_printer_name', (string) $selected_printer->name );
+						}
 
 						$attachment_ids = array();
 						$uploaded_bytes = 0;
@@ -1151,6 +1297,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'upload_limit_bytes' => self::get_project_upload_limit_bytes(),
 					'allowed_formats'    => self::get_project_allowed_extensions_label(),
 					'is_business'        => self::current_user_is_business(),
+					'materials'          => $materials,
+					'printers'           => $printers,
 				)
 			);
 			return ob_get_clean();
