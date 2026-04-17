@@ -113,6 +113,15 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			);
 		}
 
+		protected static function get_polyjet_build_style_options() {
+			return array(
+				''             => __( 'Select build style', 'service-requests-form' ),
+				'high_speed'   => __( 'High speed', 'service-requests-form' ),
+				'high_quality' => __( 'High quality', 'service-requests-form' ),
+				'balanced'     => __( 'Balanced', 'service-requests-form' ),
+			);
+		}
+
 		protected static function sanitize_status( $value ) {
 			$value = sanitize_key( wp_unslash( (string) $value ) );
 			return in_array( $value, array( 'active', 'inactive' ), true ) ? $value : 'inactive';
@@ -266,6 +275,7 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			$technology_choices = self::get_technology_options();
 			$speed_units        = self::get_speed_unit_options();
 			$pricing_models     = self::get_pricing_model_options();
+			$polyjet_build_styles = self::get_polyjet_build_style_options();
 
 			return array(
 				'name'                           => sanitize_text_field( wp_unslash( $input['name'] ?? '' ) ),
@@ -313,17 +323,65 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 				'fdm_infill_min'                 => self::sanitize_decimal_or_null( $input['fdm_infill_min'] ?? null, 0 ),
 				'fdm_infill_max'                 => self::sanitize_decimal_or_null( $input['fdm_infill_max'] ?? null, 0 ),
 				'fdm_support_factor'             => self::sanitize_decimal_or_null( $input['fdm_support_factor'] ?? null, 0 ),
+				'fdm_default_line_width'         => self::sanitize_decimal_or_null( $input['fdm_default_line_width'] ?? null, 0 ),
+				'fdm_default_print_speed'        => self::sanitize_decimal_or_null( $input['fdm_default_print_speed'] ?? null, 0 ),
+				'fdm_default_travel_speed'       => self::sanitize_decimal_or_null( $input['fdm_default_travel_speed'] ?? null, 0 ),
+				'fdm_max_print_speed'            => self::sanitize_decimal_or_null( $input['fdm_max_print_speed'] ?? null, 0 ),
+				'fdm_default_wall_count'         => self::sanitize_int_or_null( $input['fdm_default_wall_count'] ?? null, 0 ),
+				'fdm_default_top_layers'         => self::sanitize_int_or_null( $input['fdm_default_top_layers'] ?? null, 0 ),
+				'fdm_default_bottom_layers'      => self::sanitize_int_or_null( $input['fdm_default_bottom_layers'] ?? null, 0 ),
+				'fdm_default_infill_pattern'     => sanitize_text_field( wp_unslash( $input['fdm_default_infill_pattern'] ?? '' ) ),
+				'fdm_supported_infill_patterns'  => self::sanitize_text_list( $input['fdm_supported_infill_patterns'] ?? '' ),
+				'fdm_support_overhang_angle'     => self::sanitize_decimal_or_null( $input['fdm_support_overhang_angle'] ?? null, 0 ),
+				'fdm_support_interface_factor'   => self::sanitize_decimal_or_null( $input['fdm_support_interface_factor'] ?? null, 0 ),
+				'fdm_cooling_factor'             => self::sanitize_decimal_or_null( $input['fdm_cooling_factor'] ?? null, 0 ),
+				'fdm_retraction_factor'          => self::sanitize_decimal_or_null( $input['fdm_retraction_factor'] ?? null, 0 ),
+				'fdm_bed_adhesion_type'          => sanitize_text_field( wp_unslash( $input['fdm_bed_adhesion_type'] ?? '' ) ),
+				'fdm_bridge_optimization'        => self::sanitize_bool_flag( $input['fdm_bridge_optimization'] ?? 0 ),
 				'resin_curing_factor'            => self::sanitize_decimal_or_null( $input['resin_curing_factor'] ?? null, 0 ),
 				'resin_shrinkage_percent'        => self::sanitize_decimal_or_null( $input['resin_shrinkage_percent'] ?? null, 0 ),
 				'resin_default_wall_thickness'   => self::sanitize_decimal_or_null( $input['resin_default_wall_thickness'] ?? null, 0 ),
 				'resin_support_density_factor'   => self::sanitize_decimal_or_null( $input['resin_support_density_factor'] ?? null, 0 ),
 				'resin_support_removal_factor'   => self::sanitize_decimal_or_null( $input['resin_support_removal_factor'] ?? null, 0 ),
+				'resin_default_exposure_time'    => self::sanitize_decimal_or_null( $input['resin_default_exposure_time'] ?? null, 0 ),
+				'resin_bottom_exposure_time'     => self::sanitize_decimal_or_null( $input['resin_bottom_exposure_time'] ?? null, 0 ),
+				'resin_lift_speed'               => self::sanitize_decimal_or_null( $input['resin_lift_speed'] ?? null, 0 ),
+				'resin_lift_distance'            => self::sanitize_decimal_or_null( $input['resin_lift_distance'] ?? null, 0 ),
+				'resin_orientation_factor'       => self::sanitize_decimal_or_null( $input['resin_orientation_factor'] ?? null, 0 ),
+				'resin_support_touchpoint_factor'=> self::sanitize_decimal_or_null( $input['resin_support_touchpoint_factor'] ?? null, 0 ),
+				'resin_support_tip_size'         => self::sanitize_decimal_or_null( $input['resin_support_tip_size'] ?? null, 0 ),
+				'resin_hollow_factor'            => self::sanitize_decimal_or_null( $input['resin_hollow_factor'] ?? null, 0 ),
+				'resin_drain_hole_factor'        => self::sanitize_decimal_or_null( $input['resin_drain_hole_factor'] ?? null, 0 ),
+				'resin_drain_hole_min_diameter'  => self::sanitize_decimal_or_null( $input['resin_drain_hole_min_diameter'] ?? null, 0 ),
+				'resin_shrinkage_compensation'   => self::sanitize_decimal_or_null( $input['resin_shrinkage_compensation'] ?? null, 0 ),
+				'resin_cure_compensation_factor' => self::sanitize_decimal_or_null( $input['resin_cure_compensation_factor'] ?? null, 0 ),
+				'resin_default_shell_thickness'  => self::sanitize_decimal_or_null( $input['resin_default_shell_thickness'] ?? null, 0 ),
+				'resin_post_cure_factor'         => self::sanitize_decimal_or_null( $input['resin_post_cure_factor'] ?? null, 0 ),
+				'resin_cleaning_difficulty_factor' => self::sanitize_decimal_or_null( $input['resin_cleaning_difficulty_factor'] ?? null, 0 ),
 				'polyjet_profile_cost_factor'    => self::sanitize_decimal_or_null( $input['polyjet_profile_cost_factor'] ?? null, 0 ),
 				'polyjet_profile_time_factor'    => self::sanitize_decimal_or_null( $input['polyjet_profile_time_factor'] ?? null, 0 ),
 				'polyjet_finish_cost_factor'     => self::sanitize_decimal_or_null( $input['polyjet_finish_cost_factor'] ?? null, 0 ),
 				'polyjet_finish_time_factor'     => self::sanitize_decimal_or_null( $input['polyjet_finish_time_factor'] ?? null, 0 ),
+				'polyjet_support_material_factor' => self::sanitize_decimal_or_null( $input['polyjet_support_material_factor'] ?? null, 0 ),
+				'polyjet_tray_packing_factor'    => self::sanitize_decimal_or_null( $input['polyjet_tray_packing_factor'] ?? null, 0 ),
+				'polyjet_surface_quality_factor' => self::sanitize_decimal_or_null( $input['polyjet_surface_quality_factor'] ?? null, 0 ),
+				'polyjet_postprocess_factor'     => self::sanitize_decimal_or_null( $input['polyjet_postprocess_factor'] ?? null, 0 ),
+				'polyjet_failure_factor'         => self::sanitize_decimal_or_null( $input['polyjet_failure_factor'] ?? null, 0 ),
+				'polyjet_color_mixing_factor'    => self::sanitize_decimal_or_null( $input['polyjet_color_mixing_factor'] ?? null, 0 ),
+				'polyjet_material_switching_factor' => self::sanitize_decimal_or_null( $input['polyjet_material_switching_factor'] ?? null, 0 ),
+				'polyjet_cleaning_factor'        => self::sanitize_decimal_or_null( $input['polyjet_cleaning_factor'] ?? null, 0 ),
+				'polyjet_application_profile_override_factor' => self::sanitize_decimal_or_null( $input['polyjet_application_profile_override_factor'] ?? null, 0 ),
+				'polyjet_support_cleanup_difficulty_factor' => self::sanitize_decimal_or_null( $input['polyjet_support_cleanup_difficulty_factor'] ?? null, 0 ),
+				'polyjet_layer_resolution_microns' => self::sanitize_decimal_or_null( $input['polyjet_layer_resolution_microns'] ?? null, 0 ),
+				'polyjet_build_style'            => self::sanitize_choice( $input['polyjet_build_style'] ?? '', $polyjet_build_styles ),
+				'polyjet_voxel_control_factor'   => self::sanitize_decimal_or_null( $input['polyjet_voxel_control_factor'] ?? null, 0 ),
 				'multi_material_enabled'         => self::sanitize_bool_flag( $input['multi_material_enabled'] ?? 0 ),
 				'color_printing_enabled'         => self::sanitize_bool_flag( $input['color_printing_enabled'] ?? 0 ),
+				'supports_hollow_models'         => self::sanitize_bool_flag( $input['supports_hollow_models'] ?? 0 ),
+				'supports_full_color_workflow'   => self::sanitize_bool_flag( $input['supports_full_color_workflow'] ?? 0 ),
+				'supports_biocompatible_workflow' => self::sanitize_bool_flag( $input['supports_biocompatible_workflow'] ?? 0 ),
+				'supports_transparent_materials' => self::sanitize_bool_flag( $input['supports_transparent_materials'] ?? 0 ),
+				'supports_flexible_materials'    => self::sanitize_bool_flag( $input['supports_flexible_materials'] ?? 0 ),
 				'max_materials_per_job'          => self::sanitize_int_or_null( $input['max_materials_per_job'] ?? null, 0 ),
 				'min_wall_thickness'             => self::sanitize_decimal_or_null( $input['min_wall_thickness'] ?? null, 0 ),
 				'max_quantity_per_job'           => self::sanitize_int_or_null( $input['max_quantity_per_job'] ?? null, 0 ),
@@ -458,6 +516,7 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			$technology_options = self::get_technology_options();
 			$speed_unit_options = self::get_speed_unit_options();
 			$pricing_models     = self::get_pricing_model_options();
+			$polyjet_build_styles = self::get_polyjet_build_style_options();
 			?>
 			<div class="wrap srf-printers-page">
 				<style>
@@ -622,32 +681,94 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 
 							<div class="srf-form-section">
 								<h3><?php esc_html_e( 'Technology-specific parameters', 'service-requests-form' ); ?></h3>
+								<p style="margin-top:0;color:#667085;"><?php esc_html_e( 'Store a broad technical profile for this printer so future UI rules and pricing logic can adapt per machine.', 'service-requests-form' ); ?></p>
+
+								<h4 style="margin:18px 0 10px;"><?php esc_html_e( 'FDM / FFF parameters', 'service-requests-form' ); ?></h4>
 								<div class="srf-grid-cols-3">
 									<div class="srf-input-row"><label>FDM infill min (%)</label><input type="number" min="0" step="0.01" name="fdm_infill_min" value="<?php echo esc_attr( $edit_printer->fdm_infill_min ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>FDM infill max (%)</label><input type="number" min="0" step="0.01" name="fdm_infill_max" value="<?php echo esc_attr( $edit_printer->fdm_infill_max ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>FDM support factor</label><input type="number" min="0" step="0.001" name="fdm_support_factor" value="<?php echo esc_attr( $edit_printer->fdm_support_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default line width (mm)</label><input type="number" min="0" step="0.0001" name="fdm_default_line_width" value="<?php echo esc_attr( $edit_printer->fdm_default_line_width ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default print speed</label><input type="number" min="0" step="0.01" name="fdm_default_print_speed" value="<?php echo esc_attr( $edit_printer->fdm_default_print_speed ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default travel speed</label><input type="number" min="0" step="0.01" name="fdm_default_travel_speed" value="<?php echo esc_attr( $edit_printer->fdm_default_travel_speed ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM max print speed</label><input type="number" min="0" step="0.01" name="fdm_max_print_speed" value="<?php echo esc_attr( $edit_printer->fdm_max_print_speed ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default wall count</label><input type="number" min="0" step="1" name="fdm_default_wall_count" value="<?php echo esc_attr( $edit_printer->fdm_default_wall_count ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default infill pattern</label><input type="text" name="fdm_default_infill_pattern" value="<?php echo esc_attr( $edit_printer->fdm_default_infill_pattern ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default top layers</label><input type="number" min="0" step="1" name="fdm_default_top_layers" value="<?php echo esc_attr( $edit_printer->fdm_default_top_layers ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM default bottom layers</label><input type="number" min="0" step="1" name="fdm_default_bottom_layers" value="<?php echo esc_attr( $edit_printer->fdm_default_bottom_layers ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM support overhang angle</label><input type="number" min="0" step="0.0001" name="fdm_support_overhang_angle" value="<?php echo esc_attr( $edit_printer->fdm_support_overhang_angle ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM support interface factor</label><input type="number" min="0" step="0.001" name="fdm_support_interface_factor" value="<?php echo esc_attr( $edit_printer->fdm_support_interface_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM cooling factor</label><input type="number" min="0" step="0.001" name="fdm_cooling_factor" value="<?php echo esc_attr( $edit_printer->fdm_cooling_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM retraction factor</label><input type="number" min="0" step="0.001" name="fdm_retraction_factor" value="<?php echo esc_attr( $edit_printer->fdm_retraction_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM bed adhesion type</label><input type="text" name="fdm_bed_adhesion_type" value="<?php echo esc_attr( $edit_printer->fdm_bed_adhesion_type ?? '' ); ?>" placeholder="brim, raft, skirt" /></div>
+									<div class="srf-input-row" style="grid-column: span 2;"><label>FDM supported infill patterns</label><textarea name="fdm_supported_infill_patterns" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->fdm_supported_infill_patterns ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: gyroid, grid, cubic', 'service-requests-form' ); ?></small></div>
+								</div>
+								<div class="srf-toggle-grid" style="margin-top:14px;">
+									<?php self::render_checkbox( 'fdm_bridge_optimization', 'FDM bridge optimization', ! empty( $edit_printer->fdm_bridge_optimization ), 'Mark if the machine/profile is optimized for bridge-heavy parts.' ); ?>
+								</div>
+
+								<h4 style="margin:22px 0 10px;"><?php esc_html_e( 'Resin / SLA / DLP parameters', 'service-requests-form' ); ?></h4>
+								<div class="srf-grid-cols-3">
 									<div class="srf-input-row"><label>Resin curing factor</label><input type="number" min="0" step="0.001" name="resin_curing_factor" value="<?php echo esc_attr( $edit_printer->resin_curing_factor ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>Resin shrinkage (%)</label><input type="number" min="0" step="0.001" name="resin_shrinkage_percent" value="<?php echo esc_attr( $edit_printer->resin_shrinkage_percent ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>Resin default wall thickness (mm)</label><input type="number" min="0" step="0.0001" name="resin_default_wall_thickness" value="<?php echo esc_attr( $edit_printer->resin_default_wall_thickness ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>Resin support density factor</label><input type="number" min="0" step="0.001" name="resin_support_density_factor" value="<?php echo esc_attr( $edit_printer->resin_support_density_factor ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>Resin support removal factor</label><input type="number" min="0" step="0.001" name="resin_support_removal_factor" value="<?php echo esc_attr( $edit_printer->resin_support_removal_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin default exposure time</label><input type="number" min="0" step="0.0001" name="resin_default_exposure_time" value="<?php echo esc_attr( $edit_printer->resin_default_exposure_time ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin bottom exposure time</label><input type="number" min="0" step="0.0001" name="resin_bottom_exposure_time" value="<?php echo esc_attr( $edit_printer->resin_bottom_exposure_time ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin lift speed</label><input type="number" min="0" step="0.0001" name="resin_lift_speed" value="<?php echo esc_attr( $edit_printer->resin_lift_speed ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin lift distance</label><input type="number" min="0" step="0.0001" name="resin_lift_distance" value="<?php echo esc_attr( $edit_printer->resin_lift_distance ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin orientation factor</label><input type="number" min="0" step="0.001" name="resin_orientation_factor" value="<?php echo esc_attr( $edit_printer->resin_orientation_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin support touchpoint factor</label><input type="number" min="0" step="0.001" name="resin_support_touchpoint_factor" value="<?php echo esc_attr( $edit_printer->resin_support_touchpoint_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin support tip size (mm)</label><input type="number" min="0" step="0.0001" name="resin_support_tip_size" value="<?php echo esc_attr( $edit_printer->resin_support_tip_size ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin hollow factor</label><input type="number" min="0" step="0.001" name="resin_hollow_factor" value="<?php echo esc_attr( $edit_printer->resin_hollow_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin drain hole factor</label><input type="number" min="0" step="0.001" name="resin_drain_hole_factor" value="<?php echo esc_attr( $edit_printer->resin_drain_hole_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin drain hole min diameter (mm)</label><input type="number" min="0" step="0.0001" name="resin_drain_hole_min_diameter" value="<?php echo esc_attr( $edit_printer->resin_drain_hole_min_diameter ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin shrinkage compensation</label><input type="number" min="0" step="0.001" name="resin_shrinkage_compensation" value="<?php echo esc_attr( $edit_printer->resin_shrinkage_compensation ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin cure compensation factor</label><input type="number" min="0" step="0.001" name="resin_cure_compensation_factor" value="<?php echo esc_attr( $edit_printer->resin_cure_compensation_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin default shell thickness (mm)</label><input type="number" min="0" step="0.0001" name="resin_default_shell_thickness" value="<?php echo esc_attr( $edit_printer->resin_default_shell_thickness ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin post-cure factor</label><input type="number" min="0" step="0.001" name="resin_post_cure_factor" value="<?php echo esc_attr( $edit_printer->resin_post_cure_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin cleaning difficulty factor</label><input type="number" min="0" step="0.001" name="resin_cleaning_difficulty_factor" value="<?php echo esc_attr( $edit_printer->resin_cleaning_difficulty_factor ?? '' ); ?>" /></div>
+								</div>
+
+								<h4 style="margin:22px 0 10px;"><?php esc_html_e( 'PolyJet parameters', 'service-requests-form' ); ?></h4>
+								<div class="srf-grid-cols-3">
 									<div class="srf-input-row"><label>PolyJet profile cost factor</label><input type="number" min="0" step="0.001" name="polyjet_profile_cost_factor" value="<?php echo esc_attr( $edit_printer->polyjet_profile_cost_factor ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>PolyJet profile time factor</label><input type="number" min="0" step="0.001" name="polyjet_profile_time_factor" value="<?php echo esc_attr( $edit_printer->polyjet_profile_time_factor ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>PolyJet finish cost factor</label><input type="number" min="0" step="0.001" name="polyjet_finish_cost_factor" value="<?php echo esc_attr( $edit_printer->polyjet_finish_cost_factor ?? '' ); ?>" /></div>
 									<div class="srf-input-row"><label>PolyJet finish time factor</label><input type="number" min="0" step="0.001" name="polyjet_finish_time_factor" value="<?php echo esc_attr( $edit_printer->polyjet_finish_time_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet support material factor</label><input type="number" min="0" step="0.001" name="polyjet_support_material_factor" value="<?php echo esc_attr( $edit_printer->polyjet_support_material_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet tray packing factor</label><input type="number" min="0" step="0.001" name="polyjet_tray_packing_factor" value="<?php echo esc_attr( $edit_printer->polyjet_tray_packing_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet surface quality factor</label><input type="number" min="0" step="0.001" name="polyjet_surface_quality_factor" value="<?php echo esc_attr( $edit_printer->polyjet_surface_quality_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet post-process factor</label><input type="number" min="0" step="0.001" name="polyjet_postprocess_factor" value="<?php echo esc_attr( $edit_printer->polyjet_postprocess_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet failure factor</label><input type="number" min="0" step="0.001" name="polyjet_failure_factor" value="<?php echo esc_attr( $edit_printer->polyjet_failure_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet color mixing factor</label><input type="number" min="0" step="0.001" name="polyjet_color_mixing_factor" value="<?php echo esc_attr( $edit_printer->polyjet_color_mixing_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet material switching factor</label><input type="number" min="0" step="0.001" name="polyjet_material_switching_factor" value="<?php echo esc_attr( $edit_printer->polyjet_material_switching_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet cleaning factor</label><input type="number" min="0" step="0.001" name="polyjet_cleaning_factor" value="<?php echo esc_attr( $edit_printer->polyjet_cleaning_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet profile override factor</label><input type="number" min="0" step="0.001" name="polyjet_application_profile_override_factor" value="<?php echo esc_attr( $edit_printer->polyjet_application_profile_override_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet support cleanup difficulty</label><input type="number" min="0" step="0.001" name="polyjet_support_cleanup_difficulty_factor" value="<?php echo esc_attr( $edit_printer->polyjet_support_cleanup_difficulty_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet layer resolution (microns)</label><input type="number" min="0" step="0.0001" name="polyjet_layer_resolution_microns" value="<?php echo esc_attr( $edit_printer->polyjet_layer_resolution_microns ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet build style</label><select name="polyjet_build_style"><?php foreach ( self::get_polyjet_build_style_options() as $style_key => $style_label ) : ?><option value="<?php echo esc_attr( $style_key ); ?>" <?php selected( $edit_printer->polyjet_build_style ?? '', $style_key ); ?>><?php echo esc_html( $style_label ); ?></option><?php endforeach; ?></select></div>
+									<div class="srf-input-row"><label>PolyJet voxel control factor</label><input type="number" min="0" step="0.001" name="polyjet_voxel_control_factor" value="<?php echo esc_attr( $edit_printer->polyjet_voxel_control_factor ?? '' ); ?>" /></div>
+								</div>
+
+								<h4 style="margin:22px 0 10px;"><?php esc_html_e( 'Capabilities and validation', 'service-requests-form' ); ?></h4>
+								<div class="srf-grid-cols-3">
 									<div class="srf-input-row"><label>Min wall thickness (mm)</label><input type="number" min="0" step="0.0001" name="min_wall_thickness" value="<?php echo esc_attr( $edit_printer->min_wall_thickness ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Max materials per job</label><input type="number" min="0" step="1" name="max_materials_per_job" value="<?php echo esc_attr( $edit_printer->max_materials_per_job ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Max quantity per job</label><input type="number" min="0" step="1" name="max_quantity_per_job" value="<?php echo esc_attr( $edit_printer->max_quantity_per_job ?? '' ); ?>" /></div>
+									<div class="srf-input-row" style="grid-column: span 3;"><label>Allowed file formats</label><textarea name="allowed_file_formats" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->allowed_file_formats ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: stl, obj, 3mf, step', 'service-requests-form' ); ?></small></div>
 								</div>
 								<div class="srf-toggle-grid" style="margin-top:14px;">
 									<?php self::render_checkbox( 'multi_material_enabled', 'Enable multi-material jobs', ! empty( $edit_printer->multi_material_enabled ), 'For PolyJet, multimaterial, or full-color capable systems.' ); ?>
 									<?php self::render_checkbox( 'color_printing_enabled', 'Enable color printing', ! empty( $edit_printer->color_printing_enabled ), 'Allow color-aware UI and pricing rules.' ); ?>
-								</div>
-								<div class="srf-grid-cols-3" style="margin-top:14px;">
-									<div class="srf-input-row"><label>Max materials per job</label><input type="number" min="0" step="1" name="max_materials_per_job" value="<?php echo esc_attr( $edit_printer->max_materials_per_job ?? '' ); ?>" /></div>
-									<div class="srf-input-row"><label>Max quantity per job</label><input type="number" min="0" step="1" name="max_quantity_per_job" value="<?php echo esc_attr( $edit_printer->max_quantity_per_job ?? '' ); ?>" /></div>
-									<div class="srf-input-row"><label>Allowed file formats</label><textarea name="allowed_file_formats" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->allowed_file_formats ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: stl, obj, 3mf, step', 'service-requests-form' ); ?></small></div>
+									<?php self::render_checkbox( 'supports_hollow_models', 'Supports hollow models', ! empty( $edit_printer->supports_hollow_models ), 'This printer can run hollow-model workflows.' ); ?>
+									<?php self::render_checkbox( 'supports_full_color_workflow', 'Supports full-color workflow', ! empty( $edit_printer->supports_full_color_workflow ), 'Useful for color-enabled PolyJet or binder-jet systems.' ); ?>
+									<?php self::render_checkbox( 'supports_biocompatible_workflow', 'Supports biocompatible workflow', ! empty( $edit_printer->supports_biocompatible_workflow ), 'Enable medical / dental certified workflow rules.' ); ?>
+									<?php self::render_checkbox( 'supports_transparent_materials', 'Supports transparent materials', ! empty( $edit_printer->supports_transparent_materials ), 'Allow transparent or clear materials in UI rules.' ); ?>
+									<?php self::render_checkbox( 'supports_flexible_materials', 'Supports flexible materials', ! empty( $edit_printer->supports_flexible_materials ), 'Allow elastomer or flexible material workflows.' ); ?>
 								</div>
 							</div>
-
 							<div class="srf-admin-actions"><button type="submit" class="button button-primary"><?php echo esc_html( $edit_printer ? __( 'Update Printer', 'service-requests-form' ) : __( 'Save Printer', 'service-requests-form' ) ); ?></button></div>
 						</form>
 					</div>
