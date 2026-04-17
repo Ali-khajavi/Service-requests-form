@@ -1323,6 +1323,36 @@ document.addEventListener('click', function (e) {
     bounds.maxZ = Math.max(bounds.maxZ, vertex.z);
   }
 
+  function signedTriangleVolume(a, b, c) {
+    return (
+      (a.x * b.y * c.z +
+       b.x * c.y * a.z +
+       c.x * a.y * b.z -
+       a.x * c.y * b.z -
+       b.x * a.y * c.z -
+       c.x * b.y * a.z) / 6
+    );
+  }
+
+  function calculateMeshVolumeMm3(triangles) {
+    if (!triangles || !triangles.length) return 0;
+
+    var total = 0;
+
+    for (var i = 0; i < triangles.length; i++) {
+      var tri = triangles[i];
+      if (!tri || !tri.vertices || tri.vertices.length !== 3) continue;
+
+      total += signedTriangleVolume(
+        tri.vertices[0],
+        tri.vertices[1],
+        tri.vertices[2]
+      );
+    }
+
+    return Math.abs(total);
+  }
+
   function buildMesh(triangles, rawBounds) {
     var bounds = {
       x: rawBounds.maxX - rawBounds.minX,
@@ -1337,13 +1367,17 @@ document.addEventListener('click', function (e) {
     };
 
     var radius = Math.max(bounds.x, bounds.y, bounds.z) || 1;
+    var volumeMm3 = calculateMeshVolumeMm3(triangles);
+    var volumeCm3 = volumeMm3 > 0 ? (volumeMm3 / 1000) : 0;
 
     return {
       triangles: triangles,
       triangleCount: triangles.length,
       center: center,
       radius: radius,
-      bounds: bounds
+      bounds: bounds,
+      volumeMm3: volumeMm3,
+      volumeCm3: volumeCm3
     };
   }
 
@@ -1375,7 +1409,7 @@ document.addEventListener('click', function (e) {
 
     var titleInput = form.querySelector('#srf-project-title');
 
-    initProjectViewer(form);
+    form._srfProjectViewer = initProjectViewer(form);
 
     function isLoggedIn() {
       return document.body.classList.contains('logged-in');
@@ -1700,25 +1734,28 @@ function init3DQuotePage() {
     return n.toFixed(2) + ' cm3';
   }
 
-  function getMaterialVolumeFromViewer(form) {
-    var boundsNode = form ? form.querySelector('[data-field="bounds"]') : null;
-    if (!boundsNode) return 0;
+  function formatWeight(value) {
+    var n = Number.isFinite(value) ? value : 0;
+    return n.toFixed(2) + ' g';
+  }
 
-    var raw = (boundsNode.textContent || '').trim();
-    if (!raw || raw === '—') return 0;
+  function getProjectViewer(form) {
+    return form && form._srfProjectViewer ? form._srfProjectViewer : null;
+  }
 
-    var parts = raw.split('×').map(function (item) {
-      return toNumber(item.trim(), 0);
-    }).filter(function (n) {
-      return n > 0;
-    });
+  function getModelVolumeFromViewer(form) {
+    var viewer = getProjectViewer(form);
+    if (!viewer || !viewer.mesh) return 0;
 
-    if (parts.length !== 3) return 0;
+    var volumeCm3 = toNumber(viewer.mesh.volumeCm3, 0);
+    return volumeCm3 > 0 ? volumeCm3 : 0;
+  }
 
-    var mm3 = parts[0] * parts[1] * parts[2];
-    var cm3 = mm3 / 1000;
-
-    return cm3 > 0 ? cm3 : 0;
+  function getPrinterLayerLimits(printerOption) {
+    return {
+      min: toNumber(printerOption && printerOption.getAttribute('data-min-layer-height'), 0),
+      max: toNumber(printerOption && printerOption.getAttribute('data-max-layer-height'), 0)
+    };
   }
 
   function calculateLiveEstimate(form) {
@@ -1764,45 +1801,62 @@ function init3DQuotePage() {
     var quantity       = Math.max(1, parseInt((quantityInput && quantityInput.value) || '1', 10) || 1);
     var shellMode      = shellSelect ? shellSelect.value : 'solid';
 
-    var baseVolumeCm3  = getMaterialVolumeFromViewer(form);
-    if (!baseVolumeCm3) {
-      baseVolumeCm3 = 8;
+    var layerLimits = getPrinterLayerLimits(printerOption);
+    if (layerLimits.min > 0 && layerHeight < layerLimits.min) {
+      layerHeight = layerLimits.min;
+    }
+    if (layerLimits.max > 0 && layerHeight > layerLimits.max) {
+      layerHeight = layerLimits.max;
     }
 
-    var scaleFactor = Math.pow(scale / 100, 3);
-    var shellFactor = shellMode === 'hollow' ? 0.55 : 1;
-    var infillFactor = 0.2 + (infill / 100) * 0.8;
-    var effectiveVolumeCm3 = baseVolumeCm3 * scaleFactor * shellFactor * infillFactor;
-    var adjustedVolumeCm3 = effectiveVolumeCm3 * wastageFactor;
+    var baseVolumeCm3 = getModelVolumeFromViewer(form);
+    if (!baseVolumeCm3 || baseVolumeCm3 <= 0) {
+      return null;
+    }
+
+    var scaleFactor   = Math.pow(scale / 100, 3);
+    var infillFactor  = Math.max(0.05, Math.min(1, infill / 100));
+    var shellFactor   = shellMode === 'hollow' ? 0.35 : 1;
+
+    var effectiveVolumeCm3 = baseVolumeCm3 * scaleFactor * shellFactor;
+    var printVolumeCm3     = effectiveVolumeCm3 * infillFactor;
+    var adjustedVolumeCm3  = printVolumeCm3 * wastageFactor;
+
+    var estimatedGrams = 0;
+    if (density > 0) {
+      estimatedGrams = adjustedVolumeCm3 * density;
+    }
 
     var materialCostFromVolume = adjustedVolumeCm3 * pricePerCm3;
-    var materialCostFromWeight = 0;
+    var materialCostFromWeight = estimatedGrams * pricePerGram;
 
-    if (density > 0 && pricePerGram > 0) {
-      var estimatedGrams = adjustedVolumeCm3 * density;
-      materialCostFromWeight = estimatedGrams * pricePerGram;
-    }
-
-    var materialCost = Math.max(materialCostFromVolume, materialCostFromWeight);
-    materialCost *= surfaceFactor;
+    var unitMaterialCost = Math.max(materialCostFromVolume, materialCostFromWeight);
+    unitMaterialCost *= surfaceFactor;
 
     var estimatedHours = (adjustedVolumeCm3 / Math.max(defaultSpeed, 1)) * machineFactor * (0.2 / layerHeight);
-    var printerCost = estimatedHours * hourlyCost;
+    if (!Number.isFinite(estimatedHours) || estimatedHours < 0) {
+      estimatedHours = 0;
+    }
 
-    var unitSubtotal = materialCost + printerCost + serviceFee + setupFee;
-    var marginAmount = unitSubtotal * (profitMargin / 100);
-    var subtotalWithMargin = unitSubtotal + marginAmount;
-    var subtotal = subtotalWithMargin * quantity;
-    var taxAmount = subtotal * (taxRate / 100);
-    var total = subtotal + taxAmount;
+    var unitPrinterCost = estimatedHours * hourlyCost;
+
+    var itemsSubtotal = (unitMaterialCost + unitPrinterCost) * quantity;
+    var orderSubtotal = itemsSubtotal + serviceFee + setupFee;
+    var marginAmount  = orderSubtotal * (profitMargin / 100);
+    var subtotal      = orderSubtotal + marginAmount;
+    var taxAmount     = subtotal * (taxRate / 100);
+    var total         = subtotal + taxAmount;
 
     return {
       currencySymbol: currencySymbol,
+      modelVolume: baseVolumeCm3,
       estimatedVolume: adjustedVolumeCm3,
-      materialCost: materialCost * quantity,
-      printerCost: printerCost * quantity,
-      serviceFee: serviceFee * quantity,
+      estimatedWeight: estimatedGrams * quantity,
+      materialCost: unitMaterialCost * quantity,
+      printerCost: unitPrinterCost * quantity,
+      serviceFee: serviceFee,
       setupFee: setupFee,
+      marginAmount: marginAmount,
       taxAmount: taxAmount,
       total: total
     };
@@ -1821,7 +1875,7 @@ function init3DQuotePage() {
     var estimate = calculateLiveEstimate(form);
 
     if (!estimate) {
-      setText(form, '[data-srf-price-volume]', '—');
+      setText(form, '[data-srf-price-volume]', 'Upload STL/OBJ to calculate');
       setText(form, '[data-srf-price-material]', '—');
       setText(form, '[data-srf-price-printer]', '—');
       setText(form, '[data-srf-price-service]', '—');
@@ -1838,6 +1892,8 @@ function init3DQuotePage() {
     setText(form, '[data-srf-price-setup]', formatMoney(estimate.setupFee, estimate.currencySymbol));
     setText(form, '[data-srf-price-tax]', formatMoney(estimate.taxAmount, estimate.currencySymbol));
     setText(form, '[data-srf-price-total]', formatMoney(estimate.total, estimate.currencySymbol));
+
+    setText(form, '[data-srf-price-weight]', formatWeight(estimate.estimatedWeight));
   }
 
   function initProjectLiveEstimate() {
@@ -1871,6 +1927,16 @@ function init3DQuotePage() {
     setTimeout(function () {
       updateLiveEstimate(form);
     }, 300);
+    
+    form.addEventListener('submit', function (e) {
+      var estimate = calculateLiveEstimate(form);
+
+      if (!estimate) {
+        e.preventDefault();
+        alert('Please upload a valid STL or OBJ model and select material and printer before submitting.');
+        return;
+      }
+    });
   }
 
   SRF_onReady(function () {
