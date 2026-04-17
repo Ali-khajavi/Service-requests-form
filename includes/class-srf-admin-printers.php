@@ -80,9 +80,46 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			return $notices;
 		}
 
+		protected static function get_technology_options() {
+			return array(
+				''           => __( 'Select technology', 'service-requests-form' ),
+				'fdm'        => 'FDM / FFF',
+				'sla'        => 'SLA',
+				'dlp'        => 'DLP',
+				'polyjet'    => 'PolyJet',
+				'sls'        => 'SLS',
+				'binder_jet' => 'Binder Jet',
+				'metal'      => 'Metal',
+				'dental'     => 'Dental',
+			);
+		}
+
+		protected static function get_speed_unit_options() {
+			return array(
+				''       => __( 'Select unit', 'service-requests-form' ),
+				'mm_s'   => 'mm/s',
+				'mm3_s'  => 'mm3/s',
+				'cm3_h'  => 'cm3/h',
+				'parts_h'=> 'parts/h',
+			);
+		}
+
+		protected static function get_pricing_model_options() {
+			return array(
+				''             => __( 'Select pricing model', 'service-requests-form' ),
+				'volume_based' => __( 'Volume based', 'service-requests-form' ),
+				'time_based'   => __( 'Time based', 'service-requests-form' ),
+				'hybrid'       => __( 'Hybrid', 'service-requests-form' ),
+			);
+		}
+
 		protected static function sanitize_status( $value ) {
 			$value = sanitize_key( wp_unslash( (string) $value ) );
 			return in_array( $value, array( 'active', 'inactive' ), true ) ? $value : 'inactive';
+		}
+
+		protected static function sanitize_bool_flag( $value ) {
+			return empty( $value ) ? 0 : 1;
 		}
 
 		protected static function sanitize_supported_materials( $value ) {
@@ -120,21 +157,200 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			);
 		}
 
+		protected static function sanitize_text_list( $value ) {
+			if ( is_array( $value ) ) {
+				$items = $value;
+			} else {
+				$normalized = str_replace( array( "\r\n", "\r" ), "\n", (string) $value );
+				$normalized = str_replace( ',', "\n", $normalized );
+				$items      = explode( "\n", $normalized );
+			}
+
+			$clean = array();
+			foreach ( $items as $item ) {
+				$item = sanitize_text_field( wp_unslash( (string) $item ) );
+				if ( '' !== $item ) {
+					$clean[] = $item;
+				}
+			}
+
+			$clean = array_values( array_unique( $clean ) );
+
+			return wp_json_encode( $clean );
+		}
+
+		protected static function decode_text_list( $value ) {
+			if ( empty( $value ) ) {
+				return array();
+			}
+
+			$decoded = json_decode( (string) $value, true );
+			if ( ! is_array( $decoded ) ) {
+				return array();
+			}
+
+			return array_values(
+				array_filter(
+					array_map( 'sanitize_text_field', $decoded ),
+					static function( $item ) {
+						return '' !== $item;
+					}
+				)
+			);
+		}
+
+		protected static function format_text_list_for_textarea( $value ) {
+			$list = self::decode_text_list( $value );
+			return implode( "\n", $list );
+		}
+
+		protected static function sanitize_json_text( $value ) {
+			$value = trim( (string) wp_unslash( $value ) );
+			if ( '' === $value ) {
+				return '';
+			}
+
+			$decoded = json_decode( $value, true );
+			if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $decoded ) ) {
+				return '';
+			}
+
+			return wp_json_encode( $decoded );
+		}
+
+		protected static function pretty_json_text( $value ) {
+			if ( empty( $value ) ) {
+				return '';
+			}
+
+			$decoded = json_decode( (string) $value, true );
+			if ( ! is_array( $decoded ) ) {
+				return '';
+			}
+
+			return wp_json_encode( $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		}
+
+		protected static function sanitize_decimal_or_null( $value, $min = 0 ) {
+			if ( '' === (string) $value || null === $value ) {
+				return null;
+			}
+
+			$number = (float) $value;
+			if ( $number < $min ) {
+				$number = $min;
+			}
+
+			return $number;
+		}
+
+		protected static function sanitize_int_or_null( $value, $min = 0 ) {
+			if ( '' === (string) $value || null === $value ) {
+				return null;
+			}
+
+			$number = (int) $value;
+			if ( $number < $min ) {
+				$number = $min;
+			}
+
+			return $number;
+		}
+
+		protected static function sanitize_choice( $value, $choices ) {
+			$value = sanitize_key( wp_unslash( (string) $value ) );
+			return array_key_exists( $value, $choices ) ? $value : '';
+		}
+
 		protected static function sanitize_payload( $input ) {
+			$technology_choices = self::get_technology_options();
+			$speed_units        = self::get_speed_unit_options();
+			$pricing_models     = self::get_pricing_model_options();
+
 			return array(
-				'name'                => sanitize_text_field( wp_unslash( $input['name'] ?? '' ) ),
-				'brand'               => sanitize_text_field( wp_unslash( $input['brand'] ?? '' ) ),
-				'model'               => sanitize_text_field( wp_unslash( $input['model'] ?? '' ) ),
-				'technology'          => sanitize_text_field( wp_unslash( $input['technology'] ?? '' ) ),
-				'build_volume_x'      => max( 0, (float) ( $input['build_volume_x'] ?? 0 ) ),
-				'build_volume_y'      => max( 0, (float) ( $input['build_volume_y'] ?? 0 ) ),
-				'build_volume_z'      => max( 0, (float) ( $input['build_volume_z'] ?? 0 ) ),
-				'default_speed'       => max( 0, (float) ( $input['default_speed'] ?? 0 ) ),
-				'hourly_cost'         => max( 0, (float) ( $input['hourly_cost'] ?? 0 ) ),
-				'min_layer_height'    => max( 0, (float) ( $input['min_layer_height'] ?? 0 ) ),
-				'max_layer_height'    => max( 0, (float) ( $input['max_layer_height'] ?? 0 ) ),
-				'supported_materials' => self::sanitize_supported_materials( $input['supported_materials'] ?? array() ),
-				'status'              => self::sanitize_status( $input['status'] ?? 'inactive' ),
+				'name'                           => sanitize_text_field( wp_unslash( $input['name'] ?? '' ) ),
+				'brand'                          => sanitize_text_field( wp_unslash( $input['brand'] ?? '' ) ),
+				'model'                          => sanitize_text_field( wp_unslash( $input['model'] ?? '' ) ),
+				'description'                    => sanitize_textarea_field( wp_unslash( $input['description'] ?? '' ) ),
+				'technology'                     => self::sanitize_choice( $input['technology'] ?? '', $technology_choices ),
+				'build_volume_x'                 => self::sanitize_decimal_or_null( $input['build_volume_x'] ?? null, 0 ),
+				'build_volume_y'                 => self::sanitize_decimal_or_null( $input['build_volume_y'] ?? null, 0 ),
+				'build_volume_z'                 => self::sanitize_decimal_or_null( $input['build_volume_z'] ?? null, 0 ),
+				'xy_resolution'                  => self::sanitize_decimal_or_null( $input['xy_resolution'] ?? null, 0 ),
+				'nozzle_size'                    => self::sanitize_decimal_or_null( $input['nozzle_size'] ?? null, 0 ),
+				'min_feature_size'               => self::sanitize_decimal_or_null( $input['min_feature_size'] ?? null, 0 ),
+				'max_part_weight'                => self::sanitize_decimal_or_null( $input['max_part_weight'] ?? null, 0 ),
+				'default_speed'                  => self::sanitize_decimal_or_null( $input['default_speed'] ?? null, 0 ),
+				'speed_unit'                     => self::sanitize_choice( $input['speed_unit'] ?? '', $speed_units ),
+				'hourly_cost'                    => self::sanitize_decimal_or_null( $input['hourly_cost'] ?? null, 0 ),
+				'machine_efficiency_factor'      => self::sanitize_decimal_or_null( $input['machine_efficiency_factor'] ?? 1, 0 ),
+				'setup_time_minutes'             => self::sanitize_decimal_or_null( $input['setup_time_minutes'] ?? null, 0 ),
+				'warmup_time_minutes'            => self::sanitize_decimal_or_null( $input['warmup_time_minutes'] ?? null, 0 ),
+				'postprocess_time_minutes'       => self::sanitize_decimal_or_null( $input['postprocess_time_minutes'] ?? null, 0 ),
+				'min_layer_height'               => self::sanitize_decimal_or_null( $input['min_layer_height'] ?? null, 0 ),
+				'max_layer_height'               => self::sanitize_decimal_or_null( $input['max_layer_height'] ?? null, 0 ),
+				'supported_materials'            => self::sanitize_supported_materials( $input['supported_materials'] ?? array() ),
+				'default_material_id'            => self::sanitize_int_or_null( $input['default_material_id'] ?? null, 0 ),
+				'supported_application_profiles' => self::sanitize_text_list( $input['supported_application_profiles'] ?? '' ),
+				'supported_finishes'             => self::sanitize_text_list( $input['supported_finishes'] ?? '' ),
+				'supported_support_materials'    => self::sanitize_text_list( $input['supported_support_materials'] ?? '' ),
+				'default_support_material'       => sanitize_text_field( wp_unslash( $input['default_support_material'] ?? '' ) ),
+				'support_material_map'           => self::sanitize_json_text( $input['support_material_map'] ?? '' ),
+				'supported_color_modes'          => self::sanitize_text_list( $input['supported_color_modes'] ?? '' ),
+				'pricing_model'                  => self::sanitize_choice( $input['pricing_model'] ?? '', $pricing_models ),
+				'minimum_job_price'              => self::sanitize_decimal_or_null( $input['minimum_job_price'] ?? null, 0 ),
+				'minimum_material_charge'        => self::sanitize_decimal_or_null( $input['minimum_material_charge'] ?? null, 0 ),
+				'margin_override'                => self::sanitize_decimal_or_null( $input['margin_override'] ?? null, 0 ),
+				'enable_infill'                  => self::sanitize_bool_flag( $input['enable_infill'] ?? 0 ),
+				'enable_supports'                => self::sanitize_bool_flag( $input['enable_supports'] ?? 0 ),
+				'enable_structure'               => self::sanitize_bool_flag( $input['enable_structure'] ?? 0 ),
+				'enable_application_profile'     => self::sanitize_bool_flag( $input['enable_application_profile'] ?? 0 ),
+				'enable_finish_selection'        => self::sanitize_bool_flag( $input['enable_finish_selection'] ?? 0 ),
+				'enable_color_selection'         => self::sanitize_bool_flag( $input['enable_color_selection'] ?? 0 ),
+				'enable_scale'                   => self::sanitize_bool_flag( $input['enable_scale'] ?? 0 ),
+				'enable_quantity'                => self::sanitize_bool_flag( $input['enable_quantity'] ?? 0 ),
+				'enable_advanced_settings'       => self::sanitize_bool_flag( $input['enable_advanced_settings'] ?? 0 ),
+				'fdm_infill_min'                 => self::sanitize_decimal_or_null( $input['fdm_infill_min'] ?? null, 0 ),
+				'fdm_infill_max'                 => self::sanitize_decimal_or_null( $input['fdm_infill_max'] ?? null, 0 ),
+				'fdm_support_factor'             => self::sanitize_decimal_or_null( $input['fdm_support_factor'] ?? null, 0 ),
+				'resin_curing_factor'            => self::sanitize_decimal_or_null( $input['resin_curing_factor'] ?? null, 0 ),
+				'resin_shrinkage_percent'        => self::sanitize_decimal_or_null( $input['resin_shrinkage_percent'] ?? null, 0 ),
+				'resin_default_wall_thickness'   => self::sanitize_decimal_or_null( $input['resin_default_wall_thickness'] ?? null, 0 ),
+				'resin_support_density_factor'   => self::sanitize_decimal_or_null( $input['resin_support_density_factor'] ?? null, 0 ),
+				'resin_support_removal_factor'   => self::sanitize_decimal_or_null( $input['resin_support_removal_factor'] ?? null, 0 ),
+				'polyjet_profile_cost_factor'    => self::sanitize_decimal_or_null( $input['polyjet_profile_cost_factor'] ?? null, 0 ),
+				'polyjet_profile_time_factor'    => self::sanitize_decimal_or_null( $input['polyjet_profile_time_factor'] ?? null, 0 ),
+				'polyjet_finish_cost_factor'     => self::sanitize_decimal_or_null( $input['polyjet_finish_cost_factor'] ?? null, 0 ),
+				'polyjet_finish_time_factor'     => self::sanitize_decimal_or_null( $input['polyjet_finish_time_factor'] ?? null, 0 ),
+				'multi_material_enabled'         => self::sanitize_bool_flag( $input['multi_material_enabled'] ?? 0 ),
+				'color_printing_enabled'         => self::sanitize_bool_flag( $input['color_printing_enabled'] ?? 0 ),
+				'max_materials_per_job'          => self::sanitize_int_or_null( $input['max_materials_per_job'] ?? null, 0 ),
+				'min_wall_thickness'             => self::sanitize_decimal_or_null( $input['min_wall_thickness'] ?? null, 0 ),
+				'max_quantity_per_job'           => self::sanitize_int_or_null( $input['max_quantity_per_job'] ?? null, 0 ),
+				'allowed_file_formats'           => self::sanitize_text_list( $input['allowed_file_formats'] ?? '' ),
+				'status'                         => self::sanitize_status( $input['status'] ?? 'inactive' ),
+			);
+		}
+
+		protected static function render_checkbox( $name, $label, $checked, $help = '' ) {
+			?>
+			<label class="srf-toggle-card">
+				<input type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $checked ) ); ?> />
+				<span>
+					<strong><?php echo esc_html( $label ); ?></strong>
+					<?php if ( $help ) : ?>
+						<small><?php echo esc_html( $help ); ?></small>
+					<?php endif; ?>
+				</span>
+			</label>
+			<?php
+		}
+
+		protected static function render_page_title( $edit_printer ) {
+			echo esc_html(
+				$edit_printer
+					? __( 'Edit Printer', 'service-requests-form' )
+					: __( 'Add Printer', 'service-requests-form' )
 			);
 		}
 
@@ -237,25 +453,27 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			}
 
 			$selected_materials = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
-
-			$page_url = self::get_page_url();
-			$notices  = self::get_notices();
+			$page_url           = self::get_page_url();
+			$notices            = self::get_notices();
+			$technology_options = self::get_technology_options();
+			$speed_unit_options = self::get_speed_unit_options();
+			$pricing_models     = self::get_pricing_model_options();
 			?>
 			<div class="wrap srf-printers-page">
 				<style>
-					.srf-admin-shell{max-width:1280px}
+					.srf-admin-shell{max-width:1380px}
 					.srf-admin-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin:8px 0 18px}
 					.srf-admin-header h1{margin:0 0 6px}
 					.srf-admin-description{margin:0;color:#667085}
 					.srf-admin-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 					.srf-admin-card h2{margin:0 0 18px}
+					.srf-admin-card h3{margin:0 0 14px;font-size:15px}
 					.srf-grid-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+					.srf-grid-cols-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 					.srf-input-row label{display:block;font-weight:600;color:#344054;margin-bottom:6px}
-					.srf-input-row input[type="text"],
-					.srf-input-row input[type="number"],
-					.srf-input-row textarea,
-					.srf-input-row select{width:100%;max-width:none}
-					.srf-admin-actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+					.srf-input-row input[type="text"],.srf-input-row input[type="number"],.srf-input-row textarea,.srf-input-row select{width:100%;max-width:none}
+					.srf-input-row small{display:block;margin-top:6px;color:#667085}
+					.srf-admin-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
 					.srf-admin-table{width:100%;border-collapse:collapse}
 					.srf-admin-table th,.srf-admin-table td{padding:14px 12px;border-bottom:1px solid #eaecf0;text-align:left;vertical-align:top}
 					.srf-admin-table th{background:#f9fafb;color:#667085;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
@@ -266,235 +484,210 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 					.srf-row-actions{display:flex;gap:8px;flex-wrap:wrap}
 					.srf-checkbox-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
 					.srf-checkbox-item{display:flex;align-items:center;gap:8px;background:#f9fafb;border:1px solid #eaecf0;border-radius:10px;padding:8px 10px}
-					.srf-checkbox-item input{margin:0}
-					@media (max-width: 1000px){
-						.srf-checkbox-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-					}
-					@media (max-width: 900px){
-						.srf-grid-cols{grid-template-columns:1fr}
-					}
-					@media (max-width: 640px){
-						.srf-checkbox-grid{grid-template-columns:1fr}
-					}
+					.srf-toggle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+					.srf-toggle-card{display:flex;gap:10px;align-items:flex-start;background:#f9fafb;border:1px solid #eaecf0;border-radius:12px;padding:12px}
+					.srf-toggle-card input{margin-top:2px}
+					.srf-toggle-card strong{display:block;color:#111827}
+					.srf-toggle-card small{display:block;margin-top:4px;color:#667085;line-height:1.4}
+					.srf-form-section{margin-top:22px;padding-top:18px;border-top:1px solid #f0f2f5}
+					.srf-kv{display:grid;grid-template-columns:140px 1fr;gap:8px 12px}
+					.srf-kv dt{color:#667085}
+					.srf-kv dd{margin:0}
+					@media (max-width: 1100px){.srf-toggle-grid,.srf-checkbox-grid,.srf-grid-cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+					@media (max-width: 900px){.srf-grid-cols,.srf-grid-cols-3,.srf-toggle-grid,.srf-checkbox-grid{grid-template-columns:1fr}}
 				</style>
 
 				<div class="srf-admin-shell">
 					<div class="srf-admin-header">
 						<div>
 							<h1><?php esc_html_e( 'Printers', 'service-requests-form' ); ?></h1>
-							<p class="srf-admin-description"><?php esc_html_e( 'Define printer capabilities, operating cost, and supported materials for the 3D quote engine.', 'service-requests-form' ); ?></p>
+							<p class="srf-admin-description"><?php esc_html_e( 'Create a full printer definition that controls capabilities, validation, UI fields, and quote behavior for every 3D printer technology.', 'service-requests-form' ); ?></p>
 						</div>
 
 						<?php if ( $edit_printer ) : ?>
-							<a class="button" href="<?php echo esc_url( $page_url ); ?>">
-								<?php esc_html_e( 'Cancel Editing', 'service-requests-form' ); ?>
-							</a>
+							<a class="button" href="<?php echo esc_url( $page_url ); ?>"><?php esc_html_e( 'Cancel Editing', 'service-requests-form' ); ?></a>
 						<?php endif; ?>
 					</div>
 
 					<?php foreach ( $notices as $notice ) : ?>
-						<div class="notice notice-<?php echo esc_attr( 'success' === $notice['type'] ? 'success' : 'error' ); ?> is-dismissible">
-							<p><?php echo esc_html( $notice['text'] ); ?></p>
-						</div>
+						<div class="notice notice-<?php echo esc_attr( 'success' === $notice['type'] ? 'success' : 'error' ); ?> is-dismissible"><p><?php echo esc_html( $notice['text'] ); ?></p></div>
 					<?php endforeach; ?>
 
 					<div class="srf-admin-card">
-						<h2>
-							<?php
-							echo esc_html(
-								$edit_printer
-									? __( 'Edit Printer', 'service-requests-form' )
-									: __( 'Add Printer', 'service-requests-form' )
-							);
-							?>
-						</h2>
+						<h2><?php self::render_page_title( $edit_printer ); ?></h2>
 
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 							<input type="hidden" name="action" value="srf_save_printer" />
 							<input type="hidden" name="printer_id" value="<?php echo esc_attr( $edit_printer ? (int) $edit_printer->id : 0 ); ?>" />
 							<?php wp_nonce_field( 'srf_save_printer', 'srf_printer_nonce' ); ?>
 
-							<div class="srf-grid-cols">
-								<div class="srf-input-row">
-									<label for="srf_printer_name"><?php esc_html_e( 'Name', 'service-requests-form' ); ?></label>
-									<input type="text" id="srf_printer_name" name="name" value="<?php echo esc_attr( $edit_printer->name ?? '' ); ?>" required />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_brand"><?php esc_html_e( 'Brand', 'service-requests-form' ); ?></label>
-									<input type="text" id="srf_printer_brand" name="brand" value="<?php echo esc_attr( $edit_printer->brand ?? '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_model"><?php esc_html_e( 'Model', 'service-requests-form' ); ?></label>
-									<input type="text" id="srf_printer_model" name="model" value="<?php echo esc_attr( $edit_printer->model ?? '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_technology"><?php esc_html_e( 'Technology', 'service-requests-form' ); ?></label>
-									<input type="text" id="srf_printer_technology" name="technology" value="<?php echo esc_attr( $edit_printer->technology ?? '' ); ?>" placeholder="<?php esc_attr_e( 'FDM, SLA, SLS…', 'service-requests-form' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_build_volume_x"><?php esc_html_e( 'Build volume X', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.01" id="srf_printer_build_volume_x" name="build_volume_x" value="<?php echo esc_attr( isset( $edit_printer->build_volume_x ) ? $edit_printer->build_volume_x : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_build_volume_y"><?php esc_html_e( 'Build volume Y', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.01" id="srf_printer_build_volume_y" name="build_volume_y" value="<?php echo esc_attr( isset( $edit_printer->build_volume_y ) ? $edit_printer->build_volume_y : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_build_volume_z"><?php esc_html_e( 'Build volume Z', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.01" id="srf_printer_build_volume_z" name="build_volume_z" value="<?php echo esc_attr( isset( $edit_printer->build_volume_z ) ? $edit_printer->build_volume_z : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_default_speed"><?php esc_html_e( 'Default speed', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.01" id="srf_printer_default_speed" name="default_speed" value="<?php echo esc_attr( isset( $edit_printer->default_speed ) ? $edit_printer->default_speed : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_hourly_cost"><?php esc_html_e( 'Hourly cost', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.01" id="srf_printer_hourly_cost" name="hourly_cost" value="<?php echo esc_attr( isset( $edit_printer->hourly_cost ) ? $edit_printer->hourly_cost : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_min_layer_height"><?php esc_html_e( 'Min layer height', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.0001" id="srf_printer_min_layer_height" name="min_layer_height" value="<?php echo esc_attr( isset( $edit_printer->min_layer_height ) ? $edit_printer->min_layer_height : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_max_layer_height"><?php esc_html_e( 'Max layer height', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.0001" id="srf_printer_max_layer_height" name="max_layer_height" value="<?php echo esc_attr( isset( $edit_printer->max_layer_height ) ? $edit_printer->max_layer_height : '' ); ?>" />
-								</div>
-
-								<div class="srf-input-row">
-									<label for="srf_printer_status"><?php esc_html_e( 'Status', 'service-requests-form' ); ?></label>
-									<select id="srf_printer_status" name="status">
-										<option value="active" <?php selected( $edit_printer->status ?? 'active', 'active' ); ?>><?php esc_html_e( 'Active', 'service-requests-form' ); ?></option>
-										<option value="inactive" <?php selected( $edit_printer->status ?? '', 'inactive' ); ?>><?php esc_html_e( 'Inactive', 'service-requests-form' ); ?></option>
-									</select>
+							<div class="srf-form-section" style="margin-top:0;padding-top:0;border-top:none;">
+								<h3><?php esc_html_e( 'General information', 'service-requests-form' ); ?></h3>
+								<div class="srf-grid-cols">
+									<div class="srf-input-row"><label for="srf_printer_name"><?php esc_html_e( 'Name', 'service-requests-form' ); ?></label><input type="text" id="srf_printer_name" name="name" value="<?php echo esc_attr( $edit_printer->name ?? '' ); ?>" required /></div>
+									<div class="srf-input-row"><label for="srf_printer_brand"><?php esc_html_e( 'Brand', 'service-requests-form' ); ?></label><input type="text" id="srf_printer_brand" name="brand" value="<?php echo esc_attr( $edit_printer->brand ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label for="srf_printer_model"><?php esc_html_e( 'Model', 'service-requests-form' ); ?></label><input type="text" id="srf_printer_model" name="model" value="<?php echo esc_attr( $edit_printer->model ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label for="srf_printer_technology"><?php esc_html_e( 'Technology', 'service-requests-form' ); ?></label><select id="srf_printer_technology" name="technology"><?php foreach ( $technology_options as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $edit_printer->technology ?? '', $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></div>
+									<div class="srf-input-row"><label for="srf_printer_status"><?php esc_html_e( 'Status', 'service-requests-form' ); ?></label><select id="srf_printer_status" name="status"><option value="active" <?php selected( $edit_printer->status ?? 'active', 'active' ); ?>><?php esc_html_e( 'Active', 'service-requests-form' ); ?></option><option value="inactive" <?php selected( $edit_printer->status ?? '', 'inactive' ); ?>><?php esc_html_e( 'Inactive', 'service-requests-form' ); ?></option></select></div>
+									<div class="srf-input-row"><label for="srf_printer_description"><?php esc_html_e( 'Description', 'service-requests-form' ); ?></label><textarea id="srf_printer_description" name="description" rows="4"><?php echo esc_textarea( $edit_printer->description ?? '' ); ?></textarea></div>
 								</div>
 							</div>
 
-							<div class="srf-input-row" style="margin-top:16px;">
-								<label><?php esc_html_e( 'Supported materials', 'service-requests-form' ); ?></label>
+							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'Build and hardware limits', 'service-requests-form' ); ?></h3>
+								<div class="srf-grid-cols-3">
+									<div class="srf-input-row"><label>Build volume X (mm)</label><input type="number" min="0" step="0.01" name="build_volume_x" value="<?php echo esc_attr( $edit_printer->build_volume_x ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Build volume Y (mm)</label><input type="number" min="0" step="0.01" name="build_volume_y" value="<?php echo esc_attr( $edit_printer->build_volume_y ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Build volume Z (mm)</label><input type="number" min="0" step="0.01" name="build_volume_z" value="<?php echo esc_attr( $edit_printer->build_volume_z ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>XY resolution (mm)</label><input type="number" min="0" step="0.0001" name="xy_resolution" value="<?php echo esc_attr( $edit_printer->xy_resolution ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Nozzle size (mm)</label><input type="number" min="0" step="0.0001" name="nozzle_size" value="<?php echo esc_attr( $edit_printer->nozzle_size ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Min feature size (mm)</label><input type="number" min="0" step="0.0001" name="min_feature_size" value="<?php echo esc_attr( $edit_printer->min_feature_size ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Min layer height (mm)</label><input type="number" min="0" step="0.0001" name="min_layer_height" value="<?php echo esc_attr( $edit_printer->min_layer_height ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Max layer height (mm)</label><input type="number" min="0" step="0.0001" name="max_layer_height" value="<?php echo esc_attr( $edit_printer->max_layer_height ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Max part weight (g)</label><input type="number" min="0" step="0.01" name="max_part_weight" value="<?php echo esc_attr( $edit_printer->max_part_weight ?? '' ); ?>" /></div>
+								</div>
+							</div>
 
-								<?php if ( empty( $material_map ) ) : ?>
-									<p><?php esc_html_e( 'No materials available yet. Add materials first.', 'service-requests-form' ); ?></p>
-								<?php else : ?>
-									<div class="srf-checkbox-grid">
-										<?php foreach ( $material_map as $material_id => $material_name ) : ?>
-											<label class="srf-checkbox-item">
-												<input
-													type="checkbox"
-													name="supported_materials[]"
-													value="<?php echo esc_attr( $material_id ); ?>"
-													<?php checked( in_array( (int) $material_id, $selected_materials, true ) ); ?>
-												/>
-												<span><?php echo esc_html( $material_name ); ?></span>
-											</label>
-										<?php endforeach; ?>
+							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'Cost and time model', 'service-requests-form' ); ?></h3>
+								<div class="srf-grid-cols-3">
+									<div class="srf-input-row"><label>Hourly cost</label><input type="number" min="0" step="0.01" name="hourly_cost" value="<?php echo esc_attr( $edit_printer->hourly_cost ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Default speed</label><input type="number" min="0" step="0.01" name="default_speed" value="<?php echo esc_attr( $edit_printer->default_speed ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Speed unit</label><select name="speed_unit"><?php foreach ( $speed_unit_options as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $edit_printer->speed_unit ?? '', $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></div>
+									<div class="srf-input-row"><label>Machine efficiency factor</label><input type="number" min="0" step="0.001" name="machine_efficiency_factor" value="<?php echo esc_attr( $edit_printer->machine_efficiency_factor ?? '1' ); ?>" /></div>
+									<div class="srf-input-row"><label>Setup time (min/job)</label><input type="number" min="0" step="0.01" name="setup_time_minutes" value="<?php echo esc_attr( $edit_printer->setup_time_minutes ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Warmup time (min)</label><input type="number" min="0" step="0.01" name="warmup_time_minutes" value="<?php echo esc_attr( $edit_printer->warmup_time_minutes ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Post-process time (min)</label><input type="number" min="0" step="0.01" name="postprocess_time_minutes" value="<?php echo esc_attr( $edit_printer->postprocess_time_minutes ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Pricing model</label><select name="pricing_model"><?php foreach ( $pricing_models as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $edit_printer->pricing_model ?? '', $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></div>
+									<div class="srf-input-row"><label>Minimum job price</label><input type="number" min="0" step="0.01" name="minimum_job_price" value="<?php echo esc_attr( $edit_printer->minimum_job_price ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Minimum material charge</label><input type="number" min="0" step="0.01" name="minimum_material_charge" value="<?php echo esc_attr( $edit_printer->minimum_material_charge ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Margin override (%)</label><input type="number" min="0" step="0.001" name="margin_override" value="<?php echo esc_attr( $edit_printer->margin_override ?? '' ); ?>" /></div>
+								</div>
+							</div>
+
+							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'Material compatibility', 'service-requests-form' ); ?></h3>
+								<div class="srf-grid-cols">
+									<div class="srf-input-row">
+										<label><?php esc_html_e( 'Supported materials', 'service-requests-form' ); ?></label>
+										<?php if ( empty( $material_map ) ) : ?>
+											<p><?php esc_html_e( 'No materials available yet. Add materials first.', 'service-requests-form' ); ?></p>
+										<?php else : ?>
+											<div class="srf-checkbox-grid">
+												<?php foreach ( $material_map as $material_id => $material_name ) : ?>
+													<label class="srf-checkbox-item"><input type="checkbox" name="supported_materials[]" value="<?php echo esc_attr( $material_id ); ?>" <?php checked( in_array( (int) $material_id, $selected_materials, true ) ); ?> /><span><?php echo esc_html( $material_name ); ?></span></label>
+												<?php endforeach; ?>
+											</div>
+										<?php endif; ?>
 									</div>
-								<?php endif; ?>
+									<div class="srf-input-row">
+										<label for="srf_default_material_id"><?php esc_html_e( 'Default material', 'service-requests-form' ); ?></label>
+										<select id="srf_default_material_id" name="default_material_id">
+											<option value=""><?php esc_html_e( 'No default material', 'service-requests-form' ); ?></option>
+											<?php foreach ( $material_map as $material_id => $material_name ) : ?>
+												<option value="<?php echo esc_attr( $material_id ); ?>" <?php selected( (int) ( $edit_printer->default_material_id ?? 0 ), (int) $material_id ); ?>><?php echo esc_html( $material_name ); ?></option>
+											<?php endforeach; ?>
+										</select>
+										<small><?php esc_html_e( 'Used when the UI should auto-select a preferred material for this printer.', 'service-requests-form' ); ?></small>
+									</div>
+								</div>
 							</div>
 
-							<div class="srf-admin-actions">
-								<button type="submit" class="button button-primary">
-									<?php echo esc_html( $edit_printer ? __( 'Update Printer', 'service-requests-form' ) : __( 'Save Printer', 'service-requests-form' ) ); ?>
-								</button>
+							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'Profiles, finish, support, and colors', 'service-requests-form' ); ?></h3>
+								<div class="srf-grid-cols">
+									<div class="srf-input-row"><label>Supported application profiles</label><textarea name="supported_application_profiles" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_application_profiles ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: dental_model, splint, surgical_guide', 'service-requests-form' ); ?></small></div>
+									<div class="srf-input-row"><label>Supported finishes</label><textarea name="supported_finishes" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_finishes ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: matte, glossy', 'service-requests-form' ); ?></small></div>
+									<div class="srf-input-row"><label>Supported support materials</label><textarea name="supported_support_materials" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_support_materials ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: SUP705, SUP706B', 'service-requests-form' ); ?></small></div>
+									<div class="srf-input-row"><label>Default support material</label><input type="text" name="default_support_material" value="<?php echo esc_attr( $edit_printer->default_support_material ?? '' ); ?>" /><small><?php esc_html_e( 'Shown when one support material should be auto-selected by default.', 'service-requests-form' ); ?></small></div>
+									<div class="srf-input-row"><label>Supported color modes / shades</label><textarea name="supported_color_modes" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_color_modes ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: A1, A2, Clear, FullColor', 'service-requests-form' ); ?></small></div>
+									<div class="srf-input-row"><label>Support material mapping (JSON)</label><textarea name="support_material_map" rows="5"><?php echo esc_textarea( self::pretty_json_text( $edit_printer->support_material_map ?? '' ) ); ?></textarea><small><?php esc_html_e( 'Optional JSON object to map main materials to support materials.', 'service-requests-form' ); ?></small></div>
+								</div>
 							</div>
+
+							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'UI field controls', 'service-requests-form' ); ?></h3>
+								<div class="srf-toggle-grid">
+									<?php self::render_checkbox( 'enable_infill', 'Enable infill field', ! empty( $edit_printer->enable_infill ), 'Useful for FDM workflows.' ); ?>
+									<?php self::render_checkbox( 'enable_supports', 'Enable supports field', ! empty( $edit_printer->enable_supports ), 'Show support choices in the user UI.' ); ?>
+									<?php self::render_checkbox( 'enable_structure', 'Enable structure field', ! empty( $edit_printer->enable_structure ), 'For hollow / solid or similar structural presets.' ); ?>
+									<?php self::render_checkbox( 'enable_application_profile', 'Enable application profile', ! empty( $edit_printer->enable_application_profile ), 'Recommended for PolyJet and dental flows.' ); ?>
+									<?php self::render_checkbox( 'enable_finish_selection', 'Enable finish selection', ! empty( $edit_printer->enable_finish_selection ), 'Matte / glossy and similar finish choices.' ); ?>
+									<?php self::render_checkbox( 'enable_color_selection', 'Enable color selection', ! empty( $edit_printer->enable_color_selection ), 'Show material color or shade in the frontend.' ); ?>
+									<?php self::render_checkbox( 'enable_scale', 'Enable scale field', ! empty( $edit_printer->enable_scale ) || ! $edit_printer, 'Allow user scaling in the frontend.' ); ?>
+									<?php self::render_checkbox( 'enable_quantity', 'Enable quantity field', ! empty( $edit_printer->enable_quantity ) || ! $edit_printer, 'Allow ordering multiple units.' ); ?>
+									<?php self::render_checkbox( 'enable_advanced_settings', 'Enable advanced settings', ! empty( $edit_printer->enable_advanced_settings ), 'Reserve space for future expert options.' ); ?>
+								</div>
+							</div>
+
+							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'Technology-specific parameters', 'service-requests-form' ); ?></h3>
+								<div class="srf-grid-cols-3">
+									<div class="srf-input-row"><label>FDM infill min (%)</label><input type="number" min="0" step="0.01" name="fdm_infill_min" value="<?php echo esc_attr( $edit_printer->fdm_infill_min ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM infill max (%)</label><input type="number" min="0" step="0.01" name="fdm_infill_max" value="<?php echo esc_attr( $edit_printer->fdm_infill_max ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>FDM support factor</label><input type="number" min="0" step="0.001" name="fdm_support_factor" value="<?php echo esc_attr( $edit_printer->fdm_support_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin curing factor</label><input type="number" min="0" step="0.001" name="resin_curing_factor" value="<?php echo esc_attr( $edit_printer->resin_curing_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin shrinkage (%)</label><input type="number" min="0" step="0.001" name="resin_shrinkage_percent" value="<?php echo esc_attr( $edit_printer->resin_shrinkage_percent ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin default wall thickness (mm)</label><input type="number" min="0" step="0.0001" name="resin_default_wall_thickness" value="<?php echo esc_attr( $edit_printer->resin_default_wall_thickness ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin support density factor</label><input type="number" min="0" step="0.001" name="resin_support_density_factor" value="<?php echo esc_attr( $edit_printer->resin_support_density_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Resin support removal factor</label><input type="number" min="0" step="0.001" name="resin_support_removal_factor" value="<?php echo esc_attr( $edit_printer->resin_support_removal_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet profile cost factor</label><input type="number" min="0" step="0.001" name="polyjet_profile_cost_factor" value="<?php echo esc_attr( $edit_printer->polyjet_profile_cost_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet profile time factor</label><input type="number" min="0" step="0.001" name="polyjet_profile_time_factor" value="<?php echo esc_attr( $edit_printer->polyjet_profile_time_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet finish cost factor</label><input type="number" min="0" step="0.001" name="polyjet_finish_cost_factor" value="<?php echo esc_attr( $edit_printer->polyjet_finish_cost_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>PolyJet finish time factor</label><input type="number" min="0" step="0.001" name="polyjet_finish_time_factor" value="<?php echo esc_attr( $edit_printer->polyjet_finish_time_factor ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Min wall thickness (mm)</label><input type="number" min="0" step="0.0001" name="min_wall_thickness" value="<?php echo esc_attr( $edit_printer->min_wall_thickness ?? '' ); ?>" /></div>
+								</div>
+								<div class="srf-toggle-grid" style="margin-top:14px;">
+									<?php self::render_checkbox( 'multi_material_enabled', 'Enable multi-material jobs', ! empty( $edit_printer->multi_material_enabled ), 'For PolyJet, multimaterial, or full-color capable systems.' ); ?>
+									<?php self::render_checkbox( 'color_printing_enabled', 'Enable color printing', ! empty( $edit_printer->color_printing_enabled ), 'Allow color-aware UI and pricing rules.' ); ?>
+								</div>
+								<div class="srf-grid-cols-3" style="margin-top:14px;">
+									<div class="srf-input-row"><label>Max materials per job</label><input type="number" min="0" step="1" name="max_materials_per_job" value="<?php echo esc_attr( $edit_printer->max_materials_per_job ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Max quantity per job</label><input type="number" min="0" step="1" name="max_quantity_per_job" value="<?php echo esc_attr( $edit_printer->max_quantity_per_job ?? '' ); ?>" /></div>
+									<div class="srf-input-row"><label>Allowed file formats</label><textarea name="allowed_file_formats" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->allowed_file_formats ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: stl, obj, 3mf, step', 'service-requests-form' ); ?></small></div>
+								</div>
+							</div>
+
+							<div class="srf-admin-actions"><button type="submit" class="button button-primary"><?php echo esc_html( $edit_printer ? __( 'Update Printer', 'service-requests-form' ) : __( 'Save Printer', 'service-requests-form' ) ); ?></button></div>
 						</form>
 					</div>
 
 					<div class="srf-admin-card">
 						<h2><?php esc_html_e( 'Printer catalogue', 'service-requests-form' ); ?></h2>
-
 						<table class="srf-admin-table">
-							<thead>
-								<tr>
-									<th><?php esc_html_e( 'Name', 'service-requests-form' ); ?></th>
-									<th><?php esc_html_e( 'Technology', 'service-requests-form' ); ?></th>
-									<th><?php esc_html_e( 'Build volume', 'service-requests-form' ); ?></th>
-									<th><?php esc_html_e( 'Hourly cost', 'service-requests-form' ); ?></th>
-									<th><?php esc_html_e( 'Supported materials', 'service-requests-form' ); ?></th>
-									<th><?php esc_html_e( 'Status', 'service-requests-form' ); ?></th>
-									<th><?php esc_html_e( 'Actions', 'service-requests-form' ); ?></th>
-								</tr>
-							</thead>
+							<thead><tr><th><?php esc_html_e( 'Printer', 'service-requests-form' ); ?></th><th><?php esc_html_e( 'Technology', 'service-requests-form' ); ?></th><th><?php esc_html_e( 'Limits', 'service-requests-form' ); ?></th><th><?php esc_html_e( 'Pricing', 'service-requests-form' ); ?></th><th><?php esc_html_e( 'UI profile', 'service-requests-form' ); ?></th><th><?php esc_html_e( 'Status', 'service-requests-form' ); ?></th><th><?php esc_html_e( 'Actions', 'service-requests-form' ); ?></th></tr></thead>
 							<tbody>
-								<?php if ( empty( $printers ) ) : ?>
-									<tr>
-										<td colspan="7"><?php esc_html_e( 'No printers found yet.', 'service-requests-form' ); ?></td>
-									</tr>
-								<?php else : ?>
-									<?php foreach ( $printers as $printer ) : ?>
-										<?php
-										$supported_ids   = self::decode_supported_materials( $printer->supported_materials );
-										$supported_names = array();
-
-										foreach ( $supported_ids as $mid ) {
-											if ( isset( $material_map[ $mid ] ) ) {
-												$supported_names[] = $material_map[ $mid ];
-											}
+							<?php if ( empty( $printers ) ) : ?>
+								<tr><td colspan="7"><?php esc_html_e( 'No printers found yet.', 'service-requests-form' ); ?></td></tr>
+							<?php else : ?>
+								<?php foreach ( $printers as $printer ) : ?>
+									<?php
+									$supported_ids   = self::decode_supported_materials( $printer->supported_materials );
+									$supported_names = array();
+									foreach ( $supported_ids as $mid ) {
+										if ( isset( $material_map[ $mid ] ) ) {
+											$supported_names[] = $material_map[ $mid ];
 										}
-
-										$build_volume = trim(
-											implode(
-												' × ',
-												array_filter(
-													array(
-														(string) $printer->build_volume_x,
-														(string) $printer->build_volume_y,
-														(string) $printer->build_volume_z,
-													),
-													static function( $v ) {
-														return '' !== $v && '0' !== $v && '0.00' !== $v;
-													}
-												)
-											)
-										);
-										?>
-										<tr>
-											<td>
-												<strong><?php echo esc_html( $printer->name ); ?></strong>
-												<?php if ( ! empty( $printer->brand ) || ! empty( $printer->model ) ) : ?>
-													<br><span style="color:#667085;"><?php echo esc_html( trim( $printer->brand . ' ' . $printer->model ) ); ?></span>
-												<?php endif; ?>
-											</td>
-											<td><?php echo esc_html( $printer->technology ?: '—' ); ?></td>
-											<td><?php echo esc_html( $build_volume ?: '—' ); ?></td>
-											<td><?php echo esc_html( '' !== (string) $printer->hourly_cost ? number_format_i18n( (float) $printer->hourly_cost, 2 ) : '—' ); ?></td>
-											<td><?php echo esc_html( ! empty( $supported_names ) ? implode( ', ', $supported_names ) : '—' ); ?></td>
-											<td>
-												<span class="srf-status-pill srf-status-pill--<?php echo esc_attr( 'active' === $printer->status ? 'active' : 'inactive' ); ?>">
-													<?php echo esc_html( ucfirst( (string) $printer->status ) ); ?>
-												</span>
-											</td>
-											<td>
-												<div class="srf-row-actions">
-													<a class="button button-secondary" href="<?php echo esc_url( self::get_page_url( array(
-														'action' => 'edit',
-														'id'     => (int) $printer->id,
-													) ) ); ?>">
-														<?php esc_html_e( 'Edit', 'service-requests-form' ); ?>
-													</a>
-
-													<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
-														<input type="hidden" name="action" value="srf_delete_printer" />
-														<input type="hidden" name="printer_id" value="<?php echo esc_attr( (int) $printer->id ); ?>" />
-														<?php wp_nonce_field( 'srf_delete_printer', 'srf_printer_delete_nonce' ); ?>
-														<button type="submit" class="button button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Delete this printer?', 'service-requests-form' ) ); ?>');">
-															<?php esc_html_e( 'Delete', 'service-requests-form' ); ?>
-														</button>
-													</form>
-												</div>
-											</td>
-										</tr>
-									<?php endforeach; ?>
-								<?php endif; ?>
+									}
+									$build_volume = trim( implode( ' × ', array_filter( array( (string) $printer->build_volume_x, (string) $printer->build_volume_y, (string) $printer->build_volume_z ), static function( $v ) { return '' !== $v && '0' !== $v && '0.00' !== $v; } ) ) );
+									$ui_flags = array();
+									foreach ( array( 'enable_infill' => 'Infill', 'enable_supports' => 'Supports', 'enable_structure' => 'Structure', 'enable_application_profile' => 'Profile', 'enable_finish_selection' => 'Finish', 'enable_color_selection' => 'Color' ) as $flag => $label ) {
+										if ( ! empty( $printer->{$flag} ) ) {
+											$ui_flags[] = $label;
+										}
+									}
+									?>
+									<tr>
+										<td><strong><?php echo esc_html( $printer->name ); ?></strong><?php if ( ! empty( $printer->brand ) || ! empty( $printer->model ) ) : ?><br><span style="color:#667085;"><?php echo esc_html( trim( $printer->brand . ' ' . $printer->model ) ); ?></span><?php endif; ?><?php if ( ! empty( $supported_names ) ) : ?><br><span style="color:#667085;"><?php echo esc_html( implode( ', ', array_slice( $supported_names, 0, 4 ) ) ); ?><?php echo count( $supported_names ) > 4 ? esc_html__( '…', 'service-requests-form' ) : ''; ?></span><?php endif; ?></td>
+										<td><?php echo esc_html( $printer->technology ?: '—' ); ?></td>
+										<td><dl class="srf-kv"><dt><?php esc_html_e( 'Build', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( $build_volume ?: '—' ); ?></dd><dt><?php esc_html_e( 'Layer', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( ( $printer->min_layer_height ?: '—' ) . ' / ' . ( $printer->max_layer_height ?: '—' ) ); ?></dd></dl></td>
+										<td><dl class="srf-kv"><dt><?php esc_html_e( 'Hourly', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( '' !== (string) $printer->hourly_cost ? number_format_i18n( (float) $printer->hourly_cost, 2 ) : '—' ); ?></dd><dt><?php esc_html_e( 'Model', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( $printer->pricing_model ?: '—' ); ?></dd></dl></td>
+										<td><?php echo esc_html( ! empty( $ui_flags ) ? implode( ', ', $ui_flags ) : '—' ); ?></td>
+										<td><span class="srf-status-pill srf-status-pill--<?php echo esc_attr( 'active' === $printer->status ? 'active' : 'inactive' ); ?>"><?php echo esc_html( ucfirst( (string) $printer->status ) ); ?></span></td>
+										<td><div class="srf-row-actions"><a class="button button-secondary" href="<?php echo esc_url( self::get_page_url( array( 'action' => 'edit', 'id' => (int) $printer->id ) ) ); ?>"><?php esc_html_e( 'Edit', 'service-requests-form' ); ?></a><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;"><input type="hidden" name="action" value="srf_delete_printer" /><input type="hidden" name="printer_id" value="<?php echo esc_attr( (int) $printer->id ); ?>" /><?php wp_nonce_field( 'srf_delete_printer', 'srf_printer_delete_nonce' ); ?><button type="submit" class="button button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Delete this printer?', 'service-requests-form' ) ); ?>');"><?php esc_html_e( 'Delete', 'service-requests-form' ); ?></button></form></div></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php endif; ?>
 							</tbody>
 						</table>
 					</div>
