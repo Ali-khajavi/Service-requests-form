@@ -1214,6 +1214,26 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					}
 				}
 
+				if ( $selected_printer ) {
+					$layer_height = (float) $old_data['layer_height'];
+					$min_layer    = isset( $selected_printer->min_layer_height ) ? (float) $selected_printer->min_layer_height : 0;
+					$max_layer    = isset( $selected_printer->max_layer_height ) ? (float) $selected_printer->max_layer_height : 0;
+
+					if ( $min_layer > 0 && $layer_height < $min_layer ) {
+						$errors[] = sprintf(
+							__( 'Layer height is below the minimum supported by the selected printer (%s mm).', 'service-requests-form' ),
+							number_format_i18n( $min_layer, 2 )
+						);
+					}
+
+					if ( $max_layer > 0 && $layer_height > $max_layer ) {
+						$errors[] = sprintf(
+							__( 'Layer height is above the maximum supported by the selected printer (%s mm).', 'service-requests-form' ),
+							number_format_i18n( $max_layer, 2 )
+						);
+					}
+				}
+
 				$names   = isset( $_FILES['srf_files']['name'] ) ? $_FILES['srf_files']['name'] : array();
 				$has_any = is_array( $names ) ? ( count( array_filter( $names ) ) > 0 ) : ! empty( $names );
 
@@ -1288,6 +1308,74 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 							wp_delete_post( $post_id, true );
 							$errors[] = $e->getMessage();
+						}
+
+						if ( empty( $errors ) ) {
+							$attachment_paths = array();
+							if ( ! empty( $attachment_ids ) ) {
+								foreach ( $attachment_ids as $attachment_id ) {
+									$file_path = get_attached_file( (int) $attachment_id );
+									if ( $file_path ) {
+										$attachment_paths[] = $file_path;
+									}
+								}
+							}
+
+							try {
+								if ( ! class_exists( 'SRF_Project_Pricing' ) ) {
+									throw new Exception( __( 'The project pricing engine is not available.', 'service-requests-form' ) );
+								}
+
+								$quote = SRF_Project_Pricing::calculate_final_quote(
+									$attachment_paths,
+									$selected_material,
+									$selected_printer,
+									self::get_project_quote_settings(),
+									array(
+										'layer_height' => (float) $old_data['layer_height'],
+										'infill'       => (int) $old_data['infill'],
+										'shell_mode'   => $old_data['shell_mode'],
+										'scale'        => (int) $old_data['scale'],
+										'quantity'     => (int) $old_data['quantity'],
+									)
+								);
+
+								update_post_meta( $post_id, '_sr_model_count', (int) $quote['model_count'] );
+								update_post_meta( $post_id, '_sr_model_formats', implode( ',', (array) $quote['model_formats'] ) );
+								update_post_meta( $post_id, '_sr_model_triangles', (int) $quote['model_triangles'] );
+								update_post_meta( $post_id, '_sr_model_bounds_mm', (array) $quote['model_bounds_mm'] );
+								update_post_meta( $post_id, '_sr_model_volume_cm3', (float) $quote['model_volume_cm3'] );
+								update_post_meta( $post_id, '_sr_effective_volume_cm3', (float) $quote['effective_volume_cm3'] );
+								update_post_meta( $post_id, '_sr_adjusted_volume_cm3', (float) $quote['adjusted_volume_cm3'] );
+								update_post_meta( $post_id, '_sr_estimated_weight_g', (float) $quote['estimated_weight_g'] );
+								update_post_meta( $post_id, '_sr_unit_material_cost', (float) $quote['unit_material_cost'] );
+								update_post_meta( $post_id, '_sr_unit_printer_cost', (float) $quote['unit_printer_cost'] );
+								update_post_meta( $post_id, '_sr_material_cost', (float) $quote['items_material_total'] );
+								update_post_meta( $post_id, '_sr_printer_cost', (float) $quote['items_printer_total'] );
+								update_post_meta( $post_id, '_sr_service_fee', (float) $quote['service_fee'] );
+								update_post_meta( $post_id, '_sr_setup_fee', (float) $quote['setup_fee'] );
+								update_post_meta( $post_id, '_sr_profit_margin_percent', (float) $quote['profit_margin_percent'] );
+								update_post_meta( $post_id, '_sr_profit_margin_amount', (float) $quote['profit_margin_amount'] );
+								update_post_meta( $post_id, '_sr_tax_rate', (float) $quote['tax_rate'] );
+								update_post_meta( $post_id, '_sr_tax_amount', (float) $quote['tax_amount'] );
+								update_post_meta( $post_id, '_sr_subtotal_before_margin', (float) $quote['subtotal_before_margin'] );
+								update_post_meta( $post_id, '_sr_subtotal_with_margin', (float) $quote['subtotal_with_margin'] );
+								update_post_meta( $post_id, '_sr_total_price', (float) $quote['total_price'] );
+								update_post_meta( $post_id, '_sr_currency', (string) $quote['currency'] );
+								update_post_meta( $post_id, '_sr_currency_symbol', (string) $quote['currency_symbol'] );
+								update_post_meta( $post_id, '_sr_quote_snapshot', wp_json_encode( $quote ) );
+							} catch ( Exception $e ) {
+								if ( ! empty( $attachment_ids ) ) {
+									foreach ( $attachment_ids as $aid ) {
+										wp_delete_attachment( (int) $aid, true );
+									}
+								}
+								if ( $uploaded_bytes > 0 ) {
+									self::subtract_user_used_bytes( $user_id, $uploaded_bytes );
+								}
+								wp_delete_post( $post_id, true );
+								$errors[] = $e->getMessage();
+							}
 						}
 
 						if ( empty( $errors ) ) {
