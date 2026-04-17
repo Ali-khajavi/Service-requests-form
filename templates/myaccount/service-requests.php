@@ -51,9 +51,30 @@ if ( ! empty( $view_id ) ) {
 		$shipping_address = (string) get_post_meta( $view_id, '_sr_shipping_address', true );
 		$quote_notes      = (string) get_post_meta( $view_id, '_sr_quote_notes', true );
 
+		$material_name = (string) get_post_meta( $view_id, '_sr_material_name', true );
+		$printer_name  = (string) get_post_meta( $view_id, '_sr_printer_name', true );
+		$material_id   = (int) get_post_meta( $view_id, '_sr_material_id', true );
+		$printer_id    = (int) get_post_meta( $view_id, '_sr_printer_id', true );
+
+		if ( '' === trim( $material_name ) && $material_id > 0 && class_exists( 'SRF_Quote_DB' ) ) {
+			$db = new SRF_Quote_DB();
+			$material = $db->get_material( $material_id );
+			if ( $material && ! empty( $material->name ) ) {
+				$material_name = (string) $material->name;
+			}
+		}
+
+		if ( '' === trim( $printer_name ) && $printer_id > 0 && class_exists( 'SRF_Quote_DB' ) ) {
+			$db = isset( $db ) && $db instanceof SRF_Quote_DB ? $db : new SRF_Quote_DB();
+			$printer = $db->get_printer( $printer_id );
+			if ( $printer && ! empty( $printer->name ) ) {
+				$printer_name = (string) $printer->name;
+			}
+		}
+
 		$project_details = array(
-			'material'     => (string) get_post_meta( $view_id, '_sr_material_name', true ),
-			'printer'      => (string) get_post_meta( $view_id, '_sr_printer_name', true ),
+			'material'     => $material_name,
+			'printer'      => $printer_name,
 			'layer_height' => (string) get_post_meta( $view_id, '_sr_layer_height', true ),
 			'infill'       => (string) get_post_meta( $view_id, '_sr_infill', true ),
 			'shell_mode'   => (string) get_post_meta( $view_id, '_sr_shell_mode', true ),

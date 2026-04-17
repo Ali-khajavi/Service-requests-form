@@ -958,33 +958,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				if ( $old_data['terms'] !== '1' ) {
 					$errors[] = __( 'You must accept the Terms & Conditions.', 'service-requests-form' );
 				}
-				$selected_material = null;
-				$selected_printer  = null;
-
-				if ( empty( $old_data['material_id'] ) ) {
-					$errors[] = __( 'Please select a material.', 'service-requests-form' );
-				} else {
-					$selected_material = self::get_project_material_by_id( (int) $old_data['material_id'] );
-					if ( ! $selected_material ) {
-						$errors[] = __( 'The selected material is not available.', 'service-requests-form' );
-					}
-				}
-
-				if ( empty( $old_data['printer_id'] ) ) {
-					$errors[] = __( 'Please select a printer.', 'service-requests-form' );
-				} else {
-					$selected_printer = self::get_project_printer_by_id( (int) $old_data['printer_id'] );
-					if ( ! $selected_printer ) {
-						$errors[] = __( 'The selected printer is not available.', 'service-requests-form' );
-					}
-				}
-
-				if ( $selected_material && $selected_printer && ! empty( $selected_printer->supported_material_ids ) ) {
-					if ( ! in_array( (int) $selected_material->id, $selected_printer->supported_material_ids, true ) ) {
-						$errors[] = __( 'The selected printer does not support the selected material.', 'service-requests-form' );
-					}
-				}
-
 				// Shipping address (hidden input from template)
 				$shipping_address = isset( $_POST['srf_shipping_address'] )
 					? trim( sanitize_textarea_field( wp_unslash( $_POST['srf_shipping_address'] ) ) )
@@ -1212,6 +1185,33 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				if ( $old_data['terms'] !== '1' ) {
 					$errors[] = __( 'You must accept the Terms & Conditions.', 'service-requests-form' );
+				}
+
+				$selected_material = null;
+				$selected_printer  = null;
+
+				if ( empty( $old_data['material_id'] ) ) {
+					$errors[] = __( 'Please select a material.', 'service-requests-form' );
+				} else {
+					$selected_material = self::get_project_material_by_id( (int) $old_data['material_id'] );
+					if ( ! $selected_material ) {
+						$errors[] = __( 'The selected material is not available.', 'service-requests-form' );
+					}
+				}
+
+				if ( empty( $old_data['printer_id'] ) ) {
+					$errors[] = __( 'Please select a printer.', 'service-requests-form' );
+				} else {
+					$selected_printer = self::get_project_printer_by_id( (int) $old_data['printer_id'] );
+					if ( ! $selected_printer ) {
+						$errors[] = __( 'The selected printer is not available.', 'service-requests-form' );
+					}
+				}
+
+				if ( $selected_material && $selected_printer && ! empty( $selected_printer->supported_material_ids ) ) {
+					if ( ! in_array( (int) $selected_material->id, $selected_printer->supported_material_ids, true ) ) {
+						$errors[] = __( 'The selected printer does not support the selected material.', 'service-requests-form' );
+					}
 				}
 
 				$names   = isset( $_FILES['srf_files']['name'] ) ? $_FILES['srf_files']['name'] : array();
