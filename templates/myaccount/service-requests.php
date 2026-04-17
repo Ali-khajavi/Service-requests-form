@@ -27,17 +27,47 @@ if ( ! empty( $view_id ) ) {
 
 	if ( $view_post && $owner_id === get_current_user_id() ) {
 
-		$desc = (string) $view_post->post_content;
+		$desc          = (string) $view_post->post_content;
+		$status        = (string) get_post_meta( $view_id, '_sr_status', true );
+		$request_type  = (string) get_post_meta( $view_id, '_sr_request_type', true );
+		$service_id    = (int) get_post_meta( $view_id, '_sr_service_id', true );
+		$service_title = (string) get_post_meta( $view_id, '_sr_service_title', true );
+		$project_title = (string) get_post_meta( $view_id, '_sr_project_title', true );
 
-		// Current selected variants on request
+		if ( '' === $status ) {
+			$status = 'new';
+		}
+		if ( '' === $request_type ) {
+			$request_type = 'service';
+		}
+
+		$is_project  = ( 'project' === $request_type );
+		$is_editable = ( 'new' === strtolower( $status ) );
+
+		$name             = (string) get_post_meta( $view_id, '_sr_name', true );
+		$company          = (string) get_post_meta( $view_id, '_sr_company', true );
+		$email            = (string) get_post_meta( $view_id, '_sr_email', true );
+		$phone            = (string) get_post_meta( $view_id, '_sr_phone', true );
+		$shipping_address = (string) get_post_meta( $view_id, '_sr_shipping_address', true );
+		$quote_notes      = (string) get_post_meta( $view_id, '_sr_quote_notes', true );
+
+		$project_details = array(
+			'material'     => (string) get_post_meta( $view_id, '_sr_material_name', true ),
+			'printer'      => (string) get_post_meta( $view_id, '_sr_printer_name', true ),
+			'layer_height' => (string) get_post_meta( $view_id, '_sr_layer_height', true ),
+			'infill'       => (string) get_post_meta( $view_id, '_sr_infill', true ),
+			'shell_mode'   => (string) get_post_meta( $view_id, '_sr_shell_mode', true ),
+			'scale'        => (string) get_post_meta( $view_id, '_sr_scale', true ),
+			'quantity'     => (string) get_post_meta( $view_id, '_sr_quantity', true ),
+		);
+
+		// Current selected variants on request.
 		$variants = get_post_meta( $view_id, '_sr_variants', true );
 		if ( ! is_array( $variants ) ) {
 			$variants = array();
 		}
 
-		// Variant definitions from the service
-		$service_id = (int) get_post_meta( $view_id, '_sr_service_id', true );
-
+		// Variant definitions from the service.
 		$variant_defs = array();
 		if ( class_exists( 'SR_Services_CPT' ) && method_exists( 'SR_Services_CPT', 'get_variations' ) ) {
 			$variant_defs = SR_Services_CPT::get_variations( $service_id );
@@ -46,151 +76,201 @@ if ( ! empty( $view_id ) ) {
 		}
 		$groups = is_array( $variant_defs ) ? $variant_defs : array();
 
-		// Uploaded files for this request
+		// Uploaded files for this request.
 		$file_ids = get_post_meta( $view_id, '_sr_file_ids', true );
 		if ( ! is_array( $file_ids ) ) {
 			$file_ids = array();
 		}
 		$file_ids = array_filter( array_map( 'absint', $file_ids ) );
 
+		$status_label = SRF_MyAccount::format_status_label( $status );
+		$type_label   = $is_project ? __( 'Open 3D Project', 'service-requests-form' ) : __( 'Configured Service', 'service-requests-form' );
+
+		$render_detail_row = static function( $label, $value ) {
+			if ( is_array( $value ) ) {
+				$value = implode( ', ', array_filter( array_map( 'strval', $value ) ) );
+			}
+			$value = trim( (string) $value );
+			if ( '' === $value ) {
+				$value = '—';
+			}
+			echo '<div class="srf-detail-grid__row">';
+			echo '<div class="srf-detail-grid__label">' . esc_html( $label ) . '</div>';
+			echo '<div class="srf-detail-grid__value">' . esc_html( $value ) . '</div>';
+			echo '</div>';
+		};
+
 		echo '<div class="srf-modal is-open" id="srf-request-modal" role="dialog" aria-modal="true">';
 		echo '<div class="srf-modal__overlay" data-srf-close></div>';
 		echo '<div class="srf-modal__panel">';
 		echo '<button type="button" class="srf-modal__close" data-srf-close aria-label="' . esc_attr__( 'Close', 'service-requests-form' ) . '">&times;</button>';
 
-		echo '<h3 class="srf-modal__title">' . esc_html__( 'Edit Request', 'service-requests-form' ) . ' #' . esc_html( $view_id ) . '</h3>';
+		echo '<h3 class="srf-modal__title">' . esc_html__( 'Request Details', 'service-requests-form' ) . ' #' . esc_html( $view_id ) . '</h3>';
+		echo '<div class="srf-modal__meta-badges">';
+		echo '<span class="srf-pill srf-pill--type">' . esc_html( $type_label ) . '</span>';
+		echo '<span class="srf-pill srf-pill--status srf-pill--status-' . esc_attr( sanitize_html_class( strtolower( $status ) ) ) . '">' . esc_html( $status_label ) . '</span>';
+		if ( $is_editable ) {
+			echo '<span class="srf-pill srf-pill--edit">' . esc_html__( 'Description editable', 'service-requests-form' ) . '</span>';
+		} else {
+			echo '<span class="srf-pill srf-pill--readonly">' . esc_html__( 'Read only', 'service-requests-form' ) . '</span>';
+		}
+		echo '</div>';
 
-		// ✅ EXPORT BUTTONS (Customer)
 		$export_nonce = wp_create_nonce( 'srf_export_' . $view_id );
-
 		$export_html_url = SRF_MyAccount::url_list( array(
 			'srf_export' => $view_id,
 			'format'     => 'html',
 			'srf_nonce'  => $export_nonce,
 		) );
-
 		$export_email_url = SRF_MyAccount::url_list( array(
 			'srf_export' => $view_id,
 			'format'     => 'email',
 			'srf_nonce'  => $export_nonce,
 		) );
 
-		echo '<div class="srf-modal__exports" style="margin:10px 0 14px; display:flex; gap:10px; flex-wrap:wrap;">';
+		echo '<div class="srf-modal__exports">';
 		echo '<a class="button" href="' . esc_url( $export_html_url ) . '">' . esc_html__( 'Download HTML', 'service-requests-form' ) . '</a>';
 		echo '<a class="button" href="' . esc_url( $export_email_url ) . '">' . esc_html__( 'Email Template', 'service-requests-form' ) . '</a>';
 		echo '</div>';
 
-		// ✅ Show existing uploads with secure download links
-		echo '<div class="srf-modal__uploads">';
-		echo '<h4 style="margin:10px 0 6px;">' . esc_html__( 'Your uploaded files', 'service-requests-form' ) . '</h4>';
+		echo '<div class="srf-detail-card">';
+		echo '<h4 class="srf-detail-card__title">' . esc_html__( 'Request Overview', 'service-requests-form' ) . '</h4>';
+		echo '<div class="srf-detail-grid">';
+		$render_detail_row( __( 'Request ID', 'service-requests-form' ), '#' . $view_id );
+		$render_detail_row( __( 'Date', 'service-requests-form' ), get_the_date( '', $view_id ) );
+		$render_detail_row( __( 'Request Type', 'service-requests-form' ), $type_label );
+		$render_detail_row( __( 'Status', 'service-requests-form' ), $status_label );
+		$render_detail_row( __( 'Service', 'service-requests-form' ), $service_title ? $service_title : ( $is_project ? __( 'Project Request', 'service-requests-form' ) : '—' ) );
+		if ( $is_project ) {
+			$render_detail_row( __( 'Project Title', 'service-requests-form' ), $project_title ? $project_title : $view_post->post_title );
+		}
+		echo '</div>';
+		echo '</div>';
 
-		if ( empty( $file_ids ) ) {
-
-			echo '<p style="margin:0 0 12px;">' . esc_html__( 'No files uploaded.', 'service-requests-form' ) . '</p>';
-
+		if ( $is_project ) {
+			echo '<div class="srf-detail-card">';
+			echo '<h4 class="srf-detail-card__title">' . esc_html__( '3D Project Details', 'service-requests-form' ) . '</h4>';
+			echo '<div class="srf-detail-grid">';
+			$render_detail_row( __( 'Printer', 'service-requests-form' ), $project_details['printer'] );
+			$render_detail_row( __( 'Material', 'service-requests-form' ), $project_details['material'] );
+			$render_detail_row( __( 'Layer Height', 'service-requests-form' ), '' !== $project_details['layer_height'] ? $project_details['layer_height'] . ' mm' : '' );
+			$render_detail_row( __( 'Infill', 'service-requests-form' ), '' !== $project_details['infill'] ? $project_details['infill'] . '%' : '' );
+			$render_detail_row( __( 'Shell Mode', 'service-requests-form' ), $project_details['shell_mode'] );
+			$render_detail_row( __( 'Scale', 'service-requests-form' ), '' !== $project_details['scale'] ? $project_details['scale'] . '%' : '' );
+			$render_detail_row( __( 'Quantity', 'service-requests-form' ), $project_details['quantity'] );
+			echo '</div>';
+			if ( '' !== trim( $quote_notes ) ) {
+				echo '<div class="srf-detail-text">';
+				echo '<h5>' . esc_html__( 'Printing Notes', 'service-requests-form' ) . '</h5>';
+				echo '<div class="srf-detail-text__body">' . nl2br( esc_html( $quote_notes ) ) . '</div>';
+				echo '</div>';
+			}
+			echo '</div>';
 		} else {
+			echo '<div class="srf-detail-card">';
+			echo '<h4 class="srf-detail-card__title">' . esc_html__( 'Service Options', 'service-requests-form' ) . '</h4>';
+			if ( ! empty( $variants ) ) {
+				echo '<div class="srf-detail-grid">';
+				foreach ( $variants as $variant_key => $variant_value ) {
+					$render_detail_row( $variant_key, $variant_value );
+				}
+				echo '</div>';
+			} else {
+				echo '<p class="srf-empty-note">' . esc_html__( 'No service options were stored for this request.', 'service-requests-form' ) . '</p>';
+			}
+			echo '</div>';
+		}
 
-			echo '<ul style="margin:0 0 12px; padding-left:18px;">';
+		echo '<div class="srf-detail-card">';
+		echo '<h4 class="srf-detail-card__title">' . esc_html__( 'Customer Details', 'service-requests-form' ) . '</h4>';
+		echo '<div class="srf-detail-grid">';
+		$render_detail_row( __( 'Name', 'service-requests-form' ), $name );
+		$render_detail_row( __( 'Company', 'service-requests-form' ), $company );
+		$render_detail_row( __( 'Email', 'service-requests-form' ), $email );
+		$render_detail_row( __( 'Phone', 'service-requests-form' ), $phone );
+		$render_detail_row( __( 'Shipping Address', 'service-requests-form' ), $shipping_address );
+		echo '</div>';
+		echo '</div>';
 
+		echo '<div class="srf-detail-card">';
+		echo '<h4 class="srf-detail-card__title">' . esc_html__( 'Uploaded Files', 'service-requests-form' ) . '</h4>';
+		if ( empty( $file_ids ) ) {
+			echo '<p class="srf-empty-note">' . esc_html__( 'No files uploaded.', 'service-requests-form' ) . '</p>';
+		} else {
+			echo '<ul class="srf-file-list">';
 			foreach ( $file_ids as $aid ) {
 				$aid = (int) $aid;
 				if ( ! $aid ) {
 					continue;
 				}
-
 				$filename = get_the_title( $aid );
 				if ( ! $filename ) {
 					$url = wp_get_attachment_url( $aid );
 					$filename = $url ? basename( $url ) : ( 'File #' . $aid );
 				}
-
 				$nonce = wp_create_nonce( 'srf_download_' . $view_id . '_' . $aid );
-
 				$download_url = SRF_MyAccount::url_list( array(
 					'srf_download' => $aid,
 					'srf_request'  => $view_id,
 					'srf_nonce'    => $nonce,
 				) );
-
-				echo '<li>';
-				echo '<a href="' . esc_url( $download_url ) . '">' . esc_html( $filename ) . '</a>';
-				echo '</li>';
+				echo '<li><a href="' . esc_url( $download_url ) . '">' . esc_html( $filename ) . '</a></li>';
 			}
-
 			echo '</ul>';
 		}
 		echo '</div>';
 
-		// ✅ Edit form (IMPORTANT: variants must be INSIDE this form to save)
-		echo '<form method="post" enctype="multipart/form-data" class="srf-modal__form">';
-		echo '<input type="hidden" name="srf_action" value="update_request" />';
-		echo '<input type="hidden" name="request_id" value="' . esc_attr( $view_id ) . '" />';
-		wp_nonce_field( 'srf_edit_request' );
+		echo '<div class="srf-detail-card">';
+		echo '<h4 class="srf-detail-card__title">' . esc_html__( 'Request Description', 'service-requests-form' ) . '</h4>';
 
-		// ✅ Editable variants (inside form)
-		if ( ! empty( $groups ) ) {
-
-			echo '<div class="srf-modal__variants" style="margin:10px 0 12px;">';
-			echo '<h4 style="margin:0 0 6px;">' . esc_html__( 'Variants', 'service-requests-form' ) . '</h4>';
-
-			$i = 0;
-			foreach ( $groups as $g ) {
-
-				$key    = isset( $g['key'] ) ? trim( (string) $g['key'] ) : '';
-				$values = ( isset( $g['values'] ) && is_array( $g['values'] ) ) ? $g['values'] : array();
-
-				if ( $key === '' || empty( $values ) ) {
-					continue;
-				}
-
-				$current = isset( $variants[ $key ] ) ? (string) $variants[ $key ] : '';
-
-				echo '<div style="margin:0 0 10px;">';
-				echo '<label style="display:block; font-weight:600; margin-bottom:4px;">' . esc_html( $key ) . ' <span style="color:#b32d2e;">*</span></label>';
-
-				echo '<input type="hidden" name="srf_variants[' . (int) $i . '][key]" value="' . esc_attr( $key ) . '" />';
-
-				echo '<select name="srf_variants[' . (int) $i . '][value]" required style="width:100%; max-width:420px;">';
-				echo '<option value="">' . esc_html__( 'Select…', 'service-requests-form' ) . '</option>';
-
-				foreach ( $values as $opt ) {
-					$opt = (string) $opt;
-					echo '<option value="' . esc_attr( $opt ) . '" ' . selected( $current, $opt, false ) . '>' . esc_html( $opt ) . '</option>';
-				}
-
-				echo '</select>';
-				echo '</div>';
-
-				$i++;
-			}
-
-			echo '</div>';
+		if ( $is_editable ) {
+			echo '<form method="post" class="srf-modal__form">';
+			echo '<input type="hidden" name="srf_action" value="update_request" />';
+			echo '<input type="hidden" name="request_id" value="' . esc_attr( $view_id ) . '" />';
+			wp_nonce_field( 'srf_edit_request' );
+			echo '<p class="srf-help-note">' . esc_html__( 'You can still update your description while the request status is New. File replacement and 3D model changes are not available here.', 'service-requests-form' ) . '</p>';
+			echo '<textarea name="description" rows="7" class="srf-description-field" style="width:100%;">' . esc_textarea( $desc ) . '</textarea>';
+			echo '<p style="margin-top:14px;">';
+			echo '<button type="submit" class="button button-primary">' . esc_html__( 'Save description', 'service-requests-form' ) . '</button> ';
+			echo '<a class="button" href="' . esc_url( SRF_MyAccount::url_list() ) . '">' . esc_html__( 'Close', 'service-requests-form' ) . '</a>';
+			echo '</p>';
+			echo '</form>';
+		} else {
+			echo '<div class="srf-detail-text__body">' . ( '' !== trim( $desc ) ? nl2br( esc_html( $desc ) ) : '—' ) . '</div>';
+			echo '<p class="srf-help-note">' . esc_html__( 'This request is no longer editable from your account because work has already started.', 'service-requests-form' ) . '</p>';
 		}
-
-		echo '<p><label><strong>' . esc_html__( 'Description', 'service-requests-form' ) . '</strong></label><br />';
-		echo '<textarea name="description" rows="6" style="width:100%;">' . esc_textarea( $desc ) . '</textarea></p>';
-
-		echo '<p><label><strong>' . esc_html__( 'Upload new file(s)', 'service-requests-form' ) . '</strong></label><br />';
-		echo '<input type="file" name="srf_files[]" multiple /></p>';
-
-		echo '<p style="margin-top:14px;">';
-		echo '<button type="submit" class="button button-primary">' . esc_html__( 'Save changes', 'service-requests-form' ) . '</button> ';
-		echo '<a class="button" href="' . esc_url( SRF_MyAccount::url_list() ) . '">' . esc_html__( 'Cancel', 'service-requests-form' ) . '</a>';
-		echo '</p>';
-
-		echo '</form>';
+		echo '</div>';
 
 		echo '</div></div>';
 
-		// Minimal inline script to close modal
 		echo '<script>(function(){var m=document.getElementById("srf-request-modal");if(!m)return;function close(){window.location.href=' . wp_json_encode( SRF_MyAccount::url_list() ) . ';}m.addEventListener("click",function(e){if(e.target&&e.target.hasAttribute("data-srf-close"))close();});document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});})();</script>';
 
-		// Minimal styles (so modal works even without theme CSS)
 		echo '<style>
 		.srf-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;}
 		.srf-modal__overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);}
-		.srf-modal__panel{position:relative;max-width:760px;width:92%;background:#fff;border-radius:12px;padding:18px;z-index:2;box-shadow:0 10px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto;}
+		.srf-modal__panel{position:relative;max-width:900px;width:94%;background:#fff;border-radius:12px;padding:22px;z-index:2;box-shadow:0 10px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto;}
 		.srf-modal__close{position:absolute;right:12px;top:10px;border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer;}
+		.srf-modal__meta-badges,.srf-modal__exports{margin:10px 0 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+		.srf-pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f1f1;}
+		.srf-pill--edit{background:#e8f7ea;color:#1e6b35;}
+		.srf-pill--readonly{background:#f5f5f5;color:#555;}
+		.srf-pill--type{background:#eef4ff;color:#264b8f;}
+		.srf-pill--status-new{background:#eee9ff;color:#5b4db3;}
+		.srf-pill--status-in-progress{background:#fff1e5;color:#b85b00;}
+		.srf-pill--status-done{background:#e7f7ee;color:#1f7a45;}
+		.srf-detail-card{border:1px solid #e6e6e6;border-radius:10px;padding:16px;margin:0 0 16px;background:#fff;}
+		.srf-detail-card__title{margin:0 0 12px;font-size:18px;}
+		.srf-detail-grid{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:10px 16px;}
+		.srf-detail-grid__row{display:contents;}
+		.srf-detail-grid__label{font-weight:600;color:#222;}
+		.srf-detail-grid__value{color:#444;word-break:break-word;}
+		.srf-detail-text h5{margin:14px 0 8px;font-size:15px;}
+		.srf-detail-text__body{white-space:pre-wrap;line-height:1.55;color:#333;}
+		.srf-file-list{margin:0;padding-left:18px;}
+		.srf-file-list li{margin:0 0 6px;}
+		.srf-empty-note,.srf-help-note{margin:0;color:#555;line-height:1.55;}
+		.srf-description-field{max-width:100%;}
+		@media (max-width: 640px){.srf-detail-grid{grid-template-columns:1fr;}.srf-modal__panel{padding:18px;}}
 		</style>';
 	}
 }

@@ -191,13 +191,11 @@ class SRF_MyAccount {
 	/**
 	 * Handle POST actions on the Service Requests page (modal edit).
 	 *
-	 * Your requirement:
-	 * - Editing creates a NEW request (new ID)
-	 * - Only message + uploads can change
-	 * - All other fields copied from old request
-	 * - Old request + old uploads must be deleted everywhere
-	 * - Storage/quota must be updated correctly
-	 * - User must see existing files + description in popup (handled in template)
+	 * Rules:
+	 * - Only the request owner may edit.
+	 * - Only requests with status = new may be edited.
+	 * - Only the description/content may be changed from My Account.
+	 * - Files, variants, printer/material settings and all other request data stay locked.
 	 */
 	public static function handle_post_actions() {
 
@@ -218,7 +216,7 @@ class SRF_MyAccount {
 		}
 
 		$action = isset( $_POST['srf_action'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_action'] ) ) : '';
-		if ( $action !== 'update_request' ) {
+		if ( 'update_request' !== $action ) {
 			return;
 		}
 
@@ -230,176 +228,59 @@ class SRF_MyAccount {
 			self::safe_redirect( self::url_list() );
 		}
 
-		$old_id = isset( $_POST['request_id'] ) ? absint( $_POST['request_id'] ) : 0;
-		if ( ! $old_id ) {
+		$request_id = isset( $_POST['request_id'] ) ? absint( $_POST['request_id'] ) : 0;
+		if ( ! $request_id ) {
 			wc_add_notice( __( 'Invalid request.', 'service-requests-form' ), 'error' );
 			self::safe_redirect( self::url_list() );
 		}
 
+		$request = get_post( $request_id );
+		if ( ! $request || 'service_request' !== $request->post_type ) {
+			wc_add_notice( __( 'Request not found.', 'service-requests-form' ), 'error' );
+			self::safe_redirect( self::url_list() );
+		}
+
 		$user_id = get_current_user_id();
-		$owner   = (int) get_post_meta( $old_id, '_sr_user_id', true );
+		$owner   = (int) get_post_meta( $request_id, '_sr_user_id', true );
 		if ( $owner !== (int) $user_id ) {
 			wc_add_notice( __( 'You are not allowed to edit this request.', 'service-requests-form' ), 'error' );
 			self::safe_redirect( self::url_list() );
 		}
 
-		$new_desc = isset( $_POST['description'] ) ? wp_kses_post( wp_unslash( $_POST['description'] ) ) : '';
-
-		$old_post = get_post( $old_id );
-		if ( ! $old_post || 'service_request' !== $old_post->post_type ) {
-			wc_add_notice( __( 'Request not found.', 'service-requests-form' ), 'error' );
-			self::safe_redirect( self::url_list() );
+		$status = (string) get_post_meta( $request_id, '_sr_status', true );
+		if ( '' === $status ) {
+			$status = 'new';
 		}
 
-		// ✅ Create a NEW request (replacement) with NEW ID.
-		$new_id = wp_insert_post(
+		if ( 'new' !== strtolower( $status ) ) {
+			wc_add_notice( __( 'This request can no longer be edited.', 'service-requests-form' ), 'error' );
+			self::safe_redirect( self::url_list( array( 'srf_view' => $request_id ) ) );
+		}
+
+		$new_desc = isset( $_POST['description'] ) ? wp_kses_post( wp_unslash( $_POST['description'] ) ) : '';
+		$new_desc = trim( $new_desc );
+
+		$updated = wp_update_post(
 			array(
-				'post_type'    => 'service_request',
-				'post_status'  => $old_post->post_status,
-				'post_title'   => $old_post->post_title,
+				'ID'           => $request_id,
 				'post_content' => $new_desc,
-				'post_author'  => $user_id, // important
 			),
 			true
 		);
 
-		if ( is_wp_error( $new_id ) || ! $new_id ) {
+		if ( is_wp_error( $updated ) ) {
 			wc_add_notice( __( 'Could not save your changes.', 'service-requests-form' ), 'error' );
-			self::safe_redirect( self::url_list( array( 'srf_view' => $old_id ) ) );
+			self::safe_redirect( self::url_list( array( 'srf_view' => $request_id ) ) );
 		}
 
-		// ✅ Copy metas (ALL except those you want to be replaced).
-		// - Keep everything same as old request (service, user, contact, status, etc.)
-		// - Only message + uploads are changed.
-		$meta_keys = array(
-			'_sr_user_id',
-			'_sr_name',
-			'_sr_company',
-			'_sr_email',
-			'_sr_phone',
-			'_sr_shipping_address',
-			'_sr_service_id',
-			'_sr_service_title',
-			'_sr_variants', // ✅ FIX: preserve variants when creating the replacement request
-			'_sr_status',
-			'_sr_no_file',
-			'_sr_terms_accepted',
-		);
+		update_post_meta( $request_id, '_sr_description', wp_strip_all_tags( $new_desc ) );
 
+		// Explicitly ignore any attempt to modify locked fields from My Account.
+		unset( $_FILES['srf_files'] );
+		unset( $_POST['srf_variants'] );
 
-		foreach ( $meta_keys as $k ) {
-			$val = get_post_meta( $old_id, $k, true );
-			if ( $val !== '' && $val !== null ) {
-				update_post_meta( $new_id, $k, $val );
-			}
-		}
-
-		// ✅ If customer submitted updated variants from the modal, store them.
-		// Otherwise, the copied _sr_variants from the old request remains.
-		if ( isset( $_POST['srf_variants'] ) && is_array( $_POST['srf_variants'] ) ) {
-
-			$selected_variants = array();
-
-			foreach ( (array) $_POST['srf_variants'] as $row ) {
-				$key = isset( $row['key'] ) ? trim( sanitize_text_field( wp_unslash( $row['key'] ) ) ) : '';
-				$val = isset( $row['value'] ) ? trim( sanitize_text_field( wp_unslash( $row['value'] ) ) ) : '';
-
-				if ( $key !== '' && $val !== '' ) {
-					$selected_variants[ $key ] = $val;
-				}
-			}
-
-			// Optional: only update if there is at least one selection
-			update_post_meta( $new_id, '_sr_variants', $selected_variants );
-		}
-
-
-		// ✅ Keep description meta in sync (this is one of the only editable fields).
-		update_post_meta( $new_id, '_sr_description', wp_strip_all_tags( $new_desc ) );
-
-		// ✅ Delete old uploaded files AND subtract bytes from user storage.
-		$old_files = get_post_meta( $old_id, '_sr_file_ids', true );
-		if ( ! is_array( $old_files ) ) {
-			$old_files = array();
-		}
-
-		$bytes_to_subtract = 0;
-
-		foreach ( $old_files as $fid ) {
-			$fid = absint( $fid );
-			if ( ! $fid ) {
-				continue;
-			}
-
-			$bytes = (int) get_post_meta( $fid, '_srf_file_bytes', true );
-			if ( $bytes <= 0 ) {
-				$path = get_attached_file( $fid );
-				if ( $path && file_exists( $path ) ) {
-					$bytes = (int) filesize( $path );
-				}
-			}
-
-			$bytes_to_subtract += max( 0, $bytes );
-
-			// delete attachment + physical file
-			wp_delete_attachment( $fid, true );
-		}
-
-		// Remove old request files meta
-		delete_post_meta( $old_id, '_sr_file_ids' );
-
-		// ✅ Adjust user used bytes (keep quota correct)
-		if ( $bytes_to_subtract > 0 && class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'subtract_user_used_bytes_public' ) ) {
-			SR_Form_Handler::subtract_user_used_bytes_public( $user_id, $bytes_to_subtract );
-		} elseif ( $bytes_to_subtract > 0 && class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'adjust_user_storage_bytes_public' ) ) {
-			// optional alternate wrapper name
-			SR_Form_Handler::adjust_user_storage_bytes_public( $user_id, -1 * $bytes_to_subtract );
-		}
-
-		// ✅ Upload new files into the new request (protected method via PUBLIC WRAPPER).
-		$attachment_ids = array();
-		$uploaded_bytes = 0;
-
-		if ( class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'handle_request_uploads_public' ) ) {
-			try {
-				list( $attachment_ids, $uploaded_bytes ) = SR_Form_Handler::handle_request_uploads_public( $new_id );
-
-				if ( ! is_array( $attachment_ids ) ) {
-					$attachment_ids = array();
-				}
-
-				update_post_meta( $new_id, '_sr_file_ids', array_values( array_map( 'absint', $attachment_ids ) ) );
-
-			} catch ( Exception $e ) {
-
-				// Rollback: delete new attachments
-				if ( ! empty( $attachment_ids ) ) {
-					foreach ( $attachment_ids as $aid ) {
-						wp_delete_attachment( (int) $aid, true );
-					}
-				}
-
-				// Rollback: subtract bytes if wrapper doesn't already do it internally
-				if ( $uploaded_bytes > 0 && class_exists( 'SR_Form_Handler' ) && method_exists( 'SR_Form_Handler', 'subtract_user_used_bytes_public' ) ) {
-					SR_Form_Handler::subtract_user_used_bytes_public( $user_id, $uploaded_bytes );
-				}
-
-				// Remove new request to avoid broken data
-				wp_delete_post( $new_id, true );
-
-				wc_add_notice( $e->getMessage(), 'error' );
-				self::safe_redirect( self::url_list( array( 'srf_view' => $old_id ) ) );
-			}
-		} else {
-			// If no uploads method, just store empty file list.
-			update_post_meta( $new_id, '_sr_file_ids', array() );
-		}
-
-		// ✅ Delete old request completely (everywhere).
-		wp_delete_post( $old_id, true );
-
-		wc_add_notice( __( 'Request updated successfully.', 'service-requests-form' ), 'success' );
-		self::safe_redirect( self::url_list() );
+		wc_add_notice( __( 'Request description updated successfully.', 'service-requests-form' ), 'success' );
+		self::safe_redirect( self::url_list( array( 'srf_view' => $request_id ) ) );
 	}
 
 	/**
