@@ -68,6 +68,8 @@ if ( ! class_exists( 'SRF_Quote_DB' ) ) {
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				name varchar(191) NOT NULL,
 				brand varchar(191) DEFAULT NULL,
+				printer_family varchar(191) DEFAULT NULL,
+				brand_settings_json longtext DEFAULT NULL,
 				model varchar(191) DEFAULT NULL,
 				description text DEFAULT NULL,
 				technology varchar(100) DEFAULT NULL,
