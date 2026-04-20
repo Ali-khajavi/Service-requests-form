@@ -188,9 +188,27 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 		}
 
 		protected static function get_service_profile_options() {
-			$posts = get_posts( array( 'post_type' => 'sr_service', 'post_status' => array( 'publish', 'draft', 'pending', 'private' ), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
+			$query = new WP_Query( array(
+				'post_type'              => 'sr_service',
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'ignore_sticky_posts'    => true,
+				'no_found_rows'          => true,
+				'suppress_filters'       => false,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'fields'                 => 'ids',
+			) );
+
 			$options = array();
-			foreach ( $posts as $post ) { $options[ (int) $post->ID ] = get_the_title( $post ); }
+			if ( ! empty( $query->posts ) ) {
+				foreach ( $query->posts as $service_id ) {
+					$options[ (int) $service_id ] = get_the_title( $service_id );
+				}
+			}
+
 			return $options;
 		}
 
@@ -545,14 +563,16 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 				$edit_printer = $db->get_printer( $edit_id );
 			}
 
-			$selected_materials = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
-			$page_url           = self::get_page_url();
-			$notices            = self::get_notices();
-			$technology_options   = self::get_technology_options();
-			$speed_unit_options = self::get_speed_unit_options();
-			$pricing_models     = self::get_pricing_model_options();
-			$brand_options      = class_exists( 'SRF_Printer_Brand_Registry' ) ? SRF_Printer_Brand_Registry::get_brand_options() : array();
-			$brand_settings     = class_exists( 'SRF_Printer_Brand_Registry' ) && $edit_printer ? SRF_Printer_Brand_Registry::decode_settings( $edit_printer->brand_settings_json ?? '' ) : array();
+			$selected_materials       = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
+			$service_map              = self::get_service_profile_options();
+			$selected_service_profiles = $edit_printer ? self::decode_id_list( $edit_printer->supported_service_profile_ids ?? '' ) : array();
+			$page_url                 = self::get_page_url();
+			$notices                  = self::get_notices();
+			$technology_options       = self::get_technology_options();
+			$speed_unit_options       = self::get_speed_unit_options();
+			$pricing_models           = self::get_pricing_model_options();
+			$brand_options            = class_exists( 'SRF_Printer_Brand_Registry' ) ? SRF_Printer_Brand_Registry::get_brand_options() : array();
+			$brand_settings           = class_exists( 'SRF_Printer_Brand_Registry' ) && $edit_printer ? SRF_Printer_Brand_Registry::decode_settings( $edit_printer->brand_settings_json ?? '' ) : array();
 			?>
 			<div class="wrap srf-printers-page">
 				<style>
@@ -578,6 +598,7 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 					.srf-status-pill--inactive{background:#f2f4f7;color:#344054}
 					.srf-row-actions{display:flex;gap:8px;flex-wrap:wrap}
 					.srf-checkbox-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
+					.srf-checkbox-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px;max-height:280px;overflow:auto;border:1px solid #eaecf0;border-radius:12px;padding:10px;background:#fff}
 					.srf-checkbox-item{display:flex;align-items:center;gap:8px;background:#f9fafb;border:1px solid #eaecf0;border-radius:10px;padding:8px 10px}
 					.srf-toggle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 					.srf-toggle-card{display:flex;gap:10px;align-items:flex-start;background:#f9fafb;border:1px solid #eaecf0;border-radius:12px;padding:12px}
