@@ -188,9 +188,37 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 		}
 
 		protected static function get_service_profile_options() {
-			$posts = get_posts( array( 'post_type' => 'sr_service', 'post_status' => array( 'publish', 'draft', 'pending', 'private' ), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 			$options = array();
-			foreach ( $posts as $post ) { $options[ (int) $post->ID ] = get_the_title( $post ); }
+
+			if ( class_exists( 'SR_Service_Data' ) && method_exists( 'SR_Service_Data', 'get_services_for_dropdown' ) ) {
+				$services = SR_Service_Data::get_services_for_dropdown();
+				if ( is_array( $services ) ) {
+					foreach ( $services as $service ) {
+						$service_id = isset( $service['id'] ) ? absint( $service['id'] ) : 0;
+						$title      = isset( $service['title'] ) ? sanitize_text_field( (string) $service['title'] ) : '';
+						if ( $service_id > 0 && '' !== $title ) {
+							$options[ $service_id ] = $title;
+						}
+					}
+				}
+			}
+
+			if ( empty( $options ) ) {
+				$posts = get_posts(
+					array(
+						'post_type'      => 'sr_service',
+						'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+						'posts_per_page' => -1,
+						'orderby'        => 'title',
+						'order'          => 'ASC',
+						'suppress_filters' => false,
+					)
+				);
+				foreach ( $posts as $post ) {
+					$options[ (int) $post->ID ] = get_the_title( $post );
+				}
+			}
+
 			return $options;
 		}
 
@@ -545,14 +573,16 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 				$edit_printer = $db->get_printer( $edit_id );
 			}
 
-			$selected_materials = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
-			$page_url           = self::get_page_url();
-			$notices            = self::get_notices();
-			$technology_options   = self::get_technology_options();
-			$speed_unit_options = self::get_speed_unit_options();
-			$pricing_models     = self::get_pricing_model_options();
-			$brand_options      = class_exists( 'SRF_Printer_Brand_Registry' ) ? SRF_Printer_Brand_Registry::get_brand_options() : array();
-			$brand_settings     = class_exists( 'SRF_Printer_Brand_Registry' ) && $edit_printer ? SRF_Printer_Brand_Registry::decode_settings( $edit_printer->brand_settings_json ?? '' ) : array();
+			$selected_materials        = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
+			$service_map                = self::get_service_profile_options();
+			$selected_service_profiles  = $edit_printer ? self::decode_id_list( $edit_printer->supported_service_profile_ids ?? '' ) : array();
+			$page_url                   = self::get_page_url();
+			$notices                    = self::get_notices();
+			$technology_options         = self::get_technology_options();
+			$speed_unit_options         = self::get_speed_unit_options();
+			$pricing_models             = self::get_pricing_model_options();
+			$brand_options              = class_exists( 'SRF_Printer_Brand_Registry' ) ? SRF_Printer_Brand_Registry::get_brand_options() : array();
+			$brand_settings             = class_exists( 'SRF_Printer_Brand_Registry' ) && $edit_printer ? SRF_Printer_Brand_Registry::decode_settings( $edit_printer->brand_settings_json ?? '' ) : array();
 			?>
 			<div class="wrap srf-printers-page">
 				<style>
