@@ -529,7 +529,6 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			$printers      = $db->get_printers();
 			$material_rows = $db->get_materials();
 			$material_map  = array();
-			$service_map   = self::get_service_profile_options();
 
 			if ( is_array( $material_rows ) ) {
 				foreach ( $material_rows as $material ) {
@@ -546,9 +545,8 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 				$edit_printer = $db->get_printer( $edit_id );
 			}
 
-			$selected_materials        = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
-			$selected_service_profiles = $edit_printer ? self::decode_id_list( $edit_printer->supported_service_profile_ids ?? '' ) : array();
-			$page_url                  = self::get_page_url();
+			$selected_materials = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
+			$page_url           = self::get_page_url();
 			$notices            = self::get_notices();
 			$technology_options   = self::get_technology_options();
 			$speed_unit_options = self::get_speed_unit_options();
@@ -704,16 +702,19 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 								<h3><?php esc_html_e( 'Profiles (profile services)', 'service-requests-form' ); ?></h3>
 								<div class="srf-grid-cols">
 									<div class="srf-input-row">
-										<label for="srf_supported_service_profile_ids"><?php esc_html_e( 'Supported service profiles', 'service-requests-form' ); ?></label>
+										<label><?php esc_html_e( 'Supported service profiles', 'service-requests-form' ); ?></label>
 										<?php if ( empty( $service_map ) ) : ?>
 											<p><?php esc_html_e( 'No services available yet. Add or publish services first.', 'service-requests-form' ); ?></p>
 										<?php else : ?>
-											<select id="srf_supported_service_profile_ids" name="supported_service_profile_ids[]" multiple size="8">
+											<div id="srf_supported_service_profiles_list" class="srf-checkbox-list">
 												<?php foreach ( $service_map as $service_id => $service_title ) : ?>
-													<option value="<?php echo esc_attr( $service_id ); ?>" <?php selected( in_array( (int) $service_id, $selected_service_profiles, true ) ); ?>><?php echo esc_html( $service_title ); ?></option>
+													<label class="srf-checkbox-item">
+														<input type="checkbox" name="supported_service_profile_ids[]" value="<?php echo esc_attr( $service_id ); ?>" <?php checked( in_array( (int) $service_id, $selected_service_profiles, true ) ); ?> />
+														<span><?php echo esc_html( $service_title ); ?></span>
+													</label>
 												<?php endforeach; ?>
-											</select>
-											<small><?php esc_html_e( 'Select only the service profiles this printer supports. These choices are then exposed in Project Step 2 for this printer.', 'service-requests-form' ); ?></small>
+											</div>
+											<small><?php esc_html_e( 'Tick each service profile that this printer supports. These checked services are then exposed in Project Step 2 for this printer.', 'service-requests-form' ); ?></small>
 										<?php endif; ?>
 									</div>
 									<div class="srf-input-row">
@@ -721,10 +722,10 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 										<select id="srf_default_service_profile_id" name="default_service_profile_id">
 											<option value=""><?php esc_html_e( 'No default service profile', 'service-requests-form' ); ?></option>
 											<?php foreach ( $service_map as $service_id => $service_title ) : ?>
-												<option value="<?php echo esc_attr( $service_id ); ?>" data-service-profile-option="1" <?php selected( (int) ( $edit_printer->default_service_profile_id ?? 0 ), (int) $service_id ); ?>><?php echo esc_html( $service_title ); ?></option>
+												<option value="<?php echo esc_attr( $service_id ); ?>" data-service-id="<?php echo esc_attr( $service_id ); ?>" <?php selected( (int) ( $edit_printer->default_service_profile_id ?? 0 ), (int) $service_id ); ?>><?php echo esc_html( $service_title ); ?></option>
 											<?php endforeach; ?>
 										</select>
-										<small><?php esc_html_e( 'Choose the default only from the services selected on the left.', 'service-requests-form' ); ?></small>
+										<small><?php esc_html_e( 'Choose one of the checked supported service profiles as the default for this printer.', 'service-requests-form' ); ?></small>
 									</div>
 								</div>
 							</div>
@@ -807,7 +808,7 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 						</table>
 					</div>
 				</div>
-			<script>(function(){var brand=document.getElementById('srf_printer_brand');if(!brand)return;function sync(){document.querySelectorAll('[data-printer-brand-panel]').forEach(function(panel){panel.style.display=(panel.getAttribute('data-printer-brand-panel')===brand.value)?'':'none';});}brand.addEventListener('change',sync);sync();})();</script>
+			<script>(function(){var brand=document.getElementById('srf_printer_brand');function syncBrand(){if(!brand)return;document.querySelectorAll('[data-printer-brand-panel]').forEach(function(panel){panel.style.display=(panel.getAttribute('data-printer-brand-panel')===brand.value)?'':'none';});}var defaultService=document.getElementById('srf_default_service_profile_id');var serviceChecks=document.querySelectorAll('#srf_supported_service_profiles_list input[type="checkbox"]');function syncDefaultServiceOptions(){if(!defaultService)return;var allowed={};serviceChecks.forEach(function(cb){if(cb.checked){allowed[String(cb.value)]=true;}});Array.prototype.forEach.call(defaultService.options,function(opt,index){if(index===0){opt.hidden=false;return;}opt.hidden=!allowed[String(opt.value)];});if(defaultService.value&&!allowed[String(defaultService.value)]){defaultService.value='';}}if(brand){brand.addEventListener('change',syncBrand);syncBrand();}if(serviceChecks.length){serviceChecks.forEach(function(cb){cb.addEventListener('change',syncDefaultServiceOptions);});syncDefaultServiceOptions();}})();</script>
 			</div>
 			<?php
 		}
