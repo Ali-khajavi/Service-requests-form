@@ -25,7 +25,6 @@ $my_account_url  = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_perm
 $google_error    = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash( $_GET['srf_google_error'] ) ) : '';
 $materials       = isset( $materials ) && is_array( $materials ) ? $materials : array();
 $printers        = isset( $printers ) && is_array( $printers ) ? $printers : array();
-$service_profiles_data = isset( $service_profiles_data ) && is_array( $service_profiles_data ) ? $service_profiles_data : array();
 
 $quote_settings  = isset( $quote_settings ) && is_array( $quote_settings ) ? $quote_settings : array();
 
@@ -80,7 +79,6 @@ $google_error_map = array(
 	<?php else : ?>
 
 	<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
-		<div data-srf-service-profiles-json style="display:none"><?php echo wp_json_encode( $service_profiles_data ); ?></div>
 		<div class="srf-project-steps">
 			<div class="srf-project-step is-active" data-step="1">1. Project Title</div>
 			<div class="srf-project-step" data-step="2">2. Terms & Upload 3D Model</div>

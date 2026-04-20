@@ -76,6 +76,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		protected static function enqueue_project_request_assets() {
 			self::enqueue_frontend_base_assets();
 			self::localize_frontend_script();
+			self::inject_service_data();
 		}
 
 		protected static function localize_frontend_script() {
@@ -190,9 +191,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			}
 
 			foreach ( $printers as $printer ) {
-				$printer->supported_material_ids         = array();
-				$printer->supported_service_profile_ids  = array();
-				$printer->default_service_profile_id     = isset( $printer->default_service_profile_id ) ? absint( $printer->default_service_profile_id ) : 0;
+				$printer->supported_material_ids = array();
+				$printer->supported_service_profile_ids = array();
 
 				if ( ! empty( $printer->supported_materials ) ) {
 					$decoded = json_decode( (string) $printer->supported_materials, true );
@@ -213,6 +213,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 								array_map( 'absint', $decoded_profiles )
 							)
 						);
+					} else {
+						$printer->supported_service_profile_ids = array();
 					}
 				}
 			}
@@ -249,9 +251,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				return null;
 			}
 
-			$printer->supported_material_ids        = array();
+			$printer->supported_material_ids = array();
 			$printer->supported_service_profile_ids = array();
-			$printer->default_service_profile_id    = isset( $printer->default_service_profile_id ) ? absint( $printer->default_service_profile_id ) : 0;
 
 			if ( ! empty( $printer->supported_materials ) ) {
 				$decoded = json_decode( (string) $printer->supported_materials, true );
@@ -276,35 +277,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			}
 
 			return $printer;
-		}
-
-		protected static function get_project_service_profiles_data( $printers ) {
-			$profile_ids = array();
-
-			if ( is_array( $printers ) ) {
-				foreach ( $printers as $printer ) {
-					if ( empty( $printer->supported_service_profile_ids ) || ! is_array( $printer->supported_service_profile_ids ) ) {
-						continue;
-					}
-					$profile_ids = array_merge( $profile_ids, array_map( 'absint', $printer->supported_service_profile_ids ) );
-				}
-			}
-
-			$profile_ids = array_values( array_unique( array_filter( $profile_ids ) ) );
-			$data        = array();
-
-			if ( empty( $profile_ids ) || ! class_exists( 'SR_Service_Data' ) ) {
-				return $data;
-			}
-
-			foreach ( $profile_ids as $profile_id ) {
-				$service_data = SR_Service_Data::get_service_data( $profile_id );
-				if ( ! empty( $service_data ) && ! empty( $service_data['id'] ) ) {
-					$data[ (int) $service_data['id'] ] = $service_data;
-				}
-			}
-
-			return $data;
 		}
 
 		protected static function get_project_quote_settings() {
@@ -1184,11 +1156,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				'title'        => '',
 				'description'  => '',
 				'terms'        => '0',
-				'material_id'        => '',
-				'printer_id'         => '',
-				'service_profile_id' => '',
-				'profile_variants'   => array(),
-				'layer_height'       => '0.20',
+				'material_id'  => '',
+				'printer_id'   => '',
+				'layer_height' => '0.20',
 				'infill'       => '20',
 				'shell_mode'   => 'solid',
 				'scale'        => '100',
@@ -1201,9 +1171,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
 				$dashboard_url = SRF_MyAccount::url_list();
 			}
-			$materials             = self::get_project_active_materials();
-			$printers              = self::get_project_active_printers();
-			$service_profiles_data = self::get_project_service_profiles_data( $printers );
+			$materials = self::get_project_active_materials();
+			$printers  = self::get_project_active_printers();
 
 			if ( isset( $_GET['srf_project_submitted'] ) && $_GET['srf_project_submitted'] === '1' ) {
 				$success = true;
@@ -1217,6 +1186,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'terms'        => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
 					'material_id'  => isset( $_POST['srf_material_id'] ) ? (string) absint( $_POST['srf_material_id'] ) : '',
 					'printer_id'   => isset( $_POST['srf_printer_id'] ) ? (string) absint( $_POST['srf_printer_id'] ) : '',
+					'service_profile_id' => isset( $_POST['srf_service_profile_id'] ) ? (string) absint( $_POST['srf_service_profile_id'] ) : '',
+					'profile_variations' => isset( $_POST['srf_profile_variations'] ) && is_array( $_POST['srf_profile_variations'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['srf_profile_variations'] ) ) : array(),
 					'layer_height' => isset( $_POST['srf_layer_height'] ) ? (string) max( 0, (float) wp_unslash( $_POST['srf_layer_height'] ) ) : '0.20',
 					'infill'       => isset( $_POST['srf_infill'] ) ? (string) max( 0, min( 100, (int) wp_unslash( $_POST['srf_infill'] ) ) ) : '20',
 					'shell_mode'   => isset( $_POST['srf_shell_mode'] ) && 'hollow' === sanitize_key( wp_unslash( $_POST['srf_shell_mode'] ) ) ? 'hollow' : 'solid',
@@ -1274,13 +1245,15 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				$selected_service_profile = null;
 				if ( ! empty( $old_data['service_profile_id'] ) ) {
-					$service_profile_id = (int) $old_data['service_profile_id'];
-					if ( ! $selected_printer || empty( $selected_printer->supported_service_profile_ids ) || ! in_array( $service_profile_id, $selected_printer->supported_service_profile_ids, true ) ) {
-						$errors[] = __( 'The selected profile service is not available for the selected printer.', 'service-requests-form' );
-					} elseif ( class_exists( 'SR_Service_Data' ) ) {
+					$service_profile_id = absint( $old_data['service_profile_id'] );
+					if ( ! class_exists( 'SR_Service_Data' ) || ! SR_Service_Data::is_valid_service_id( $service_profile_id ) ) {
+						$errors[] = __( 'The selected service profile is not available.', 'service-requests-form' );
+					} elseif ( $selected_printer && ! empty( $selected_printer->supported_service_profile_ids ) && ! in_array( $service_profile_id, $selected_printer->supported_service_profile_ids, true ) ) {
+						$errors[] = __( 'The selected printer does not support that service profile.', 'service-requests-form' );
+					} else {
 						$selected_service_profile = SR_Service_Data::get_service_data( $service_profile_id );
-						if ( empty( $selected_service_profile ) ) {
-							$errors[] = __( 'The selected profile service could not be loaded.', 'service-requests-form' );
+						if ( ! $selected_service_profile ) {
+							$errors[] = __( 'The selected service profile could not be loaded.', 'service-requests-form' );
 						}
 					}
 				}
@@ -1351,6 +1324,13 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_quantity', (int) $old_data['quantity'] );
 						update_post_meta( $post_id, '_sr_quote_notes', $old_data['notes'] );
 
+						if ( ! empty( $old_data['service_profile_id'] ) ) {
+							update_post_meta( $post_id, '_sr_service_profile_id', (int) $old_data['service_profile_id'] );
+						}
+						if ( ! empty( $old_data['profile_variations'] ) ) {
+							update_post_meta( $post_id, '_sr_profile_variations', $old_data['profile_variations'] );
+						}
+
 						if ( ! empty( $selected_material ) ) {
 							update_post_meta( $post_id, '_sr_material_name', (string) $selected_material->name );
 						}
@@ -1358,11 +1338,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						if ( ! empty( $selected_printer ) ) {
 							update_post_meta( $post_id, '_sr_printer_name', (string) $selected_printer->name );
 						}
-
 						if ( ! empty( $selected_service_profile ) ) {
-							update_post_meta( $post_id, '_sr_profile_service_id', (int) $selected_service_profile['id'] );
-							update_post_meta( $post_id, '_sr_profile_service_title', (string) $selected_service_profile['title'] );
-							update_post_meta( $post_id, '_sr_profile_variations', $old_data['profile_variants'] );
+							update_post_meta( $post_id, '_sr_service_profile_title', (string) $selected_service_profile['title'] );
 						}
 
 						$attachment_ids = array();
@@ -1484,9 +1461,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'allowed_formats'    => self::get_project_allowed_extensions_label(),
 					'is_business'        => self::current_user_is_business(),
 					'materials'          => $materials,
-					'printers'              => $printers,
-					'service_profiles_data' => $service_profiles_data,
-					'quote_settings'        => self::get_project_quote_settings(),
+					'printers'           => $printers,
+					'quote_settings'     => self::get_project_quote_settings(),
 				)
 			);
 			return ob_get_clean();

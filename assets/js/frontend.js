@@ -1598,125 +1598,6 @@ function init3DQuotePage() {
     return select.options[select.selectedIndex] || null;
   }
 
-  function parseJsonAttr(node, attrName) {
-    if (!node) return [];
-    var raw = node.getAttribute(attrName) || '';
-    if (!raw) return [];
-    try {
-      var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function getProjectServiceProfilesData(form) {
-    var holder = form ? form.querySelector('[data-srf-service-profiles-json]') : null;
-    if (!holder) return {};
-    var raw = holder.textContent || holder.innerText || '';
-    if (!raw) return {};
-    try {
-      var parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function renderProfileVariationFields(form, serviceId) {
-    var wrapper = form ? form.querySelector('[data-srf-profile-variants-field]') : null;
-    var target = form ? form.querySelector('[data-srf-profile-variants]') : null;
-    if (!wrapper || !target) return;
-
-    var selectedRaw = target.getAttribute('data-selected') || '{}';
-    var selectedMap = {};
-    try {
-      selectedMap = JSON.parse(selectedRaw) || {};
-    } catch (e) {
-      selectedMap = {};
-    }
-
-    var services = getProjectServiceProfilesData(form);
-    var service = serviceId && services[String(serviceId)] ? services[String(serviceId)] : null;
-    var variants = service && Array.isArray(service.variants) ? service.variants : [];
-
-    if (!variants.length) {
-      target.innerHTML = '';
-      wrapper.hidden = true;
-      return;
-    }
-
-    var html = '';
-    for (var i = 0; i < variants.length; i++) {
-      var row = variants[i] || {};
-      var key = row.key || ('Variant ' + (i + 1));
-      var values = Array.isArray(row.values) ? row.values : [];
-      var selected = selectedMap[key] || '';
-      html += '<div class="srf-form__field" style="margin-bottom:12px;">';
-      html += '<label>' + escapeHtml(String(key)) + '</label>';
-      if (values.length) {
-        html += '<select name="srf_profile_variants[' + escapeAttr(String(key)) + ']">';
-        html += '<option value="">Select ' + escapeHtml(String(key)) + '</option>';
-        for (var j = 0; j < values.length; j++) {
-          var val = String(values[j]);
-          html += '<option value="' + escapeAttr(val) + '"' + (selected === val ? ' selected' : '') + '>' + escapeHtml(val) + '</option>';
-        }
-        html += '</select>';
-      } else {
-        html += '<input type="text" name="srf_profile_variants[' + escapeAttr(String(key)) + ']" value="' + escapeAttr(selected) + '" />';
-      }
-      html += '</div>';
-    }
-
-    target.innerHTML = html;
-    wrapper.hidden = false;
-  }
-
-  function updateServiceProfilesForPrinter(form) {
-    if (!form) return;
-    var printerSelect = form.querySelector('#srf-printer-id');
-    var serviceSelect = form.querySelector('#srf-service-profile-id');
-    var fieldWrap = form.querySelector('[data-srf-service-profile-field]');
-    if (!printerSelect || !serviceSelect || !fieldWrap) return;
-
-    var printerOpt = getSelectedOption(printerSelect);
-    var supported = parseJsonAttr(printerOpt, 'data-supported-profiles');
-    var defaultId = printerOpt ? (printerOpt.getAttribute('data-default-profile-id') || '') : '';
-    var data = getProjectServiceProfilesData(form);
-    var selectedFromOld = serviceSelect.getAttribute('data-selected') || '';
-    var currentValue = serviceSelect.value || selectedFromOld || defaultId || '';
-
-    serviceSelect.innerHTML = '<option value="">Select profile service</option>';
-
-    if (!supported.length) {
-      fieldWrap.hidden = true;
-      serviceSelect.value = '';
-      renderProfileVariationFields(form, '');
-      return;
-    }
-
-    for (var i = 0; i < supported.length; i++) {
-      var id = String(supported[i]);
-      if (!data[id]) continue;
-      var opt = document.createElement('option');
-      opt.value = id;
-      opt.textContent = data[id].title || ('Service #' + id);
-      serviceSelect.appendChild(opt);
-    }
-
-    var valid = false;
-    for (var k = 0; k < serviceSelect.options.length; k++) {
-      if (serviceSelect.options[k].value === String(currentValue)) {
-        valid = true;
-        break;
-      }
-    }
-    serviceSelect.value = valid ? String(currentValue) : (defaultId || '');
-    serviceSelect.setAttribute('data-selected', serviceSelect.value || '');
-    fieldWrap.hidden = false;
-    renderProfileVariationFields(form, serviceSelect.value);
-  }
-
   function updateProjectSummary(form) {
     if (!form) return;
 
@@ -1783,8 +1664,124 @@ function init3DQuotePage() {
       printerSelect.value = '';
     }
 
-    updateServiceProfilesForPrinter(form);
     updateProjectSummary(form);
+  }
+
+  
+  function parseIdListOption(option, attr) {
+    if (!option) return [];
+    var raw = option.getAttribute(attr) || '[]';
+    try {
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.map(function (id) {
+        return parseInt(id, 10);
+      }).filter(function (id) {
+        return !Number.isNaN(id) && id > 0;
+      }) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderProfileVariations(form, serviceId) {
+    var wrap = form.querySelector('#srf-profile-variations-wrap');
+    var host = form.querySelector('#srf-profile-variations');
+    if (!wrap || !host) return;
+
+    host.innerHTML = '';
+    wrap.style.display = 'none';
+
+    if (!serviceId || !window.srfServiceData || !window.srfServiceData[String(serviceId)]) {
+      return;
+    }
+
+    var service = window.srfServiceData[String(serviceId)] || {};
+    var variants = Array.isArray(service.variants) ? service.variants : [];
+    if (!variants.length) return;
+
+    for (var i = 0; i < variants.length; i++) {
+      var group = variants[i] || {};
+      var key = group.key || ('Variation ' + (i + 1));
+      var values = Array.isArray(group.values) ? group.values : [];
+      if (!values.length) continue;
+
+      var slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      var field = document.createElement('div');
+      field.className = 'srf-form__field';
+
+      var label = document.createElement('label');
+      label.setAttribute('for', 'srf-profile-var-' + slug);
+      label.textContent = key;
+      field.appendChild(label);
+
+      var select = document.createElement('select');
+      select.id = 'srf-profile-var-' + slug;
+      select.name = 'srf_profile_variations[' + key + ']';
+
+      var placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Select ' + key;
+      select.appendChild(placeholder);
+
+      for (var j = 0; j < values.length; j++) {
+        var option = document.createElement('option');
+        option.value = String(values[j]);
+        option.textContent = String(values[j]);
+        select.appendChild(option);
+      }
+
+      field.appendChild(select);
+      host.appendChild(field);
+    }
+
+    if (host.children.length) {
+      wrap.style.display = '';
+    }
+  }
+
+  function updateProjectServiceProfiles(form) {
+    if (!form) return;
+
+    var printerSelect = form.querySelector('#srf-printer-id');
+    var profileWrap = form.querySelector('#srf-service-profile-wrap');
+    var profileSelect = form.querySelector('#srf-service-profile-id');
+    if (!printerSelect || !profileWrap || !profileSelect) return;
+
+    var printerOption = getSelectedOption(printerSelect);
+    var supportedIds = parseIdListOption(printerOption, 'data-supported-service-profiles');
+    var defaultId = parseInt(printerOption && printerOption.getAttribute('data-default-service-profile-id') || '0', 10) || 0;
+
+    profileSelect.innerHTML = '';
+    var baseOption = document.createElement('option');
+    baseOption.value = '';
+    baseOption.textContent = 'Select profile service';
+    profileSelect.appendChild(baseOption);
+
+    if (!supportedIds.length || !window.srfServiceData) {
+      profileWrap.style.display = 'none';
+      renderProfileVariations(form, 0);
+      return;
+    }
+
+    for (var i = 0; i < supportedIds.length; i++) {
+      var id = supportedIds[i];
+      var service = window.srfServiceData[String(id)];
+      if (!service) continue;
+      var opt = document.createElement('option');
+      opt.value = String(id);
+      opt.textContent = service.title || ('Service #' + id);
+      profileSelect.appendChild(opt);
+    }
+
+    profileWrap.style.display = '';
+
+    if (defaultId > 0 && supportedIds.indexOf(defaultId) !== -1) {
+      profileSelect.value = String(defaultId);
+    } else {
+      profileSelect.value = '';
+    }
+
+    renderProfileVariations(form, profileSelect.value);
   }
 
   function initProjectQuoteOptions() {
@@ -1793,7 +1790,6 @@ function init3DQuotePage() {
 
     var materialSelect = form.querySelector('#srf-material-id');
     var printerSelect  = form.querySelector('#srf-printer-id');
-    var serviceSelect  = form.querySelector('#srf-service-profile-id');
     var layerInput     = form.querySelector('#srf-layer-height');
     var quantityInput  = form.querySelector('#srf-quantity');
 
@@ -1801,19 +1797,13 @@ function init3DQuotePage() {
 
     materialSelect.addEventListener('change', function () {
       filterPrintersByMaterial(form);
+      updateProjectServiceProfiles(form);
     });
 
     printerSelect.addEventListener('change', function () {
-      updateServiceProfilesForPrinter(form);
       updateProjectSummary(form);
+      updateProjectServiceProfiles(form);
     });
-
-    if (serviceSelect) {
-      serviceSelect.addEventListener('change', function () {
-        this.setAttribute('data-selected', this.value || '');
-        renderProfileVariationFields(form, this.value || '');
-      });
-    }
 
     if (layerInput) {
       layerInput.addEventListener('input', function () {
@@ -1827,9 +1817,16 @@ function init3DQuotePage() {
       });
     }
 
+    var profileSelect = form.querySelector('#srf-service-profile-id');
+    if (profileSelect) {
+      profileSelect.addEventListener('change', function () {
+        renderProfileVariations(form, this.value);
+      });
+    }
+
     filterPrintersByMaterial(form);
-    updateServiceProfilesForPrinter(form);
     updateProjectSummary(form);
+    updateProjectServiceProfiles(form);
   }
 
   SRF_onReady(function () {
