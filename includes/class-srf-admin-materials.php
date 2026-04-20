@@ -86,6 +86,49 @@ if ( ! class_exists( 'SRF_Admin_Materials' ) ) {
 			return in_array( $value, array( 'active', 'inactive' ), true ) ? $value : 'inactive';
 		}
 
+
+		protected static function sanitize_text_list( $value ) {
+			if ( is_array( $value ) ) {
+				$items = $value;
+			} else {
+				$normalized = str_replace( array( "\r\n", "\r" ), "\n", (string) $value );
+				$normalized = str_replace( ',', "\n", $normalized );
+				$items      = explode( "\n", $normalized );
+			}
+			$clean = array();
+			foreach ( $items as $item ) {
+				$item = sanitize_text_field( wp_unslash( (string) $item ) );
+				if ( '' !== $item ) { $clean[] = $item; }
+			}
+			return wp_json_encode( array_values( array_unique( $clean ) ) );
+		}
+
+		protected static function decode_text_list( $value ) {
+			if ( empty( $value ) ) { return array(); }
+			$decoded = json_decode( (string) $value, true );
+			if ( ! is_array( $decoded ) ) { return array(); }
+			return array_values( array_filter( array_map( 'sanitize_text_field', $decoded ) ) );
+		}
+
+		protected static function format_text_list_for_textarea( $value ) {
+			return implode( "\n", self::decode_text_list( $value ) );
+		}
+
+		protected static function sanitize_json_text( $value ) {
+			$value = trim( (string) wp_unslash( $value ) );
+			if ( '' === $value ) { return ''; }
+			$decoded = json_decode( $value, true );
+			if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $decoded ) ) { return ''; }
+			return wp_json_encode( $decoded );
+		}
+
+		protected static function pretty_json_text( $value ) {
+			if ( empty( $value ) ) { return ''; }
+			$decoded = json_decode( (string) $value, true );
+			if ( ! is_array( $decoded ) ) { return ''; }
+			return wp_json_encode( $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		}
+
 		protected static function sanitize_payload( $input ) {
 			$name = sanitize_text_field( wp_unslash( $input['name'] ?? '' ) );
 			$slug = sanitize_title( wp_unslash( $input['slug'] ?? '' ) );
@@ -104,8 +147,13 @@ if ( ! class_exists( 'SRF_Admin_Materials' ) ) {
 				'machine_time_factor'    => max( 0, (float) ( $input['machine_time_factor'] ?? 1 ) ),
 				'surface_quality_factor' => max( 0, (float) ( $input['surface_quality_factor'] ?? 1 ) ),
 				'wastage_factor'         => max( 0, (float) ( $input['wastage_factor'] ?? 1 ) ),
-				'color_availability'     => sanitize_text_field( wp_unslash( $input['color_availability'] ?? '' ) ),
-				'status'                 => self::sanitize_status( $input['status'] ?? 'inactive' ),
+				'color_availability'           => sanitize_text_field( wp_unslash( $input['color_availability'] ?? '' ) ),
+				'supported_finishes'         => self::sanitize_text_list( $input['supported_finishes'] ?? '' ),
+				'supported_support_materials'=> self::sanitize_text_list( $input['supported_support_materials'] ?? '' ),
+				'default_support_material'   => sanitize_text_field( wp_unslash( $input['default_support_material'] ?? '' ) ),
+				'supported_color_modes'      => self::sanitize_text_list( $input['supported_color_modes'] ?? '' ),
+				'support_material_map'       => self::sanitize_json_text( $input['support_material_map'] ?? '' ),
+				'status'                      => self::sanitize_status( $input['status'] ?? 'inactive' ),
 			);
 		}
 
@@ -329,6 +377,35 @@ if ( ! class_exists( 'SRF_Admin_Materials' ) ) {
 								<div class="srf-input-row">
 									<label for="srf_material_color_availability"><?php esc_html_e( 'Available colors', 'service-requests-form' ); ?></label>
 									<input type="text" id="srf_material_color_availability" name="color_availability" value="<?php echo esc_attr( $edit_material->color_availability ?? '' ); ?>" />
+								</div>
+
+								<div class="srf-input-row">
+									<label for="srf_material_supported_finishes"><?php esc_html_e( 'Supported finishes', 'service-requests-form' ); ?></label>
+									<textarea id="srf_material_supported_finishes" name="supported_finishes" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_material->supported_finishes ?? '' ) ); ?></textarea>
+									<small><?php esc_html_e( 'One per line. Example: matte, glossy', 'service-requests-form' ); ?></small>
+								</div>
+
+								<div class="srf-input-row">
+									<label for="srf_material_supported_support_materials"><?php esc_html_e( 'Supported support materials', 'service-requests-form' ); ?></label>
+									<textarea id="srf_material_supported_support_materials" name="supported_support_materials" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_material->supported_support_materials ?? '' ) ); ?></textarea>
+									<small><?php esc_html_e( 'One per line. Example: SUP705, SUP706B', 'service-requests-form' ); ?></small>
+								</div>
+
+								<div class="srf-input-row">
+									<label for="srf_material_default_support_material"><?php esc_html_e( 'Default support material', 'service-requests-form' ); ?></label>
+									<input type="text" id="srf_material_default_support_material" name="default_support_material" value="<?php echo esc_attr( $edit_material->default_support_material ?? '' ); ?>" />
+								</div>
+
+								<div class="srf-input-row">
+									<label for="srf_material_supported_color_modes"><?php esc_html_e( 'Supported color modes / shades', 'service-requests-form' ); ?></label>
+									<textarea id="srf_material_supported_color_modes" name="supported_color_modes" rows="4"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_material->supported_color_modes ?? '' ) ); ?></textarea>
+									<small><?php esc_html_e( 'One per line. Example: A1, A2, Clear, FullColor', 'service-requests-form' ); ?></small>
+								</div>
+
+								<div class="srf-input-row">
+									<label for="srf_material_support_material_map"><?php esc_html_e( 'Support material mapping (JSON)', 'service-requests-form' ); ?></label>
+									<textarea id="srf_material_support_material_map" name="support_material_map" rows="4"><?php echo esc_textarea( self::pretty_json_text( $edit_material->support_material_map ?? '' ) ); ?></textarea>
+									<small><?php esc_html_e( 'Optional JSON object to map this main material to one or more support materials.', 'service-requests-form' ); ?></small>
 								</div>
 
 								<div class="srf-input-row">

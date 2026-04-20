@@ -168,6 +168,32 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			);
 		}
 
+
+		protected static function sanitize_id_list( $value ) {
+			$ids = array();
+			if ( is_array( $value ) ) {
+				foreach ( $value as $item ) {
+					$id = absint( $item );
+					if ( $id > 0 ) { $ids[] = $id; }
+				}
+			}
+			return wp_json_encode( array_values( array_unique( $ids ) ) );
+		}
+
+		protected static function decode_id_list( $value ) {
+			if ( empty( $value ) ) { return array(); }
+			$decoded = json_decode( (string) $value, true );
+			if ( ! is_array( $decoded ) ) { return array(); }
+			return array_values( array_filter( array_map( 'absint', $decoded ) ) );
+		}
+
+		protected static function get_service_profile_options() {
+			$posts = get_posts( array( 'post_type' => 'sr_service', 'post_status' => array( 'publish', 'draft', 'pending', 'private' ), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
+			$options = array();
+			foreach ( $posts as $post ) { $options[ (int) $post->ID ] = get_the_title( $post ); }
+			return $options;
+		}
+
 		protected static function sanitize_text_list( $value ) {
 			if ( is_array( $value ) ) {
 				$items = $value;
@@ -308,6 +334,8 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 				'max_layer_height'               => self::sanitize_decimal_or_null( $input['max_layer_height'] ?? null, 0 ),
 				'supported_materials'            => self::sanitize_supported_materials( $input['supported_materials'] ?? array() ),
 				'default_material_id'            => self::sanitize_int_or_null( $input['default_material_id'] ?? null, 0 ),
+				'supported_service_profile_ids'  => self::sanitize_id_list( $input['supported_service_profile_ids'] ?? array() ),
+				'default_service_profile_id'     => self::sanitize_int_or_null( $input['default_service_profile_id'] ?? null, 0 ),
 				'supported_application_profiles' => self::sanitize_text_list( $input['supported_application_profiles'] ?? '' ),
 				'supported_finishes'             => self::sanitize_text_list( $input['supported_finishes'] ?? '' ),
 				'supported_support_materials'    => self::sanitize_text_list( $input['supported_support_materials'] ?? '' ),
@@ -603,6 +631,13 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 							</div>
 
 							<div class="srf-form-section">
+								<h3><?php esc_html_e( 'Brand-specific printer profile', 'service-requests-form' ); ?></h3>
+								<p style="margin-top:0;color:#667085;"><?php esc_html_e( 'After the admin chooses a brand, the plugin loads that brand profile from the printers folder. Stratasys is separated first, Formlabs is added next, and more brands can be plugged in later without growing one giant file.', 'service-requests-form' ); ?></p>
+								<?php if ( class_exists( 'SRF_Printer_Brand_Registry' ) ) : ?>
+									<?php SRF_Printer_Brand_Registry::render_brand_panels( $edit_printer->brand ?? '', $brand_settings ); ?>
+								<?php endif; ?>
+							</div>
+							<div class="srf-form-section">
 								<h3><?php esc_html_e( 'Build and hardware limits', 'service-requests-form' ); ?></h3>
 								<div class="srf-grid-cols-3">
 									<div class="srf-input-row"><label>Build volume X (mm)</label><input type="number" min="0" step="0.01" name="build_volume_x" value="<?php echo esc_attr( $edit_printer->build_volume_x ?? '' ); ?>" /></div>
@@ -638,15 +673,16 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 								<h3><?php esc_html_e( 'Material compatibility', 'service-requests-form' ); ?></h3>
 								<div class="srf-grid-cols">
 									<div class="srf-input-row">
-										<label><?php esc_html_e( 'Supported materials', 'service-requests-form' ); ?></label>
+										<label for="srf_supported_materials"><?php esc_html_e( 'Supported materials', 'service-requests-form' ); ?></label>
 										<?php if ( empty( $material_map ) ) : ?>
 											<p><?php esc_html_e( 'No materials available yet. Add materials first.', 'service-requests-form' ); ?></p>
 										<?php else : ?>
-											<div class="srf-checkbox-grid">
+											<select id="srf_supported_materials" name="supported_materials[]" multiple size="8">
 												<?php foreach ( $material_map as $material_id => $material_name ) : ?>
-													<label class="srf-checkbox-item"><input type="checkbox" name="supported_materials[]" value="<?php echo esc_attr( $material_id ); ?>" <?php checked( in_array( (int) $material_id, $selected_materials, true ) ); ?> /><span><?php echo esc_html( $material_name ); ?></span></label>
+													<option value="<?php echo esc_attr( $material_id ); ?>" <?php selected( in_array( (int) $material_id, $selected_materials, true ) ); ?>><?php echo esc_html( $material_name ); ?></option>
 												<?php endforeach; ?>
-											</div>
+											</select>
+											<small><?php esc_html_e( 'Use Ctrl/Cmd to select multiple materials supported by this printer.', 'service-requests-form' ); ?></small>
 										<?php endif; ?>
 									</div>
 									<div class="srf-input-row">
@@ -657,20 +693,36 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 												<option value="<?php echo esc_attr( $material_id ); ?>" <?php selected( (int) ( $edit_printer->default_material_id ?? 0 ), (int) $material_id ); ?>><?php echo esc_html( $material_name ); ?></option>
 											<?php endforeach; ?>
 										</select>
-										<small><?php esc_html_e( 'Used when the UI should auto-select a preferred material for this printer.', 'service-requests-form' ); ?></small>
+										<small><?php esc_html_e( 'Material colors, finishes, and support definitions are managed in the Materials tab. Here you only decide which materials this printer accepts.', 'service-requests-form' ); ?></small>
 									</div>
 								</div>
 							</div>
 
 							<div class="srf-form-section">
-								<h3><?php esc_html_e( 'Profiles, finish, support, and colors', 'service-requests-form' ); ?></h3>
+								<h3><?php esc_html_e( 'Profiles (profile services)', 'service-requests-form' ); ?></h3>
 								<div class="srf-grid-cols">
-									<div class="srf-input-row"><label>Supported application profiles</label><textarea name="supported_application_profiles" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_application_profiles ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: dental_model, splint, surgical_guide', 'service-requests-form' ); ?></small></div>
-									<div class="srf-input-row"><label>Supported finishes</label><textarea name="supported_finishes" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_finishes ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: matte, glossy', 'service-requests-form' ); ?></small></div>
-									<div class="srf-input-row"><label>Supported support materials</label><textarea name="supported_support_materials" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_support_materials ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: SUP705, SUP706B', 'service-requests-form' ); ?></small></div>
-									<div class="srf-input-row"><label>Default support material</label><input type="text" name="default_support_material" value="<?php echo esc_attr( $edit_printer->default_support_material ?? '' ); ?>" /><small><?php esc_html_e( 'Shown when one support material should be auto-selected by default.', 'service-requests-form' ); ?></small></div>
-									<div class="srf-input-row"><label>Supported color modes / shades</label><textarea name="supported_color_modes" rows="5"><?php echo esc_textarea( self::format_text_list_for_textarea( $edit_printer->supported_color_modes ?? '' ) ); ?></textarea><small><?php esc_html_e( 'One per line. Example: A1, A2, Clear, FullColor', 'service-requests-form' ); ?></small></div>
-									<div class="srf-input-row"><label>Support material mapping (JSON)</label><textarea name="support_material_map" rows="5"><?php echo esc_textarea( self::pretty_json_text( $edit_printer->support_material_map ?? '' ) ); ?></textarea><small><?php esc_html_e( 'Optional JSON object to map main materials to support materials.', 'service-requests-form' ); ?></small></div>
+									<div class="srf-input-row">
+										<label for="srf_supported_service_profile_ids"><?php esc_html_e( 'Supported service profiles', 'service-requests-form' ); ?></label>
+										<?php if ( empty( $service_map ) ) : ?>
+											<p><?php esc_html_e( 'No services available yet. Add or publish services first.', 'service-requests-form' ); ?></p>
+										<?php else : ?>
+											<select id="srf_supported_service_profile_ids" name="supported_service_profile_ids[]" multiple size="8">
+												<?php foreach ( $service_map as $service_id => $service_title ) : ?>
+													<option value="<?php echo esc_attr( $service_id ); ?>" <?php selected( in_array( (int) $service_id, $selected_service_profiles, true ) ); ?>><?php echo esc_html( $service_title ); ?></option>
+												<?php endforeach; ?>
+											</select>
+											<small><?php esc_html_e( 'These service profiles come from the Services tab. When the frontend is wired, choosing one of them for a printer can expose that service variations inside Project Step 2.', 'service-requests-form' ); ?></small>
+										<?php endif; ?>
+									</div>
+									<div class="srf-input-row">
+										<label for="srf_default_service_profile_id"><?php esc_html_e( 'Default service profile', 'service-requests-form' ); ?></label>
+										<select id="srf_default_service_profile_id" name="default_service_profile_id">
+											<option value=""><?php esc_html_e( 'No default service profile', 'service-requests-form' ); ?></option>
+											<?php foreach ( $service_map as $service_id => $service_title ) : ?>
+												<option value="<?php echo esc_attr( $service_id ); ?>" <?php selected( (int) ( $edit_printer->default_service_profile_id ?? 0 ), (int) $service_id ); ?>><?php echo esc_html( $service_title ); ?></option>
+											<?php endforeach; ?>
+										</select>
+									</div>
 								</div>
 							</div>
 
@@ -689,13 +741,6 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 								</div>
 							</div>
 
-							<div class="srf-form-section">
-								<h3><?php esc_html_e( 'Brand-specific printer profile', 'service-requests-form' ); ?></h3>
-								<p style="margin-top:0;color:#667085;"><?php esc_html_e( 'After the admin chooses a brand, the plugin loads that brand profile from the printers folder. Stratasys is separated first, Formlabs is added next, and more brands can be plugged in later without growing one giant file.', 'service-requests-form' ); ?></p>
-								<?php if ( class_exists( 'SRF_Printer_Brand_Registry' ) ) : ?>
-									<?php SRF_Printer_Brand_Registry::render_brand_panels( $edit_printer->brand ?? '', $brand_settings ); ?>
-								<?php endif; ?>
-							</div>
 
 							<div class="srf-form-section">
 								<h3><?php esc_html_e( 'Capabilities and validation', 'service-requests-form' ); ?></h3>
