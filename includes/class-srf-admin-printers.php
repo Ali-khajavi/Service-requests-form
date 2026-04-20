@@ -529,6 +529,7 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 			$printers      = $db->get_printers();
 			$material_rows = $db->get_materials();
 			$material_map  = array();
+			$service_map   = self::get_service_profile_options();
 
 			if ( is_array( $material_rows ) ) {
 				foreach ( $material_rows as $material ) {
@@ -545,8 +546,9 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 				$edit_printer = $db->get_printer( $edit_id );
 			}
 
-			$selected_materials = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
-			$page_url           = self::get_page_url();
+			$selected_materials        = $edit_printer ? self::decode_supported_materials( $edit_printer->supported_materials ) : array();
+			$selected_service_profiles = $edit_printer ? self::decode_id_list( $edit_printer->supported_service_profile_ids ?? '' ) : array();
+			$page_url                  = self::get_page_url();
 			$notices            = self::get_notices();
 			$technology_options   = self::get_technology_options();
 			$speed_unit_options = self::get_speed_unit_options();
@@ -719,9 +721,10 @@ if ( ! class_exists( 'SRF_Admin_Printers' ) ) {
 										<select id="srf_default_service_profile_id" name="default_service_profile_id">
 											<option value=""><?php esc_html_e( 'No default service profile', 'service-requests-form' ); ?></option>
 											<?php foreach ( $service_map as $service_id => $service_title ) : ?>
-												<option value="<?php echo esc_attr( $service_id ); ?>" <?php selected( (int) ( $edit_printer->default_service_profile_id ?? 0 ), (int) $service_id ); ?>><?php echo esc_html( $service_title ); ?></option>
+												<option value="<?php echo esc_attr( $service_id ); ?>" data-service-profile-option="1" <?php selected( (int) ( $edit_printer->default_service_profile_id ?? 0 ), (int) $service_id ); ?>><?php echo esc_html( $service_title ); ?></option>
 											<?php endforeach; ?>
 										</select>
+										<small><?php esc_html_e( 'Choose the default only from the services selected on the left.', 'service-requests-form' ); ?></small>
 									</div>
 								</div>
 							</div>
