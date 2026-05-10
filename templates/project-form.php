@@ -78,14 +78,14 @@ $google_error_map = array(
 		</div>
 	<?php else : ?>
 
-	<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
-		<div class="srf-project-steps">
-			<div class="srf-project-step is-active" data-step="1">1. Project Title</div>
-			<div class="srf-project-step" data-step="2">2. Terms & Upload 3D Model</div>
-			<div class="srf-project-step" data-step="3">3. Confirmed</div>
-		</div>
+	<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
+			<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
+			<div class="srf-project-steps">
+				<div class="srf-project-step is-active" data-step="1">1. Project Title</div>
+				<div class="srf-project-step" data-step="2">2. Terms & Upload 3D Model</div>
+				<div class="srf-project-step" data-step="3">3. Confirmed</div>
+			</div>
 
-		<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
 			<div class="srf-project-grid">
 				<div class="srf-project-main">
 					<h2 class="srf-project-panel__title"><?php esc_html_e( 'Project Title', 'service-requests-form' ); ?></h2>
@@ -451,6 +451,7 @@ $google_error_map = array(
 			</div>
 		</div>
 	</form>
+	</div>
 
 	<?php endif; ?>
 </div>
