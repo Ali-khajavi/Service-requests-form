@@ -168,7 +168,7 @@ $google_error_map = array(
 			</div>
 
 			<div class="srf-form__actions srf-form__actions--project-step1">
-				<button type="button" class="srf-button" data-srf-next-step="1">
+				<button type="button" class="srf-button srf-button--secondary srf-project-btn srf-project-btn--next" data-srf-next-step="1">
 					<span class="srf-button__label"><?php esc_html_e( 'Next', 'service-requests-form' ); ?></span>
 				</button>
 			</div>
