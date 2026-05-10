@@ -1435,7 +1435,7 @@ document.addEventListener('click', function (e) {
     }
 
     if (nextBtn) {
-      nextBtn.addEventListener('click', function () {
+      nextBtn.addEventListener('click', function (e) {
         var title = titleInput ? titleInput.value.trim() : '';
 
         if (!title) {
@@ -1454,9 +1454,22 @@ document.addEventListener('click', function (e) {
     }
 
     if (prevBtn) {
-      prevBtn.addEventListener('click', function () {
+      prevBtn.addEventListener('click', function (e) {
         activateStep(1);
       });
+    }
+
+    // Hide submit/back buttons on Step 1, show on Step 2+
+    var submitBtn = form.querySelector('[data-srf-next-step="1"]') || form.querySelector('[type="submit"]');
+    var backBtn = form.querySelector('[data-srf-prev-step="2"]') || form.querySelector('[data-srf-prev-step]');
+    var step1Panel = form.querySelector('[data-srf-step-panel="1"]');
+    
+    if (step1Panel) {
+      if (backBtn) backBtn.style.display = 'none';
+      if (submitBtn) submitBtn.style.display = 'none';
+    } else {
+      if (backBtn) backBtn.style.display = 'inline-block';
+      if (submitBtn) submitBtn.style.display = 'block';
     }
   }
 
