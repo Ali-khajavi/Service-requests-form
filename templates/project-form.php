@@ -95,13 +95,12 @@ $google_error_map = array(
 						<label for="srf-project-title">
 							<?php esc_html_e( 'Project title', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 						</label>
-						<input
-							type="text"
-							id="srf-project-title"
-							name="srf_project_title"
-							value="<?php echo esc_attr( $old( 'title' ) ); ?>"
-							required
-						/>
+							<input
+								type="text"
+								id="srf-project-title"
+								name="srf_project_title"
+								value="<?php echo esc_attr( $old( 'title' ) ); ?>"
+							/>
 					</div>
 
 					<div class="srf-form__field">
@@ -112,7 +111,6 @@ $google_error_map = array(
 								id="srf-project-description"
 								name="srf_project_description"
 								rows="7"
-								required
 							><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
 						</div>
 				</div>
