@@ -106,14 +106,15 @@ $google_error_map = array(
 
 					<div class="srf-form__field">
 						<label for="srf-project-description">
-							<?php esc_html_e( 'Description', 'service-requests-form' ); ?>
+							<?php esc_html_e( 'Description', 'service-requests-form' ); ?> <span class="srf-required">*</span>
 						</label>
-						<textarea
-							id="srf-project-description"
-							name="srf_project_description"
-							rows="7"
-						><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
-					</div>
+							<textarea
+								id="srf-project-description"
+								name="srf_project_description"
+								rows="7"
+								required
+							><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
+						</div>
 				</div>
 
 				<div class="srf-project-auth">
@@ -429,8 +430,6 @@ $google_error_map = array(
 							<strong data-srf-price-total>—</strong>
 						</div>
 					</div>
-				</div>
-
 				</div>
 			</div>
 

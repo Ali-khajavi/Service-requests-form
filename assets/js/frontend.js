@@ -1408,6 +1408,8 @@ document.addEventListener('click', function (e) {
     var prevBtn = form.querySelector('[data-srf-prev-step="2"]');
 
     var titleInput = form.querySelector('#srf-project-title');
+    var descriptionInput = form.querySelector('#srf-project-description');
+    var step2Actions = form.querySelector('.srf-form__actions--project');
 
     form._srfProjectViewer = initProjectViewer(form);
 
@@ -1421,6 +1423,7 @@ document.addEventListener('click', function (e) {
       if (step1Dot) step1Dot.classList.remove('is-active', 'is-done');
       if (step2Dot) step2Dot.classList.remove('is-active', 'is-done');
       if (step3Dot) step3Dot.classList.remove('is-active', 'is-done');
+      if (step2Actions) step2Actions.style.display = 'none';
 
       if (step === 1) {
         if (step1Panel) step1Panel.classList.add('is-active');
@@ -1431,16 +1434,24 @@ document.addEventListener('click', function (e) {
         if (step1Dot) step1Dot.classList.add('is-done');
         if (step2Panel) step2Panel.classList.add('is-active');
         if (step2Dot) step2Dot.classList.add('is-active');
+        if (step2Actions) step2Actions.style.display = '';
       }
     }
 
     if (nextBtn) {
       nextBtn.addEventListener('click', function (e) {
         var title = titleInput ? titleInput.value.trim() : '';
+        var description = descriptionInput ? descriptionInput.value.trim() : '';
 
         if (!title) {
           alert('Please enter the project title first.');
           if (titleInput) titleInput.focus();
+          return;
+        }
+
+        if (!description) {
+          alert('Please enter the project description first.');
+          if (descriptionInput) descriptionInput.focus();
           return;
         }
 
@@ -1459,17 +1470,8 @@ document.addEventListener('click', function (e) {
       });
     }
 
-    // Hide submit/back buttons on Step 1, show on Step 2+
-    var submitBtn = form.querySelector('[data-srf-next-step="1"]') || form.querySelector('[type="submit"]');
-    var backBtn = form.querySelector('[data-srf-prev-step="2"]') || form.querySelector('[data-srf-prev-step]');
-    var step1Panel = form.querySelector('[data-srf-step-panel="1"]');
-    
-    if (step1Panel) {
-      if (backBtn) backBtn.style.display = 'none';
-      if (submitBtn) submitBtn.style.display = 'none';
-    } else {
-      if (backBtn) backBtn.style.display = 'inline-block';
-      if (submitBtn) submitBtn.style.display = 'block';
+    if (step2Actions) {
+      step2Actions.style.display = 'none';
     }
   }
 
