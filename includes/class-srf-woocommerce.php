@@ -13,10 +13,12 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 
 		const META_PRODUCT_ID = '_sr_wc_product_id';
 		const META_BASE_PRICE = '_sr_service_base_price';
+		const META_DIRECT_PURCHASABLE = '_sr_service_direct_purchasable';
 
 		public static function init() {
 			add_action( 'save_post_sr_service', array( __CLASS__, 'sync_product_from_service' ), 30, 2 );
 			add_filter( 'woocommerce_is_purchasable', array( __CLASS__, 'service_product_not_directly_purchasable' ), 10, 2 );
+			add_filter( 'woocommerce_add_to_cart_validation', array( __CLASS__, 'validate_service_product_add_to_cart' ), 10, 5 );
 			add_action( 'woocommerce_single_product_summary', array( __CLASS__, 'render_service_product_request_button' ), 31 );
 			add_filter( 'woocommerce_loop_add_to_cart_link', array( __CLASS__, 'replace_loop_add_to_cart_link' ), 10, 3 );
 			add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'apply_cart_item_prices' ), 20 );
@@ -45,6 +47,10 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 
 		public static function get_base_price( $service_id ) {
 			return max( 0, (float) get_post_meta( (int) $service_id, self::META_BASE_PRICE, true ) );
+		}
+
+		public static function is_service_direct_purchasable( $service_id ) {
+			return 'yes' === get_post_meta( (int) $service_id, self::META_DIRECT_PURCHASABLE, true );
 		}
 
 		public static function calculate_service_price( $service_id, $selected_variants = array() ) {
@@ -121,6 +127,9 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			update_post_meta( $product_id, '_virtual', 'yes' );
 			update_post_meta( $product_id, '_sold_individually', 'yes' );
 			update_post_meta( $product_id, '_stock_status', 'instock' );
+			update_post_meta( $product_id, '_manage_stock', 'no' );
+			update_post_meta( $product_id, '_catalog_visibility', 'visible' );
+			update_post_meta( $product_id, '_sr_service_direct_purchasable', self::is_service_direct_purchasable( $post_id ) ? 'yes' : 'no' );
 			if ( has_post_thumbnail( $post_id ) ) {
 				set_post_thumbnail( $product_id, get_post_thumbnail_id( $post_id ) );
 			}
@@ -135,25 +144,39 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 		}
 
 		public static function service_product_not_directly_purchasable( $purchasable, $product ) {
-			if ( self::$adding_service_to_cart ) {
-				return $purchasable;
+			// Service products must remain purchasable for WooCommerce cart/checkout validation.
+			// Direct shop purchases are controlled by validate_service_product_add_to_cart().
+			return $purchasable;
+		}
+
+		public static function validate_service_product_add_to_cart( $passed, $product_id, $quantity, $variation_id = 0, $variations = array() ) {
+			$service_id = (int) get_post_meta( (int) $product_id, '_sr_service_id', true );
+			if ( $service_id <= 0 ) {
+				return $passed;
 			}
-			$product_id = $product ? $product->get_id() : 0;
-			return get_post_meta( $product_id, '_sr_service_id', true ) ? false : $purchasable;
+
+			if ( self::$adding_service_to_cart || self::is_service_direct_purchasable( $service_id ) ) {
+				return $passed;
+			}
+
+			if ( function_exists( 'wc_add_notice' ) ) {
+				wc_add_notice( __( 'Please submit the service request form before purchasing this service.', 'service-requests-form' ), 'error' );
+			}
+			return false;
 		}
 
 		public static function render_service_product_request_button() {
 			global $product;
 			if ( ! $product ) { return; }
 			$service_id = (int) get_post_meta( $product->get_id(), '_sr_service_id', true );
-			if ( $service_id > 0 ) {
+			if ( $service_id > 0 && ! self::is_service_direct_purchasable( $service_id ) ) {
 				echo '<p><a class="button alt" href="' . esc_url( self::get_form_page_url( $service_id ) ) . '">' . esc_html__( 'Submit service request', 'service-requests-form' ) . '</a></p>';
 			}
 		}
 
 		public static function replace_loop_add_to_cart_link( $html, $product, $args ) {
 			$service_id = $product ? (int) get_post_meta( $product->get_id(), '_sr_service_id', true ) : 0;
-			if ( $service_id > 0 ) {
+			if ( $service_id > 0 && ! self::is_service_direct_purchasable( $service_id ) ) {
 				return '<a class="button" href="' . esc_url( self::get_form_page_url( $service_id ) ) . '">' . esc_html__( 'Request service', 'service-requests-form' ) . '</a>';
 			}
 			return $html;

@@ -27,6 +27,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		const META_VIDEO_TITLE = '_sr_service_video_title';
 		const META_VIDEO_DESCRIPTION = '_sr_service_video_description';
 		const META_BASE_PRICE = '_sr_service_base_price';
+		const META_DIRECT_PURCHASABLE = '_sr_service_direct_purchasable';
 
 		/**
 		 * Hook everything.
@@ -182,14 +183,24 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		public static function render_pricing_metabox( $post ) {
 			wp_nonce_field( 'sr_service_pricing_nonce_action', 'sr_service_pricing_nonce' );
 			$price = (float) get_post_meta( $post->ID, self::META_BASE_PRICE, true );
+			$direct_purchasable = 'yes' === get_post_meta( $post->ID, self::META_DIRECT_PURCHASABLE, true );
 			$product_id = (int) get_post_meta( $post->ID, '_sr_wc_product_id', true );
 			?>
 			<p>
 				<label for="sr_service_base_price"><strong><?php esc_html_e( 'Base price', 'service-requests-form' ); ?></strong></label>
 				<input type="number" min="0" step="0.01" id="sr_service_base_price" name="sr_service_base_price" value="<?php echo esc_attr( $price ); ?>" style="width:100%;" />
 			</p>
+			<p>
+				<label for="sr_service_direct_purchasable">
+					<input type="checkbox" id="sr_service_direct_purchasable" name="sr_service_direct_purchasable" value="yes" <?php checked( $direct_purchasable ); ?> />
+					<strong><?php esc_html_e( 'Purchasable directly in WooCommerce shop', 'service-requests-form' ); ?></strong>
+				</label>
+			</p>
 			<p class="description">
-				<?php esc_html_e( 'This price is synced to the linked WooCommerce product. Variant extra costs are added after the service request form is submitted.', 'service-requests-form' ); ?>
+				<?php esc_html_e( 'Unchecked: customers must submit the service request form first. Checked: customers can also buy this service directly from the shop/product page.', 'service-requests-form' ); ?>
+			</p>
+			<p class="description">
+				<?php esc_html_e( 'The base price is synced to the linked WooCommerce product. Variant extra costs are added after the service request form is submitted.', 'service-requests-form' ); ?>
 			</p>
 			<?php if ( $product_id && get_post_type( $product_id ) === 'product' ) : ?>
 				<p><a class="button" href="<?php echo esc_url( get_edit_post_link( $product_id ) ); ?>"><?php esc_html_e( 'Edit linked product', 'service-requests-form' ); ?></a></p>
@@ -407,6 +418,8 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			) {
 				$base_price = isset( $_POST['sr_service_base_price'] ) ? (float) wp_unslash( $_POST['sr_service_base_price'] ) : 0;
 				update_post_meta( $post_id, self::META_BASE_PRICE, max( 0, $base_price ) );
+				$direct_purchasable = isset( $_POST['sr_service_direct_purchasable'] ) && 'yes' === sanitize_text_field( wp_unslash( $_POST['sr_service_direct_purchasable'] ) );
+				update_post_meta( $post_id, self::META_DIRECT_PURCHASABLE, $direct_purchasable ? 'yes' : 'no' );
 			}
 
 			/**
