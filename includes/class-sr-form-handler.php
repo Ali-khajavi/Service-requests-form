@@ -1178,7 +1178,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				$success = true;
 			}
 
-			if ( ! empty( $_POST['srf_project_form_submitted'] ) ) {
+			$is_project_login_post = isset( $_POST['log'], $_POST['pwd'] ) || isset( $_POST['wp-submit'] );
+
+			if ( ! empty( $_POST['srf_project_form_submitted'] ) && ! $is_project_login_post ) {
 
 				$old_data = array(
 					'title'        => isset( $_POST['srf_project_title'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_project_title'] ) ) : '',

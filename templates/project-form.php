@@ -78,6 +78,10 @@ $google_error_map = array(
 		</div>
 	<?php else : ?>
 
+	<?php if ( ! is_user_logged_in() ) : ?>
+		<form id="srf-project-login-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post"></form>
+	<?php endif; ?>
+
 	<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
 			<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
 			<div class="srf-project-steps">
@@ -132,20 +136,22 @@ $google_error_map = array(
 							<?php endif; ?>
 
 							<div class="srf-project-auth__form srf-project-auth__form--login">
-								<?php
-								wp_login_form(
-									array(
-										'echo'           => true,
-										'redirect'       => esc_url( remove_query_arg( 'srf_google_error', $current_url ) ),
-										'form_id'        => 'srf-project-login-form',
-										'label_username' => __( 'Email or username', 'service-requests-form' ),
-										'label_password' => __( 'Password', 'service-requests-form' ),
-										'label_remember' => __( 'Remember me', 'service-requests-form' ),
-										'label_log_in'   => __( 'Login', 'service-requests-form' ),
-										'remember'       => true,
-									)
-								);
-								?>
+								<p class="login-username">
+									<label for="srf-project-login-user"><?php esc_html_e( 'Email or username', 'service-requests-form' ); ?></label>
+									<input type="text" name="log" id="srf-project-login-user" class="input" value="" size="20" autocomplete="username" form="srf-project-login-form" />
+								</p>
+								<p class="login-password">
+									<label for="srf-project-login-pass"><?php esc_html_e( 'Password', 'service-requests-form' ); ?></label>
+									<input type="password" name="pwd" id="srf-project-login-pass" class="input" value="" size="20" autocomplete="current-password" form="srf-project-login-form" />
+								</p>
+								<p class="login-remember">
+									<label><input name="rememberme" type="checkbox" id="srf-project-login-remember" value="forever" form="srf-project-login-form" /> <?php esc_html_e( 'Remember me', 'service-requests-form' ); ?></label>
+								</p>
+								<input type="hidden" name="redirect_to" value="<?php echo esc_url( remove_query_arg( 'srf_google_error', $current_url ) ); ?>" form="srf-project-login-form" />
+								<input type="hidden" name="testcookie" value="1" form="srf-project-login-form" />
+								<p class="login-submit">
+									<button type="submit" name="wp-submit" id="srf-project-login-submit" class="button button-primary" value="<?php esc_attr_e( 'Login', 'service-requests-form' ); ?>" form="srf-project-login-form"><?php esc_html_e( 'Login', 'service-requests-form' ); ?></button>
+								</p>
 							</div>
 
 							<?php if ( class_exists( 'SRF_Google_Auth' ) && SRF_Google_Auth::is_enabled() ) : ?>
