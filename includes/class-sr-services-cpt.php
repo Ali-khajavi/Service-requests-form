@@ -26,6 +26,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		const META_VIDEO_URL  = '_sr_service_video_url';
 		const META_VIDEO_TITLE = '_sr_service_video_title';
 		const META_VIDEO_DESCRIPTION = '_sr_service_video_description';
+		const META_BASE_PRICE = '_sr_service_base_price';
 
 		/**
 		 * Hook everything.
@@ -93,6 +94,15 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				'sr_service',
 				'normal',
 				'default'
+			);
+
+			add_meta_box(
+				'sr_service_pricing',
+				__( 'Service Pricing / WooCommerce Product', 'service-requests-form' ),
+				array( __CLASS__, 'render_pricing_metabox' ),
+				'sr_service',
+				'side',
+				'high'
 			);
 
 			add_meta_box(
@@ -165,6 +175,31 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		}
 
 		/**
+		 * Render pricing meta box.
+		 *
+		 * @param WP_Post $post
+		 */
+		public static function render_pricing_metabox( $post ) {
+			wp_nonce_field( 'sr_service_pricing_nonce_action', 'sr_service_pricing_nonce' );
+			$price = (float) get_post_meta( $post->ID, self::META_BASE_PRICE, true );
+			$product_id = (int) get_post_meta( $post->ID, '_sr_wc_product_id', true );
+			?>
+			<p>
+				<label for="sr_service_base_price"><strong><?php esc_html_e( 'Base price', 'service-requests-form' ); ?></strong></label>
+				<input type="number" min="0" step="0.01" id="sr_service_base_price" name="sr_service_base_price" value="<?php echo esc_attr( $price ); ?>" style="width:100%;" />
+			</p>
+			<p class="description">
+				<?php esc_html_e( 'This price is synced to the linked WooCommerce product. Variant extra costs are added after the service request form is submitted.', 'service-requests-form' ); ?>
+			</p>
+			<?php if ( $product_id && get_post_type( $product_id ) === 'product' ) : ?>
+				<p><a class="button" href="<?php echo esc_url( get_edit_post_link( $product_id ) ); ?>"><?php esc_html_e( 'Edit linked product', 'service-requests-form' ); ?></a></p>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e( 'The WooCommerce product will be created automatically when this service is saved.', 'service-requests-form' ); ?></p>
+			<?php endif; ?>
+			<?php
+		}
+
+		/**
 		 * Render variations meta box.
 		 *
 		 * @param WP_Post $post
@@ -179,7 +214,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			}
 			?>
 			<p class="description">
-				<?php esc_html_e( 'Add variant groups for this service (optional). Example: Key = Height, Values = 2m, 3m, 7.5m.', 'service-requests-form' ); ?>
+				<?php esc_html_e( 'Add variant groups for this service (optional). To add extra cost, write values like: 2m|0, 3m|20, Express|50.', 'service-requests-form' ); ?>
 			</p>
 
 			<div id="sr-service-variations-wrap">
@@ -188,7 +223,15 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 					$values = '';
 
 					if ( isset( $row['values'] ) && is_array( $row['values'] ) ) {
-						$values = implode( ', ', array_map( 'sanitize_text_field', $row['values'] ) );
+						
+						$parts = array();
+						$prices = isset( $row['prices'] ) && is_array( $row['prices'] ) ? $row['prices'] : array();
+						foreach ( $row['values'] as $vv ) {
+							$vv = sanitize_text_field( $vv );
+							$extra = isset( $prices[ $vv ] ) ? (float) $prices[ $vv ] : 0;
+							$parts[] = $extra > 0 ? $vv . '|' . $extra : $vv;
+						}
+						$values = implode( ', ', $parts );
 					} elseif ( isset( $row['values'] ) && is_string( $row['values'] ) ) {
 						$values = (string) $row['values'];
 					}
@@ -209,7 +252,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 							style="width:100%;margin-top:10px;"
 							rows="2"
 							name="sr_service_variations[<?php echo esc_attr( $i ); ?>][values]"
-							placeholder="<?php echo esc_attr__( 'Values (comma separated) e.g. 2m, 3m, 7.5m', 'service-requests-form' ); ?>"
+							placeholder="<?php echo esc_attr__( 'Values (comma separated) e.g. 2m|0, 3m|20, 7.5m|50', 'service-requests-form' ); ?>"
 						><?php echo esc_textarea( $values ); ?></textarea>
 					</div>
 				<?php endforeach; ?>
@@ -259,7 +302,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 							'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][key]" placeholder="<?php echo esc_js( __( 'Key (e.g. Height)', 'service-requests-form' ) ); ?>" />' +
 							'<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_js( __( 'Remove', 'service-requests-form' ) ); ?>">×</button>' +
 						'</div>' +
-						'<textarea style="width:100%;margin-top:10px;" rows="2" name="sr_service_variations['+idx+'][values]" placeholder="<?php echo esc_js( __( 'Values (comma separated) e.g. 2m, 3m, 7.5m', 'service-requests-form' ) ); ?>"></textarea>';
+						'<textarea style="width:100%;margin-top:10px;" rows="2" name="sr_service_variations['+idx+'][values]" placeholder="<?php echo esc_js( __( 'Values (comma separated) e.g. 2m|0, 3m|20, 7.5m|50', 'service-requests-form' ) ); ?>"></textarea>';
 
 					var row = document.createElement('div');
 					row.className = 'sr-service-var-row';
@@ -353,6 +396,20 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			}
 
 			/**
+			 * 0) Save pricing
+			 */
+			if (
+				isset( $_POST['sr_service_pricing_nonce'] ) &&
+				wp_verify_nonce(
+					sanitize_text_field( wp_unslash( $_POST['sr_service_pricing_nonce'] ) ),
+					'sr_service_pricing_nonce_action'
+				)
+			) {
+				$base_price = isset( $_POST['sr_service_base_price'] ) ? (float) wp_unslash( $_POST['sr_service_base_price'] ) : 0;
+				update_post_meta( $post_id, self::META_BASE_PRICE, max( 0, $base_price ) );
+			}
+
+			/**
 			 * 1) Save gallery IDs
 			 */
 			if (
@@ -400,12 +457,23 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 
 					$vals = array();
 
+					$prices = array();
 					if ( trim( $values_raw ) !== '' ) {
 						$parts = array_map( 'trim', explode( ',', $values_raw ) );
 						foreach ( $parts as $p ) {
 							$p = sanitize_text_field( $p );
+							if ( $p === '' ) {
+								continue;
+							}
+							$extra = 0;
+							if ( strpos( $p, '|' ) !== false ) {
+								list( $p, $extra_raw ) = array_map( 'trim', explode( '|', $p, 2 ) );
+								$p = sanitize_text_field( $p );
+								$extra = max( 0, (float) str_replace( ',', '.', $extra_raw ) );
+							}
 							if ( $p !== '' ) {
 								$vals[] = $p;
+								$prices[ $p ] = $extra;
 							}
 						}
 					}
@@ -414,9 +482,15 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 						continue;
 					}
 
+					$unique_vals = array_values( array_unique( $vals ) );
+					$clean_prices = array();
+					foreach ( $unique_vals as $uv ) {
+						$clean_prices[ $uv ] = isset( $prices[ $uv ] ) ? max( 0, (float) $prices[ $uv ] ) : 0;
+					}
 					$clean[] = array(
 						'key'    => $key_raw,
-						'values' => array_values( array_unique( $vals ) ),
+						'values' => $unique_vals,
+						'prices' => $clean_prices,
 					);
 				}
 
@@ -511,6 +585,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			$new['sr_service_thumb']    = __( 'Thumbnail', 'service-requests-form' );
 			$new['title']               = __( 'Service', 'service-requests-form' );
 			$new['sr_service_images']   = __( 'Images', 'service-requests-form' );
+			$new['sr_service_price']    = __( 'Base price', 'service-requests-form' );
 			$new['sr_service_variants'] = __( 'Variants', 'service-requests-form' );
 
 			return array_merge( $new, $columns );
@@ -552,6 +627,12 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				} else {
 					esc_html_e( 'No images', 'service-requests-form' );
 				}
+				return;
+			}
+
+			if ( $column === 'sr_service_price' ) {
+				$price = (float) get_post_meta( $post_id, self::META_BASE_PRICE, true );
+				echo esc_html( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price ) ) : number_format_i18n( $price, 2 ) );
 				return;
 			}
 

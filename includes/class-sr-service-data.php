@@ -118,9 +118,16 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
 								if ( $v !== '' ) $vals[] = $v;
 							}
 							if ( $k !== '' && ! empty( $vals ) ) {
+								$unique_vals = array_values( array_unique( $vals ) );
+								$raw_prices = isset( $row['prices'] ) && is_array( $row['prices'] ) ? $row['prices'] : array();
+								$prices = array();
+								foreach ( $unique_vals as $uv ) {
+									$prices[ $uv ] = isset( $raw_prices[ $uv ] ) ? max( 0, (float) $raw_prices[ $uv ] ) : 0;
+								}
 								$variant_groups[] = array(
 									'key'    => $k,
-									'values' => array_values( array_unique( $vals ) ),
+									'values' => $unique_vals,
+									'prices' => $prices,
 								);
 							}
 							continue;
@@ -174,6 +181,7 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
                 'content' => $content,
                 'images'  => $images,
                 'variants'=> $variant_groups,
+				'base_price' => class_exists( 'SRF_WooCommerce' ) ? SRF_WooCommerce::get_base_price( $service_id ) : 0,
 				'video'   => array(
 					'url'         => $video_url,
 					'title'       => $video_title,

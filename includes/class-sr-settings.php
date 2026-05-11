@@ -197,6 +197,28 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 					'default'           => '',
 				)
 			);
+
+			if ( class_exists( 'SRF_WooCommerce' ) ) {
+				register_setting(
+					'srf_settings_group',
+					SRF_WooCommerce::OPTION_FORM_PAGE_ID,
+					array(
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+						'default'           => 0,
+					)
+				);
+
+				register_setting(
+					'srf_settings_group',
+					SRF_WooCommerce::OPTION_AFTER_SUBMIT,
+					array(
+						'type'              => 'string',
+						'sanitize_callback' => array( __CLASS__, 'sanitize_after_submit_target' ),
+						'default'           => 'checkout',
+					)
+				);
+			}
 		}
 
 		public static function sanitize_checkbox( $value ) {
@@ -211,6 +233,11 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 		public static function sanitize_positive_int( $value ) {
 			$value = (int) $value;
 			return max( 1, $value );
+		}
+
+		public static function sanitize_after_submit_target( $value ) {
+			$value = sanitize_key( (string) $value );
+			return in_array( $value, array( 'cart', 'checkout' ), true ) ? $value : 'checkout';
 		}
 
 		public static function sanitize_extensions_csv( $value ) {
@@ -290,6 +317,8 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			$guest_ordering      = (bool) get_option( self::OPTION_GUEST_ORDERING, true );
 			$delete_on_uninstall = (bool) get_option( self::OPTION_DELETE_ON_UNINSTALL, false );
 			$notify_admin_email  = (string) get_option( self::OPTION_NOTIFY_ADMIN_EMAIL, '' );
+			$service_form_page_id = class_exists( 'SRF_WooCommerce' ) ? (int) get_option( SRF_WooCommerce::OPTION_FORM_PAGE_ID, 0 ) : 0;
+			$service_after_submit = class_exists( 'SRF_WooCommerce' ) ? (string) get_option( SRF_WooCommerce::OPTION_AFTER_SUBMIT, 'checkout' ) : 'checkout';
 			?>
 			<div class="wrap">
 				<h1><?php esc_html_e( 'Service Requests Settings', 'service-requests-form' ); ?></h1>
@@ -453,6 +482,36 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 							</td>
 						</tr>
 					</table>
+
+
+					<?php if ( class_exists( 'SRF_WooCommerce' ) ) : ?>
+						<hr />
+						<h2><?php esc_html_e( 'WooCommerce Service Products', 'service-requests-form' ); ?></h2>
+						<table class="form-table" role="presentation">
+							<tr>
+								<th scope="row"><label for="srf_service_form_page_id"><?php esc_html_e( 'Service request form page', 'service-requests-form' ); ?></label></th>
+								<td>
+									<?php
+									wp_dropdown_pages( array(
+										'name'              => SRF_WooCommerce::OPTION_FORM_PAGE_ID,
+										'id'                => 'srf_service_form_page_id',
+										'selected'          => $service_form_page_id,
+										'show_option_none'  => __( 'Select a page', 'service-requests-form' ),
+										'option_none_value' => 0,
+									) );
+									?>
+									<p class="description"><?php esc_html_e( 'Choose the page that contains [service_request_form]. Service product buttons will open this page with the selected service.', 'service-requests-form' ); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'After service form submit', 'service-requests-form' ); ?></th>
+								<td>
+									<label><input type="radio" name="<?php echo esc_attr( SRF_WooCommerce::OPTION_AFTER_SUBMIT ); ?>" value="checkout" <?php checked( $service_after_submit, 'checkout' ); ?> /> <?php esc_html_e( 'Go directly to checkout', 'service-requests-form' ); ?></label><br />
+									<label><input type="radio" name="<?php echo esc_attr( SRF_WooCommerce::OPTION_AFTER_SUBMIT ); ?>" value="cart" <?php checked( $service_after_submit, 'cart' ); ?> /> <?php esc_html_e( 'Go to cart', 'service-requests-form' ); ?></label>
+								</td>
+							</tr>
+						</table>
+					<?php endif; ?>
 
 					<?php submit_button(); ?>
 				</form>

@@ -987,6 +987,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				: array();
 
 			$selected_service_id = ! empty( $services ) ? (int) $services[0]['id'] : null;
+			if ( isset( $_GET['srf_service'] ) ) {
+				$requested_service_id = absint( wp_unslash( $_GET['srf_service'] ) );
+				if ( $requested_service_id > 0 && ( ! class_exists( 'SR_Service_Data' ) || SR_Service_Data::is_valid_service_id( $requested_service_id ) ) ) {
+					$selected_service_id = $requested_service_id;
+				}
+			}
 
 			// Show success message after redirect
 			if ( isset( $_GET['srf_submitted'] ) && $_GET['srf_submitted'] === '1' ) {
@@ -1179,6 +1185,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_user_id', $user_id );
 						update_post_meta( $post_id, '_sr_status', 'new' );
 
+						$price_data = class_exists( 'SRF_WooCommerce' ) ? SRF_WooCommerce::calculate_service_price( $service_id, $selected_variants ) : array( 'base' => 0, 'extras' => array(), 'total' => 0 );
+						update_post_meta( $post_id, '_sr_price_base', isset( $price_data['base'] ) ? (float) $price_data['base'] : 0 );
+						update_post_meta( $post_id, '_sr_price_extras', isset( $price_data['extras'] ) ? $price_data['extras'] : array() );
+						update_post_meta( $post_id, '_sr_price_total', isset( $price_data['total'] ) ? (float) $price_data['total'] : 0 );
+
 						// Selected variants (key => value)
 						if ( ! empty( $selected_variants ) && is_array( $selected_variants ) ) {
 							update_post_meta( $post_id, '_sr_variants', $selected_variants );
@@ -1220,8 +1231,14 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 							self::send_admin_new_request_email( $post_id );
 
-							// ✅ IMPORTANT: redirect to /my-account/service-requests/
-							if ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
+							$cart_added = false;
+							if ( class_exists( 'SRF_WooCommerce' ) && SRF_WooCommerce::is_available() ) {
+								$cart_added = SRF_WooCommerce::add_request_to_cart( $post_id, $service_id, $selected_variants );
+							}
+
+							if ( $cart_added && class_exists( 'SRF_WooCommerce' ) ) {
+								$redirect_url = SRF_WooCommerce::get_after_submit_url();
+							} elseif ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
 								$redirect_url = SRF_MyAccount::url_list( array( 'srf_submitted' => '1' ) );
 							} else {
 								$redirect_url = add_query_arg( 'srf_submitted', '1', get_permalink() );
@@ -1466,7 +1483,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_phone', $profile_data['phone'] );
 						update_post_meta( $post_id, '_sr_user_id', $user_id );
 						update_post_meta( $post_id, '_sr_status', 'new' );
-						update_post_meta( $post_id, '_sr_terms_accepted', 1 );
+
 						update_post_meta( $post_id, '_sr_no_file', 0 );
 						update_post_meta( $post_id, '_sr_material_id', (int) $old_data['material_id'] );
 						update_post_meta( $post_id, '_sr_printer_id', (int) $old_data['printer_id'] );

@@ -50,6 +50,8 @@ if ( ! empty( $view_id ) ) {
 		$phone            = (string) get_post_meta( $view_id, '_sr_phone', true );
 		$shipping_address = (string) get_post_meta( $view_id, '_sr_shipping_address', true );
 		$quote_notes      = (string) get_post_meta( $view_id, '_sr_quote_notes', true );
+		$price_total      = (float) get_post_meta( $view_id, '_sr_price_total', true );
+		$order_id         = (int) get_post_meta( $view_id, '_sr_wc_order_id', true );
 
 		$material_name = (string) get_post_meta( $view_id, '_sr_material_name', true );
 		$printer_name  = (string) get_post_meta( $view_id, '_sr_printer_name', true );
@@ -136,6 +138,23 @@ if ( ! empty( $view_id ) ) {
 			echo '<span class="srf-pill srf-pill--readonly">' . esc_html__( 'Read only', 'service-requests-form' ) . '</span>';
 		}
 		echo '</div>';
+		if ( $price_total > 0 || $order_id > 0 ) {
+			echo '<div class="srf-modal__payment">';
+			if ( $price_total > 0 ) {
+				echo '<p><strong>' . esc_html__( 'Service price', 'service-requests-form' ) . ':</strong> ' . esc_html( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price_total ) ) : number_format_i18n( $price_total, 2 ) ) . '</p>';
+			}
+			if ( $order_id > 0 ) {
+				$order_url = function_exists( 'wc_get_endpoint_url' ) ? wc_get_endpoint_url( 'view-order', $order_id, wc_get_page_permalink( 'myaccount' ) ) : '';
+				echo '<p><strong>' . esc_html__( 'WooCommerce order', 'service-requests-form' ) . ':</strong> ';
+				if ( $order_url ) {
+					echo '<a href="' . esc_url( $order_url ) . '">#' . esc_html( $order_id ) . '</a>';
+				} else {
+					echo '#' . esc_html( $order_id );
+				}
+				echo '</p>';
+			}
+			echo '</div>';
+		}
 
 		$export_nonce = wp_create_nonce( 'srf_export_' . $view_id );
 		$export_html_url = SRF_MyAccount::url_list( array(
@@ -308,6 +327,7 @@ echo '<th>' . esc_html__( 'Date', 'service-requests-form' ) . '</th>';
 echo '<th>' . esc_html__( 'Service', 'service-requests-form' ) . '</th>';
 echo '<th>' . esc_html__( 'Status', 'service-requests-form' ) . '</th>';
 echo '<th>' . esc_html__( 'Uploads', 'service-requests-form' ) . '</th>';
+echo '<th>' . esc_html__( 'Price', 'service-requests-form' ) . '</th>';
 echo '<th>' . esc_html__( 'Request', 'service-requests-form' ) . '</th>';
 echo '<th>' . esc_html__( 'Action', 'service-requests-form' ) . '</th>';
 echo '</tr></thead><tbody>';
@@ -323,6 +343,8 @@ while ( $query->have_posts() ) {
 	}
 
 	$summary = SRF_MyAccount::get_upload_summary( $rid );
+	$price_total = (float) get_post_meta( $rid, '_sr_price_total', true );
+	$price_text = $price_total > 0 ? ( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price_total ) ) : number_format_i18n( $price_total, 2 ) ) : '—';
 
 	$status_label = SRF_MyAccount::format_status_label( $status );
 	$status_class = 'srf-status-badge srf-status-badge--' . sanitize_html_class( $status );

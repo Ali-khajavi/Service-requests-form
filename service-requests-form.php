@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.10.16
+ * Version:     0.10.17
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -20,7 +20,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.10.16';
+	public $version = '0.10.17';
 
 	private function __construct() {}
 	private function __clone() {}
@@ -80,6 +80,7 @@ final class Service_Requests_Form {
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-myaccount.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-google-auth.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-settings.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-woocommerce.php';
 	}
 
 	private function init_hooks() {
@@ -132,6 +133,11 @@ final class Service_Requests_Form {
 		// Plugin settings
 		if ( class_exists( 'SR_Settings' ) ) {
 			SR_Settings::init();
+		}
+
+		// WooCommerce service products / checkout integration
+		if ( class_exists( 'SRF_WooCommerce' ) ) {
+			add_action( 'plugins_loaded', array( 'SRF_WooCommerce', 'init' ), 30 );
 		}
 
 		// My Account
