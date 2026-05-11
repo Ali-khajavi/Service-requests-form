@@ -565,14 +565,136 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$phone   = (string) get_user_meta( $user_id, 'billing_phone', true );
 
 			return array(
-				'name'    => $name,
-				'company' => $company,
-				'email'   => $email,
-				'phone'   => $phone,
+				'name'    => trim( $name ),
+				'company' => trim( $company ),
+				'email'   => trim( $email ),
+				'phone'   => trim( $phone ),
 			);
 		}
 
+		protected static function get_current_user_shipping_address() {
+			if ( ! is_user_logged_in() || ! class_exists( 'WC_Customer' ) ) {
+				return '';
+			}
 
+			$customer = new WC_Customer( get_current_user_id() );
+			if ( ! $customer ) {
+				return '';
+			}
+
+			$parts = array(
+				$customer->get_shipping_first_name() . ' ' . $customer->get_shipping_last_name(),
+				$customer->get_shipping_company(),
+				$customer->get_shipping_address_1(),
+				$customer->get_shipping_address_2(),
+				trim( $customer->get_shipping_postcode() . ' ' . $customer->get_shipping_city() ),
+				$customer->get_shipping_country(),
+			);
+
+			$parts = array_filter( array_map( 'trim', $parts ) );
+			return trim( implode( ', ', $parts ), " ,\t\n\r\0\x0B" );
+		}
+
+		protected static function get_my_account_url() {
+			if ( function_exists( 'wc_get_page_permalink' ) ) {
+				$url = wc_get_page_permalink( 'myaccount' );
+				if ( $url ) {
+					return $url;
+				}
+			}
+
+			return home_url( '/my-account/' );
+		}
+
+		protected static function render_service_login_gate() {
+			$request_uri    = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+			$current_url    = esc_url_raw( home_url( $request_uri ) );
+			$my_account_url = self::get_my_account_url();
+			$google_error   = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash( $_GET['srf_google_error'] ) ) : '';
+
+			$google_error_map = array(
+				'google_disabled'        => __( 'Google login is currently unavailable.', 'service-requests-form' ),
+				'google_missing_code'    => __( 'Google login was canceled or incomplete.', 'service-requests-form' ),
+				'google_invalid_state'   => __( 'Google login security validation failed. Please try again.', 'service-requests-form' ),
+				'google_token_failed'    => __( 'Could not complete Google login. Please try again.', 'service-requests-form' ),
+				'google_token_missing'   => __( 'Could not verify your Google account. Please try again.', 'service-requests-form' ),
+				'google_userinfo_failed' => __( 'Could not fetch your Google profile. Please try again.', 'service-requests-form' ),
+				'google_profile_invalid' => __( 'Google account email is missing or not verified.', 'service-requests-form' ),
+				'google_user_failed'     => __( 'Could not create or sign in your account. Please try again.', 'service-requests-form' ),
+			);
+
+			ob_start();
+			?>
+			<div class="srf-wrapper srf-service-login-gate">
+				<div class="srf-project-auth__box" data-srf-auth-state="guest">
+					<h3><?php esc_html_e( 'Sign in to continue', 'service-requests-form' ); ?></h3>
+					<p><?php esc_html_e( 'Please log in before submitting a service request.', 'service-requests-form' ); ?></p>
+
+					<?php if ( $google_error && isset( $google_error_map[ $google_error ] ) ) : ?>
+						<div class="srf-project-auth__notice"><?php echo esc_html( $google_error_map[ $google_error ] ); ?></div>
+					<?php endif; ?>
+
+					<form class="srf-project-auth__form srf-project-auth__form--login" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post">
+						<p class="login-username">
+							<label for="srf-service-login-user"><?php esc_html_e( 'Email or username', 'service-requests-form' ); ?></label>
+							<input type="text" name="log" id="srf-service-login-user" class="input" value="" autocomplete="username" />
+						</p>
+						<p class="login-password">
+							<label for="srf-service-login-pass"><?php esc_html_e( 'Password', 'service-requests-form' ); ?></label>
+							<input type="password" name="pwd" id="srf-service-login-pass" class="input" value="" autocomplete="current-password" />
+						</p>
+						<p class="login-remember">
+							<label><input name="rememberme" type="checkbox" value="forever" /> <?php esc_html_e( 'Remember me', 'service-requests-form' ); ?></label>
+						</p>
+						<input type="hidden" name="redirect_to" value="<?php echo esc_url( remove_query_arg( 'srf_google_error', $current_url ) ); ?>" />
+						<input type="hidden" name="testcookie" value="1" />
+						<p class="login-submit">
+							<button type="submit" name="wp-submit" class="button button-primary"><?php esc_html_e( 'Login', 'service-requests-form' ); ?></button>
+						</p>
+					</form>
+
+					<?php if ( class_exists( 'SRF_Google_Auth' ) && SRF_Google_Auth::is_enabled() ) : ?>
+						<div class="srf-project-auth__divider"><span><?php esc_html_e( 'or', 'service-requests-form' ); ?></span></div>
+						<div class="srf-project-auth__google-actions">
+							<?php
+							echo SRF_Google_Auth::render_google_button( $current_url, 'login', __( 'Continue with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+							echo SRF_Google_Auth::render_google_button( $current_url, 'register', __( 'Register with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+							?>
+						</div>
+					<?php endif; ?>
+
+					<div class="srf-project-auth__register-link">
+						<a href="<?php echo esc_url( $my_account_url ); ?>"><?php esc_html_e( 'Visit registration form', 'service-requests-form' ); ?></a>
+					</div>
+				</div>
+			</div>
+			<?php
+			return ob_get_clean();
+		}
+
+		protected static function get_service_profile_completion_errors() {
+			$profile          = self::get_current_user_request_profile_data();
+			$shipping_address = self::get_current_user_shipping_address();
+			$errors           = array();
+
+			if ( empty( $profile['name'] ) ) {
+				$errors[] = __( 'Name is missing from your profile.', 'service-requests-form' );
+			}
+			if ( empty( $profile['company'] ) ) {
+				$errors[] = __( 'Company is missing from your profile.', 'service-requests-form' );
+			}
+			if ( empty( $profile['email'] ) || ! is_email( $profile['email'] ) ) {
+				$errors[] = __( 'A valid email address is missing from your profile.', 'service-requests-form' );
+			}
+			if ( empty( $profile['phone'] ) ) {
+				$errors[] = __( 'Phone number is missing from your profile.', 'service-requests-form' );
+			}
+			if ( empty( $shipping_address ) ) {
+				$errors[] = __( 'Shipping address is missing from your profile.', 'service-requests-form' );
+			}
+
+			return $errors;
+		}
 
 		protected static function handle_request_uploads( $post_id, $custom_max_bytes = 0 ) {
 			$post_id = (int) $post_id;
@@ -847,6 +969,15 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		public static function shortcode_service_request_form() {
 			self::enqueue_service_request_assets();
 
+			if ( ! is_user_logged_in() ) {
+				return self::render_service_login_gate();
+			}
+
+			$profile_data     = self::get_current_user_request_profile_data();
+			$shipping_address = self::get_current_user_shipping_address();
+			$profile_errors   = self::get_service_profile_completion_errors();
+			$my_account_url   = self::get_my_account_url();
+
 			$errors   = array();
 			$old_data = array();
 			$success  = false;
@@ -867,14 +998,15 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				$old_data = array(
 					'service'     => isset( $_POST['srf_service'] ) ? (int) $_POST['srf_service'] : 0,
-					'name'        => isset( $_POST['srf_name'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_name'] ) ) : '',
-					'company'     => isset( $_POST['srf_company'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_company'] ) ) : '',
-					'email'       => isset( $_POST['srf_email'] ) ? sanitize_email( wp_unslash( $_POST['srf_email'] ) ) : '',
-					'phone'       => isset( $_POST['srf_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_phone'] ) ) : '',
 					'description' => isset( $_POST['srf_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_description'] ) ) : '',
 					'no_file'     => ! empty( $_POST['srf_no_file'] ) ? '1' : '0',
 					'terms'       => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
 				);
+
+				$old_data['name']    = isset( $profile_data['name'] ) ? (string) $profile_data['name'] : '';
+				$old_data['company'] = isset( $profile_data['company'] ) ? (string) $profile_data['company'] : '';
+				$old_data['email']   = isset( $profile_data['email'] ) ? (string) $profile_data['email'] : '';
+				$old_data['phone']   = isset( $profile_data['phone'] ) ? (string) $profile_data['phone'] : '';
 
 				// Variant selections (key => chosen value), posted as srf_variants[index][key/value]
 				$selected_variants = array();
@@ -910,11 +1042,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					$errors[] = __( 'Selected service is not valid.', 'service-requests-form' );
 				}
 
-				// Required fields
-				if ( empty( $old_data['name'] ) )        $errors[] = __( 'Name is required.', 'service-requests-form' );
-				if ( empty( $old_data['company'] ) )     $errors[] = __( 'Company is required.', 'service-requests-form' );
-				if ( empty( $old_data['phone'] ) )       $errors[] = __( 'Phone is required.', 'service-requests-form' );
-				if ( empty( $old_data['email'] ) || ! is_email( $old_data['email'] ) ) $errors[] = __( 'A valid email is required.', 'service-requests-form' );
+				// Required profile fields are loaded from the logged-in user profile, not from editable form inputs.
+				if ( ! empty( $profile_errors ) ) {
+					$errors = array_merge( $errors, $profile_errors );
+				}
+
 				if ( empty( $old_data['description'] ) ) $errors[] = __( 'Project description is required.', 'service-requests-form' );
 
 				// Variants validation (if service defines variant groups)
@@ -985,10 +1117,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				if ( $old_data['terms'] !== '1' ) {
 					$errors[] = __( 'You must accept the Terms & Conditions.', 'service-requests-form' );
 				}
-				// Shipping address (hidden input from template)
-				$shipping_address = isset( $_POST['srf_shipping_address'] )
-					? trim( sanitize_textarea_field( wp_unslash( $_POST['srf_shipping_address'] ) ) )
-					: '';
+				// Shipping address is loaded from the logged-in user profile, not from POST.
+				$shipping_address = self::get_current_user_shipping_address();
 
 				if ( $shipping_address === '' ) {
 					$errors[] = __( 'Please set up your shipping address in My Account before submitting a request.', 'service-requests-form' );
@@ -1109,6 +1239,24 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				$selected_service_data = SR_Service_Data::get_service_data( $selected_service_id );
 			}
 
+			if ( ! empty( $profile_errors ) && empty( $_POST['srf_form_submitted'] ) ) {
+				ob_start();
+				?>
+				<div class="srf-wrapper">
+					<div class="srf-form__errors">
+						<p><?php esc_html_e( 'Please complete your account profile before submitting a service request.', 'service-requests-form' ); ?></p>
+						<ul>
+							<?php foreach ( $profile_errors as $profile_error ) : ?>
+								<li><?php echo esc_html( $profile_error ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+						<p><a class="srf-button" href="<?php echo esc_url( $my_account_url ); ?>"><?php esc_html_e( 'Go to My Account', 'service-requests-form' ); ?></a></p>
+					</div>
+				</div>
+				<?php
+				return ob_get_clean();
+			}
+
 			ob_start();
 			?>
 			<div class="srf-wrapper">
@@ -1123,6 +1271,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 								'errors'              => $errors,
 								'old_data'            => $old_data,
 								'success'             => $success,
+								'profile_data'        => $profile_data,
+								'shipping_address'    => $shipping_address,
+								'my_account_url'      => $my_account_url,
 							)
 						);
 						?>
