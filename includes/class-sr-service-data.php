@@ -62,11 +62,15 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
                 return null;
             }
 
-            $title   = get_the_title( $post );
+			$title   = get_the_title( $post );
 			$thumb_url = get_the_post_thumbnail_url( $post, 'medium' );
 			if ( ! $thumb_url ) {
 				$thumb_url = '';
 			}
+			$base_price = class_exists( 'SRF_WooCommerce' ) ? SRF_WooCommerce::get_base_price( $service_id ) : (float) get_post_meta( $service_id, '_sr_service_base_price', true );
+			$base_price_formatted = function_exists( 'wc_price' )
+				? wp_strip_all_tags( wc_price( $base_price ) )
+				: number_format_i18n( $base_price, 2 );
             
 
             $raw = $post->post_content;
@@ -174,14 +178,15 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
 				}
 			}
 
-            return array(
-                'id'      => $service_id,
-                'title'   => $title,
+			return array(
+				'id'      => $service_id,
+				'title'   => $title,
 				'thumb'   => $thumb_url,
-                'content' => $content,
-                'images'  => $images,
-                'variants'=> $variant_groups,
-				'base_price' => class_exists( 'SRF_WooCommerce' ) ? SRF_WooCommerce::get_base_price( $service_id ) : 0,
+				'content' => $content,
+				'images'  => $images,
+				'variants'=> $variant_groups,
+				'base_price' => (float) $base_price,
+				'base_price_formatted' => $base_price_formatted,
 				'video'   => array(
 					'url'         => $video_url,
 					'title'       => $video_title,

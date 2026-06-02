@@ -1004,6 +1004,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				$old_data = array(
 					'service'     => isset( $_POST['srf_service'] ) ? (int) $_POST['srf_service'] : 0,
+					'quantity'    => isset( $_POST['srf_quantity'] ) ? (string) max( 1, (int) wp_unslash( $_POST['srf_quantity'] ) ) : '1',
 					'description' => isset( $_POST['srf_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_description'] ) ) : '',
 					'no_file'     => ! empty( $_POST['srf_no_file'] ) ? '1' : '0',
 					'terms'       => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
@@ -1046,6 +1047,10 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					$errors[] = __( 'Please choose a service.', 'service-requests-form' );
 				} elseif ( class_exists( 'SR_Service_Data' ) && method_exists( 'SR_Service_Data', 'is_valid_service_id' ) && ! SR_Service_Data::is_valid_service_id( (int) $old_data['service'] ) ) {
 					$errors[] = __( 'Selected service is not valid.', 'service-requests-form' );
+				}
+
+				if ( (int) $old_data['quantity'] < 1 ) {
+					$errors[] = __( 'Please enter a valid quantity.', 'service-requests-form' );
 				}
 
 				// Required profile fields are loaded from the logged-in user profile, not from editable form inputs.
@@ -1185,10 +1190,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						update_post_meta( $post_id, '_sr_user_id', $user_id );
 						update_post_meta( $post_id, '_sr_status', 'new' );
 
-						$price_data = class_exists( 'SRF_WooCommerce' ) ? SRF_WooCommerce::calculate_service_price( $service_id, $selected_variants ) : array( 'base' => 0, 'extras' => array(), 'total' => 0 );
-						update_post_meta( $post_id, '_sr_price_base', isset( $price_data['base'] ) ? (float) $price_data['base'] : 0 );
-						update_post_meta( $post_id, '_sr_price_extras', isset( $price_data['extras'] ) ? $price_data['extras'] : array() );
-						update_post_meta( $post_id, '_sr_price_total', isset( $price_data['total'] ) ? (float) $price_data['total'] : 0 );
+					$quantity = max( 1, (int) $old_data['quantity'] );
+					$price_data = class_exists( 'SRF_WooCommerce' ) ? SRF_WooCommerce::calculate_service_price( $service_id, $selected_variants, $quantity ) : array( 'base' => 0, 'extras' => array(), 'unit_total' => 0, 'total' => 0, 'quantity' => $quantity );
+					update_post_meta( $post_id, '_sr_price_base', isset( $price_data['base'] ) ? (float) $price_data['base'] : 0 );
+					update_post_meta( $post_id, '_sr_price_extras', isset( $price_data['extras'] ) ? $price_data['extras'] : array() );
+					update_post_meta( $post_id, '_sr_price_total', isset( $price_data['total'] ) ? (float) $price_data['total'] : 0 );
+					update_post_meta( $post_id, '_sr_quantity', $quantity );
 
 						// Selected variants (key => value)
 						if ( ! empty( $selected_variants ) && is_array( $selected_variants ) ) {
@@ -1227,24 +1234,28 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 							$errors[] = $e->getMessage();
 						}
 
-						if ( empty( $errors ) ) {
+					if ( empty( $errors ) ) {
 
-							self::send_admin_new_request_email( $post_id );
+						self::send_admin_new_request_email( $post_id );
 
-							$cart_added = false;
-							if ( class_exists( 'SRF_WooCommerce' ) && SRF_WooCommerce::is_available() ) {
-								$cart_added = SRF_WooCommerce::add_request_to_cart( $post_id, $service_id, $selected_variants );
-							}
+						$cart_added = false;
+						if ( class_exists( 'SRF_WooCommerce' ) && SRF_WooCommerce::is_available() ) {
+							$cart_added = SRF_WooCommerce::add_request_to_cart( $post_id, $service_id, $selected_variants, $quantity );
+						}
 
-							if ( $cart_added && class_exists( 'SRF_WooCommerce' ) ) {
-								$redirect_url = SRF_WooCommerce::get_after_submit_url();
-							} elseif ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
-								$redirect_url = SRF_MyAccount::url_list( array( 'srf_submitted' => '1' ) );
-							} else {
-								$redirect_url = add_query_arg( 'srf_submitted', '1', get_permalink() );
-							}
+						if ( $cart_added ) {
+							update_post_meta( $post_id, '_sr_status', 'pending-payment' );
+						}
 
-							self::safe_redirect( $redirect_url );
+						if ( $cart_added && class_exists( 'SRF_WooCommerce' ) ) {
+							$redirect_url = SRF_WooCommerce::get_after_submit_url();
+						} elseif ( class_exists( 'SRF_MyAccount' ) && method_exists( 'SRF_MyAccount', 'url_list' ) ) {
+							$redirect_url = SRF_MyAccount::url_list( array( 'srf_submitted' => '1' ) );
+						} else {
+							$redirect_url = add_query_arg( 'srf_submitted', '1', get_permalink() );
+						}
+
+						self::safe_redirect( $redirect_url );
 						}
 					}
 				}

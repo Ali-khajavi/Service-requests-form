@@ -53,8 +53,9 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			return 'yes' === get_post_meta( (int) $service_id, self::META_DIRECT_PURCHASABLE, true );
 		}
 
-		public static function calculate_service_price( $service_id, $selected_variants = array() ) {
+		public static function calculate_service_price( $service_id, $selected_variants = array(), $quantity = 1 ) {
 			$service_id = (int) $service_id;
+			$quantity = max( 1, (int) $quantity );
 			$total = self::get_base_price( $service_id );
 			$extras = array();
 			$variant_defs = class_exists( 'SR_Services_CPT' ) ? SR_Services_CPT::get_variations( $service_id ) : array();
@@ -73,7 +74,14 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 					}
 				}
 			}
-			return array( 'base' => self::get_base_price( $service_id ), 'extras' => $extras, 'total' => max( 0, $total ) );
+			$unit_total = max( 0, $total );
+			return array(
+				'base'       => self::get_base_price( $service_id ),
+				'extras'     => $extras,
+				'unit_total' => $unit_total,
+				'quantity'   => $quantity,
+				'total'      => max( 0, $unit_total * $quantity ),
+			);
 		}
 
 		public static function ensure_category() {
@@ -125,7 +133,7 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			update_post_meta( $product_id, '_regular_price', wc_format_decimal( $price ) );
 			update_post_meta( $product_id, '_price', wc_format_decimal( $price ) );
 			update_post_meta( $product_id, '_virtual', 'yes' );
-			update_post_meta( $product_id, '_sold_individually', 'yes' );
+			update_post_meta( $product_id, '_sold_individually', 'no' );
 			update_post_meta( $product_id, '_stock_status', 'instock' );
 			update_post_meta( $product_id, '_manage_stock', 'no' );
 			update_post_meta( $product_id, '_catalog_visibility', 'visible' );
@@ -182,10 +190,11 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			return $html;
 		}
 
-		public static function add_request_to_cart( $request_id, $service_id, $selected_variants = array() ) {
+		public static function add_request_to_cart( $request_id, $service_id, $selected_variants = array(), $quantity = 1 ) {
 			if ( ! self::is_available() || ! WC()->cart ) {
 				return false;
 			}
+			$quantity = max( 1, (int) $quantity );
 			$product_id = self::get_product_id_for_service( $service_id );
 			if ( ! $product_id ) {
 				self::sync_product_from_service( $service_id, get_post( $service_id ) );
@@ -194,14 +203,15 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			if ( ! $product_id ) {
 				return false;
 			}
-			$price = self::calculate_service_price( $service_id, $selected_variants );
+			$price = self::calculate_service_price( $service_id, $selected_variants, $quantity );
 			WC()->cart->empty_cart();
 			self::$adding_service_to_cart = true;
-			$key = WC()->cart->add_to_cart( $product_id, 1, 0, array(), array(
+			$key = WC()->cart->add_to_cart( $product_id, $quantity, 0, array(), array(
 				'srf_request_id' => (int) $request_id,
 				'srf_service_id' => (int) $service_id,
 				'srf_variants' => is_array( $selected_variants ) ? $selected_variants : array(),
-				'srf_price' => (float) $price['total'],
+				'srf_quantity' => $quantity,
+				'srf_price' => isset( $price['unit_total'] ) ? (float) $price['unit_total'] : (float) $price['total'],
 				'srf_price_breakdown' => $price,
 			) );
 			self::$adding_service_to_cart = false;
@@ -227,6 +237,9 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			if ( ! empty( $cart_item['srf_request_id'] ) ) {
 				$item_data[] = array( 'name' => __( 'Service Request', 'service-requests-form' ), 'value' => '#' . (int) $cart_item['srf_request_id'] );
 			}
+			if ( ! empty( $cart_item['srf_quantity'] ) ) {
+				$item_data[] = array( 'name' => __( 'Quantity', 'service-requests-form' ), 'value' => (int) $cart_item['srf_quantity'] );
+			}
 			if ( ! empty( $cart_item['srf_variants'] ) && is_array( $cart_item['srf_variants'] ) ) {
 				foreach ( $cart_item['srf_variants'] as $k => $v ) {
 					$item_data[] = array( 'name' => (string) $k, 'value' => (string) $v );
@@ -238,6 +251,9 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 		public static function add_order_line_item_meta( $item, $cart_item_key, $values, $order ) {
 			if ( empty( $values['srf_request_id'] ) ) { return; }
 			$item->add_meta_data( __( 'Service Request ID', 'service-requests-form' ), (int) $values['srf_request_id'], true );
+			if ( ! empty( $values['srf_quantity'] ) ) {
+				$item->add_meta_data( __( 'Quantity', 'service-requests-form' ), (int) $values['srf_quantity'], true );
+			}
 			if ( ! empty( $values['srf_variants'] ) && is_array( $values['srf_variants'] ) ) {
 				foreach ( $values['srf_variants'] as $k => $v ) {
 					$item->add_meta_data( (string) $k, (string) $v, true );

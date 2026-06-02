@@ -69,6 +69,9 @@ class SRF_Admin_Status {
 			<option value="new" <?php selected( $status, 'new' ); ?>>
 				<?php esc_html_e( 'New', 'service-requests-form' ); ?>
 			</option>
+			<option value="pending-payment" <?php selected( $status, 'pending-payment' ); ?>>
+				<?php esc_html_e( 'Pending purchase', 'service-requests-form' ); ?>
+			</option>
 			<option value="in_progress" <?php selected( $status, 'in_progress' ); ?>>
 				<?php esc_html_e( 'In progress', 'service-requests-form' ); ?>
 			</option>

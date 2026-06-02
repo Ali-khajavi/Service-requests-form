@@ -425,10 +425,11 @@ class SRF_MyAccount {
 		}
 
 		$map = array(
-			'new'         => __( 'New', 'service-requests-form' ),
-			'in_progress' => __( 'In progress', 'service-requests-form' ),
-			'done'        => __( 'Done', 'service-requests-form' ),
-			'failed'      => __( 'Failed', 'service-requests-form' ),
+			'new'             => __( 'New', 'service-requests-form' ),
+			'pending-payment' => __( 'Pending purchase', 'service-requests-form' ),
+			'in_progress'     => __( 'In progress', 'service-requests-form' ),
+			'done'            => __( 'Done', 'service-requests-form' ),
+			'failed'          => __( 'Failed', 'service-requests-form' ),
 		);
 
 		return isset( $map[ $status ] ) ? $map[ $status ] : ucfirst( str_replace( '_', ' ', $status ) );

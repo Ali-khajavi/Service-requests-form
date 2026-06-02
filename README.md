@@ -2,7 +2,7 @@
 
 **Service Requests Form** is a WordPress plugin for collecting, pricing, tracking, and managing customer service requests from the frontend. It is designed for service businesses that need a customer request form, file uploads, WooCommerce account integration, an admin workflow, and optional 3D-print/project quote features.
 
-- **Plugin version:** 0.10.11
+- **Plugin version:** 0.10.19
 - **Text domain:** `service-requests-form`
 - **Main plugin file:** `service-requests-form.php`
 - **Author:** Ali Khajavi
@@ -32,6 +32,7 @@ Admins can create and manage services using the `sr_service` post type. Each ser
 - Featured image/thumbnail.
 - Image gallery/slider.
 - Variant groups with custom keys and values.
+- Optional base price for paid services or WooCommerce products.
 - Video URL.
 - Video title.
 - Video description.

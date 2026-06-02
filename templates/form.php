@@ -218,6 +218,16 @@ if ( ! is_array( $old_variants ) ) {
 		</small>
 	</div>
 
+	<div class="srf-form__field">
+		<label for="srf_quantity">
+			<?php esc_html_e( 'Quantity', 'service-requests-form' ); ?> <span class="srf-required">*</span>
+		</label>
+		<input type="number" id="srf_quantity" name="srf_quantity" min="1" step="1" value="<?php echo esc_attr( $old( 'quantity', '1' ) ); ?>" required />
+		<small class="srf-field__help">
+			<?php esc_html_e( 'Enter how many units you want.', 'service-requests-form' ); ?>
+		</small>
+	</div>
+
 	<div class="srf-price-summary" id="srf-price-summary" style="display:none;">
 		<strong><?php esc_html_e( 'Price summary', 'service-requests-form' ); ?></strong>
 		<div id="srf-price-lines"></div>
@@ -286,11 +296,12 @@ if ( ! is_array( $old_variants ) ) {
 	var serviceSelect = document.getElementById('srf-service');
 	var variantsField = document.getElementById('srf-variants-field');
 	var wrap          = document.getElementById('srf-variants-wrap');
+	var quantityInput = document.getElementById('srf_quantity');
 	var priceBox      = document.getElementById('srf-price-summary');
 	var priceLines    = document.getElementById('srf-price-lines');
 	var priceTotal    = document.getElementById('srf-price-total');
 
-	if (!serviceSelect || !variantsField || !wrap) return;
+	if (!serviceSelect || !variantsField || !wrap || !quantityInput) return;
 
 	var oldSelections = <?php echo wp_json_encode( $old_variants ); ?> || {};
 
@@ -360,25 +371,39 @@ if ( ! is_array( $old_variants ) ) {
 		var opt = serviceSelect.options[serviceSelect.selectedIndex];
 		if (!opt) { priceBox.style.display = 'none'; return; }
 		var base = parseFloat(opt.getAttribute('data-base-price') || '0') || 0;
+		var quantity = parseInt(quantityInput.value || '1', 10) || 1;
+		quantity = Math.max(1, quantity);
 		var groups = [];
 		try { groups = JSON.parse(opt.getAttribute('data-variants') || '[]'); } catch(e) { groups = []; }
-		var total = base;
+		var total = base * quantity;
+		var hasVisibleLine = false;
 		priceLines.innerHTML = '';
-		var baseLine = document.createElement('div');
-		baseLine.textContent = '<?php echo esc_js( __( 'Base price', 'service-requests-form' ) ); ?>: ' + formatMoney(base);
-		priceLines.appendChild(baseLine);
+		if (base > 0) {
+			var baseLine = document.createElement('div');
+			baseLine.textContent = '<?php echo esc_js( __( 'Base price', 'service-requests-form' ) ); ?>: ' + formatMoney(base);
+			priceLines.appendChild(baseLine);
+			hasVisibleLine = true;
+		}
 		var selects = wrap.querySelectorAll('select');
 		selects.forEach(function(sel, idx){
 			var chosen = sel.value;
 			var g = groups[idx] || {};
 			var extra = chosen && g.prices && g.prices[chosen] ? parseFloat(g.prices[chosen]) : 0;
 			if (extra > 0) {
-				total += extra;
+				total += extra * quantity;
 				var line = document.createElement('div');
-				line.textContent = (g.key || '<?php echo esc_js( __( 'Option', 'service-requests-form' ) ); ?>') + ': ' + chosen + ' +' + formatMoney(extra);
+				line.textContent = (g.key || '<?php echo esc_js( __( 'Option', 'service-requests-form' ) ); ?>') + ': ' + chosen + ' +' + formatMoney(extra) + ' x ' + quantity;
 				priceLines.appendChild(line);
+				hasVisibleLine = true;
 			}
 		});
+		if (!hasVisibleLine && base <= 0) {
+			priceBox.style.display = 'none';
+			return;
+		}
+		var qtyLine = document.createElement('div');
+		qtyLine.textContent = '<?php echo esc_js( __( 'Quantity', 'service-requests-form' ) ); ?>: ' + quantity;
+		priceLines.appendChild(qtyLine);
 		priceTotal.textContent = formatMoney(total);
 		priceBox.style.display = '';
 	}
@@ -409,6 +434,9 @@ if ( ! is_array( $old_variants ) ) {
 		oldSelections = {};
 		rebuild();
 	});
+
+	quantityInput.addEventListener('change', updatePriceSummary);
+	quantityInput.addEventListener('input', updatePriceSummary);
 
 	rebuild();
 })();

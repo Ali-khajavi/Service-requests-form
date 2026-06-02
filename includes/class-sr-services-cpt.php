@@ -190,6 +190,9 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				<label for="sr_service_base_price"><strong><?php esc_html_e( 'Base price', 'service-requests-form' ); ?></strong></label>
 				<input type="number" min="0" step="0.01" id="sr_service_base_price" name="sr_service_base_price" value="<?php echo esc_attr( $price ); ?>" style="width:100%;" />
 			</p>
+			<p class="description">
+				<?php esc_html_e( 'Leave this at 0 if the service does not need pricing.', 'service-requests-form' ); ?>
+			</p>
 			<p>
 				<label for="sr_service_direct_purchasable">
 					<input type="checkbox" id="sr_service_direct_purchasable" name="sr_service_direct_purchasable" value="yes" <?php checked( $direct_purchasable ); ?> />
@@ -645,7 +648,11 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 
 			if ( $column === 'sr_service_price' ) {
 				$price = (float) get_post_meta( $post_id, self::META_BASE_PRICE, true );
-				echo esc_html( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price ) ) : number_format_i18n( $price, 2 ) );
+				if ( $price > 0 ) {
+					echo esc_html( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price ) ) : number_format_i18n( $price, 2 ) );
+				} else {
+					echo '&mdash;';
+				}
 				return;
 			}
 

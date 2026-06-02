@@ -193,6 +193,8 @@ function SRF_onReady(fn) {
     var content = service.content || '';
     var images  = Array.isArray(service.images) ? service.images : [];
     var video   = service.video && typeof service.video === 'object' ? service.video : {};
+    var basePrice = parseFloat(service.base_price || 0) || 0;
+    var basePriceFormatted = service.base_price_formatted || '';
 
     // Variant groups (optional)
     var variantsRaw  = service.variants || service.variations || [];
@@ -269,8 +271,18 @@ function SRF_onReady(fn) {
         '</div>';
     }
 
+    var priceHtml = '';
+    if (basePrice > 0) {
+      priceHtml =
+        '<div class="srf-service-info__price">' +
+          '<strong>Price:</strong> ' +
+          '<span>' + escapeHtml(basePriceFormatted || String(basePrice.toFixed(2))) + '</span>' +
+        '</div>';
+    }
+
     return (
       '<div class="srf-service-info" data-service-id="' + escapeAttr(service.id) + '">' +
+        priceHtml +
         videoHtml +
         sliderHtml +
         '<h2 class="srf-service-info__title">' + escapeHtml(title) + '</h2>' +

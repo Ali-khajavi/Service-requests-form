@@ -181,6 +181,9 @@ if ( ! empty( $view_id ) ) {
 		$render_detail_row( __( 'Request Type', 'service-requests-form' ), $type_label );
 		$render_detail_row( __( 'Status', 'service-requests-form' ), $status_label );
 		$render_detail_row( __( 'Service', 'service-requests-form' ), $service_title ? $service_title : ( $is_project ? __( 'Project Request', 'service-requests-form' ) : '—' ) );
+		if ( ! $is_project ) {
+			$render_detail_row( __( 'Quantity', 'service-requests-form' ), (string) max( 1, (int) get_post_meta( $view_id, '_sr_quantity', true ) ) );
+		}
 		if ( $is_project ) {
 			$render_detail_row( __( 'Project Title', 'service-requests-form' ), $project_title ? $project_title : $view_post->post_title );
 		}
@@ -296,8 +299,14 @@ if ( ! empty( $view_id ) ) {
 		.srf-pill--readonly{background:#f5f5f5;color:#555;}
 		.srf-pill--type{background:#eef4ff;color:#264b8f;}
 		.srf-pill--status-new{background:#eee9ff;color:#5b4db3;}
+		.srf-pill--status-pending-payment{background:#fff4cc;color:#9a6a00;}
 		.srf-pill--status-in-progress{background:#fff1e5;color:#b85b00;}
 		.srf-pill--status-done{background:#e7f7ee;color:#1f7a45;}
+		.srf-status-badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f1f1;}
+		.srf-status-badge--new{background:#eee9ff;color:#5b4db3;}
+		.srf-status-badge--pending-payment{background:#fff4cc;color:#9a6a00;}
+		.srf-status-badge--in_progress{background:#fff1e5;color:#b85b00;}
+		.srf-status-badge--done{background:#e7f7ee;color:#1f7a45;}
 		.srf-detail-card{border:1px solid #e6e6e6;border-radius:10px;padding:16px;margin:0 0 16px;background:#fff;}
 		.srf-detail-card__title{margin:0 0 12px;font-size:18px;}
 		.srf-detail-grid{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:10px 16px;}
@@ -346,8 +355,8 @@ while ( $query->have_posts() ) {
 	$price_total = (float) get_post_meta( $rid, '_sr_price_total', true );
 	$price_text = $price_total > 0 ? ( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price_total ) ) : number_format_i18n( $price_total, 2 ) ) : '—';
 
-	$status_label = SRF_MyAccount::format_status_label( $status );
-	$status_class = 'srf-status-badge srf-status-badge--' . sanitize_html_class( $status );
+		$status_label = SRF_MyAccount::format_status_label( $status );
+		$status_class = 'srf-status-badge srf-status-badge--' . sanitize_html_class( $status );
 
 	$uploads_text = '—';
 	if ( $summary['count'] > 0 ) {
@@ -365,6 +374,7 @@ while ( $query->have_posts() ) {
 	echo '<td data-title="' . esc_attr__( 'Service', 'service-requests-form' ) . '">' . esc_html( $service ) . '</td>';
 	echo '<td data-title="' . esc_attr__( 'Status', 'service-requests-form' ) . '"><span class="' . esc_attr( $status_class ) . '">' . esc_html( $status_label ) . '</span></td>';
 	echo '<td data-title="' . esc_attr__( 'Uploads', 'service-requests-form' ) . '">' . esc_html( $uploads_text ) . '</td>';
+	echo '<td data-title="' . esc_attr__( 'Price', 'service-requests-form' ) . '">' . esc_html( $price_text ) . '</td>';
 	echo '<td data-title="' . esc_attr__( 'Request', 'service-requests-form' ) . '">#' . esc_html( $rid ) . '</td>';
 	echo '<td data-title="' . esc_attr__( 'Action', 'service-requests-form' ) . '"><a class="button" href="' . esc_url( $view_url ) . '">' . esc_html__( 'View', 'service-requests-form' ) . '</a></td>';
 	echo '</tr>';

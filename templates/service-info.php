@@ -29,6 +29,8 @@ $title   = isset( $data['title'] ) ? (string) $data['title'] : '';
 $content = isset( $data['content'] ) ? (string) $data['content'] : '';
 $images  = ( isset( $data['images'] ) && is_array( $data['images'] ) ) ? $data['images'] : array();
 $video   = ( isset( $data['video'] ) && is_array( $data['video'] ) ) ? $data['video'] : array();
+$base_price = isset( $data['base_price'] ) ? (float) $data['base_price'] : 0;
+$base_price_formatted = isset( $data['base_price_formatted'] ) ? (string) $data['base_price_formatted'] : '';
 
 // Variant groups: prefer 'variants' (new) but accept 'variations' (legacy) as fallback.
 $raw_variants = array();
@@ -98,6 +100,13 @@ $video_embed = isset( $video['embed'] ) ? (string) $video['embed'] : '';
 ?>
 
 <div class="srf-service-info">
+	<?php if ( $base_price > 0 ) : ?>
+		<div class="srf-service-info__price">
+			<strong><?php esc_html_e( 'Price', 'service-requests-form' ); ?>:</strong>
+			<span><?php echo esc_html( $base_price_formatted !== '' ? $base_price_formatted : number_format_i18n( $base_price, 2 ) ); ?></span>
+		</div>
+	<?php endif; ?>
+
 	<?php if ( $video_embed !== '' ) : ?>
 		<div class="srf-service-video">
 			<div class="srf-service-video__frame">
