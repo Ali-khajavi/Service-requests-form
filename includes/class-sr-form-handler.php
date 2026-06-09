@@ -79,6 +79,36 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			self::inject_service_data();
 		}
 
+		protected static function is_coming_soon_enabled() {
+			return (bool) get_option( 'srf_coming_soon_enabled', false );
+		}
+
+		protected static function render_coming_soon_banner( $context = 'service' ) {
+			$context = (string) $context;
+			$title   = __( 'Coming Soon', 'service-requests-form' );
+			$message = ( 'project' === $context )
+				? __( 'The project request form is being prepared. Please check back soon.', 'service-requests-form' )
+				: __( 'The service request form is being prepared. Please check back soon.', 'service-requests-form' );
+
+			$logo = function_exists( 'get_custom_logo' ) ? get_custom_logo() : '';
+			if ( empty( $logo ) ) {
+				$logo = '<div class="srf-coming-soon__site-name">' . esc_html( get_bloginfo( 'name' ) ) . '</div>';
+			}
+
+			ob_start();
+			?>
+			<div class="srf-wrapper srf-coming-soon-wrap">
+				<div class="srf-coming-soon" role="status" aria-live="polite">
+					<div class="srf-coming-soon__brand"><?php echo $logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<div class="srf-coming-soon__badge"><?php echo esc_html( $title ); ?></div>
+					<h2 class="srf-coming-soon__title"><?php echo esc_html( $title ); ?></h2>
+					<p class="srf-coming-soon__message"><?php echo esc_html( $message ); ?></p>
+				</div>
+			</div>
+			<?php
+			return ob_get_clean();
+		}
+
 		protected static function localize_frontend_script() {
 			static $localized = false;
 
@@ -979,6 +1009,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// Shortcode Detailed Form Handler
 		// ===============================
 		public static function shortcode_service_request_form() {
+			self::enqueue_frontend_base_assets();
+			if ( self::is_coming_soon_enabled() ) {
+				return self::render_coming_soon_banner( 'service' );
+			}
+
 			self::enqueue_service_request_assets();
 
 			if ( ! is_user_logged_in() ) {
@@ -1343,6 +1378,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// ===============================
 
 		public static function shortcode_project_request_form() {
+			self::enqueue_frontend_base_assets();
+			if ( self::is_coming_soon_enabled() ) {
+				return self::render_coming_soon_banner( 'project' );
+			}
+
 			self::enqueue_project_request_assets();
 			
 			$errors   = array();

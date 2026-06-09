@@ -4,6 +4,74 @@
     font-family: inherit;
 }
 
+.srf-coming-soon-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+.srf-coming-soon {
+    width: min(92vw, 720px);
+    padding: 2.25rem 1.75rem;
+    border: 1px solid #dbe2ea;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+    text-align: center;
+}
+
+.srf-coming-soon__brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.srf-coming-soon__brand .custom-logo {
+    max-width: 180px;
+    height: auto;
+}
+
+.srf-coming-soon__site-name {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+    background: #eef3f8;
+    color: #1d4e89;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.srf-coming-soon__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #e8f0fb;
+    color: #1d4e89;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.srf-coming-soon__title {
+    margin: 0 0 0.65rem;
+    color: #0f172a;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    line-height: 1.15;
+}
+
+.srf-coming-soon__message {
+    margin: 0;
+    color: #5f6c7b;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
 .srf-layout {
     display: grid;
     grid-template-columns: minmax(280px, 30%) minmax(0, 70%);

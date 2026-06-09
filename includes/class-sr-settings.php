@@ -19,6 +19,7 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 		const OPTION_GUEST_ORDERING       = 'srf_quote_guest_ordering';
 		const OPTION_DELETE_ON_UNINSTALL  = 'srf_quote_delete_data_on_uninstall';
 		const OPTION_NOTIFY_ADMIN_EMAIL   = 'srf_quote_notify_admin_email';
+		const OPTION_COMING_SOON          = 'srf_coming_soon_enabled';
 
 		public static function init() {
 			add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
@@ -198,6 +199,16 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 				)
 			);
 
+			register_setting(
+				'srf_settings_group',
+				self::OPTION_COMING_SOON,
+				array(
+					'type'              => 'boolean',
+					'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ),
+					'default'           => false,
+				)
+			);
+
 			if ( class_exists( 'SRF_WooCommerce' ) ) {
 				register_setting(
 					'srf_settings_group',
@@ -317,6 +328,7 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			$guest_ordering      = (bool) get_option( self::OPTION_GUEST_ORDERING, true );
 			$delete_on_uninstall = (bool) get_option( self::OPTION_DELETE_ON_UNINSTALL, false );
 			$notify_admin_email  = (string) get_option( self::OPTION_NOTIFY_ADMIN_EMAIL, '' );
+			$coming_soon_enabled = (bool) get_option( self::OPTION_COMING_SOON, false );
 			$service_form_page_id = class_exists( 'SRF_WooCommerce' ) ? (int) get_option( SRF_WooCommerce::OPTION_FORM_PAGE_ID, 0 ) : 0;
 			$service_after_submit = class_exists( 'SRF_WooCommerce' ) ? (string) get_option( SRF_WooCommerce::OPTION_AFTER_SUBMIT, 'checkout' ) : 'checkout';
 			?>
@@ -378,6 +390,17 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 
 					<h2><?php esc_html_e( '3D Quote General Settings', 'service-requests-form' ); ?></h2>
 					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Coming soon mode', 'service-requests-form' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="<?php echo esc_attr( self::OPTION_COMING_SOON ); ?>" value="1" <?php checked( $coming_soon_enabled ); ?> />
+									<?php esc_html_e( 'Show a coming soon banner instead of the service and project forms.', 'service-requests-form' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'When enabled, both shortcodes will show a branded coming soon screen using the site logo.', 'service-requests-form' ); ?></p>
+							</td>
+						</tr>
+
 						<tr>
 							<th scope="row">
 								<label for="srf_quote_currency"><?php esc_html_e( 'Currency', 'service-requests-form' ); ?></label>
