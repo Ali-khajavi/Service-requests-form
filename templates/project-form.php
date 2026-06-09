@@ -82,13 +82,14 @@ $google_error_map = array(
 		<form id="srf-project-login-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post"></form>
 	<?php endif; ?>
 
-	<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
-			<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
+	<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
 			<div class="srf-project-steps">
 				<div class="srf-project-step is-active" data-step="1">1. Project Title</div>
 				<div class="srf-project-step" data-step="2">2. Terms & Upload 3D Model</div>
 				<div class="srf-project-step" data-step="3">3. Confirmed</div>
 			</div>
+
+			<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
 
 			<div class="srf-project-grid">
 				<div class="srf-project-main">
@@ -177,9 +178,9 @@ $google_error_map = array(
 					<span class="srf-button__label"><?php esc_html_e( 'Next', 'service-requests-form' ); ?></span>
 				</button>
 			</div>
-		</div>
+			</div>
 
-		<div class="srf-project-panel srf-project-panel--step2" data-srf-step-panel="2">
+		<div class="srf-project-panel srf-project-panel--step2" data-srf-step-panel="2" hidden>
 			<h2 class="srf-project-panel__title"><?php esc_html_e( 'Terms & Upload 3D Model', 'service-requests-form' ); ?></h2>
 			<p class="srf-project-panel__intro"><?php esc_html_e( 'Accept the terms and upload your 3D files before submitting the request.', 'service-requests-form' ); ?></p>
 
@@ -457,7 +458,6 @@ $google_error_map = array(
 			</div>
 		</div>
 	</form>
-	</div>
 
 	<?php endif; ?>
 </div>

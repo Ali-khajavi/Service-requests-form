@@ -1423,6 +1423,13 @@ document.addEventListener('click', function (e) {
     var descriptionInput = form.querySelector('#srf-project-description');
     var step2Actions = form.querySelector('.srf-form__actions--project');
 
+    function setPanelState(panel, isActive) {
+      if (!panel) return;
+      panel.classList.toggle('is-active', isActive);
+      panel.hidden = !isActive;
+      panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    }
+
     form._srfProjectViewer = initProjectViewer(form);
 
     function isLoggedIn() {
@@ -1430,21 +1437,21 @@ document.addEventListener('click', function (e) {
     }
 
     function activateStep(step) {
-      if (step1Panel) step1Panel.classList.remove('is-active');
-      if (step2Panel) step2Panel.classList.remove('is-active');
+      setPanelState(step1Panel, false);
+      setPanelState(step2Panel, false);
       if (step1Dot) step1Dot.classList.remove('is-active', 'is-done');
       if (step2Dot) step2Dot.classList.remove('is-active', 'is-done');
       if (step3Dot) step3Dot.classList.remove('is-active', 'is-done');
       if (step2Actions) step2Actions.style.display = 'none';
 
       if (step === 1) {
-        if (step1Panel) step1Panel.classList.add('is-active');
+        setPanelState(step1Panel, true);
         if (step1Dot) step1Dot.classList.add('is-active');
       }
 
       if (step === 2) {
         if (step1Dot) step1Dot.classList.add('is-done');
-        if (step2Panel) step2Panel.classList.add('is-active');
+        setPanelState(step2Panel, true);
         if (step2Dot) step2Dot.classList.add('is-active');
         if (step2Actions) step2Actions.style.display = '';
       }
@@ -1485,6 +1492,8 @@ document.addEventListener('click', function (e) {
     if (step2Actions) {
       step2Actions.style.display = 'none';
     }
+
+    setPanelState(step2Panel, false);
   }
 
   function projectSuccessInit() {

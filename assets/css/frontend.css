@@ -748,6 +748,10 @@
     display: block;
 }
 
+.srf-project-panel[hidden] {
+    display: none !important;
+}
+
 .srf-project-panel__title {
     margin: 0 0 0.2rem;
     font-size: 1.6rem;
