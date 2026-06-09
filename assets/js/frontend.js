@@ -404,11 +404,11 @@ document.addEventListener('click', function (e) {
 
     box.innerHTML =
       '<h3 class="srf-popup__title">' +
-      ((window.srfFrontend && srfFrontend.popup_title) || 'Business account required') +
+      ((window.srfFrontend && srfFrontend.popup_title) || 'Login required') +
       '</h3>' +
       '<p class="srf-popup__message">' +
       ((window.srfFrontend && srfFrontend.popup_message) ||
-        'To submit a service request you must have a Business account.') +
+        'Please log in to submit a service request.') +
       '</p>' +
       '<button type="button" class="srf-popup__button">' +
       ((window.srfFrontend && srfFrontend.popup_button) || 'OK') +

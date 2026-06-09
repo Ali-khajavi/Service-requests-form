@@ -36,7 +36,7 @@ class SRF_Admin_Storage {
 
 		echo '<div class="wrap">';
 		echo '<h1>' . esc_html__( 'Service Request Storage', 'service-requests-form' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Each user is limited to 1GB total upload storage. When a request is marked DONE, files are deleted and the user storage is freed.', 'service-requests-form' ) . '</p>';
+		echo '<p>' . esc_html__( 'Standard users are limited to 1GB total upload storage. Business accounts can have a higher quota. When a request is marked DONE, files are deleted and the user storage is freed.', 'service-requests-form' ) . '</p>';
 
 		echo '<table class="widefat striped">';
 		echo '<thead><tr>';

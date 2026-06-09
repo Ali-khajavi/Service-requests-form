@@ -39,6 +39,10 @@ if ( ! isset( $old_data ) || ! is_array( $old_data ) ) {
 	$old_data = array();
 }
 
+$upload_limit_bytes = isset( $upload_limit_bytes ) ? (int) $upload_limit_bytes : 1073741824;
+$upload_limit_label  = isset( $upload_limit_label ) ? (string) $upload_limit_label : size_format( $upload_limit_bytes );
+$upload_used_bytes   = isset( $upload_used_bytes ) ? (int) $upload_used_bytes : 0;
+
 $old = function( $key, $default = '' ) use ( $old_data ) {
 	return isset( $old_data[ $key ] ) ? $old_data[ $key ] : $default;
 };
@@ -252,7 +256,14 @@ if ( ! is_array( $old_variants ) ) {
 		</label>
 		<input type="file" id="srf-files" name="srf_files[]" multiple />
 		<small class="srf-field__help">
-			<?php esc_html_e( 'You can upload CAD/3D/scan files here. File type and size limits apply.', 'service-requests-form' ); ?>
+			<?php
+			echo esc_html(
+				sprintf(
+					__( 'You can upload CAD/3D/scan files here. Total storage limit: %s.', 'service-requests-form' ),
+					$upload_limit_label
+				)
+			);
+			?>
 		</small>
 	</div>
 
@@ -293,15 +304,23 @@ if ( ! is_array( $old_variants ) ) {
 
 <script>
 (function(){
+	var form          = document.querySelector('.srf-form');
 	var serviceSelect = document.getElementById('srf-service');
 	var variantsField = document.getElementById('srf-variants-field');
 	var wrap          = document.getElementById('srf-variants-wrap');
 	var quantityInput = document.getElementById('srf_quantity');
+	var fileInput     = document.getElementById('srf-files');
 	var priceBox      = document.getElementById('srf-price-summary');
 	var priceLines    = document.getElementById('srf-price-lines');
 	var priceTotal    = document.getElementById('srf-price-total');
+	var uploadLimitBytes = <?php echo (int) $upload_limit_bytes; ?>;
+	var uploadUsedBytes   = <?php echo (int) $upload_used_bytes; ?>;
+	var uploadLimitLabel  = <?php echo wp_json_encode( $upload_limit_label ); ?>;
+	var uploadTitle       = <?php echo wp_json_encode( __( 'Upload limit reached', 'service-requests-form' ) ); ?>;
+	var overOneGbMessage  = <?php echo wp_json_encode( __( 'Over 1 GB storage is only possible for Business accounts. Please contact our IT team.', 'service-requests-form' ) ); ?>;
+	var genericUploadMsg  = <?php echo wp_json_encode( __( 'Your upload exceeds your available storage limit of %s. Please contact our IT team.', 'service-requests-form' ) ); ?>;
 
-	if (!serviceSelect || !variantsField || !wrap || !quantityInput) return;
+	if (!form || !serviceSelect || !variantsField || !wrap || !quantityInput || !fileInput) return;
 
 	var oldSelections = <?php echo wp_json_encode( $old_variants ); ?> || {};
 
@@ -364,6 +383,60 @@ if ( ! is_array( $old_variants ) ) {
 	function formatMoney(amount){
 		amount = parseFloat(amount || 0);
 		try { return new Intl.NumberFormat(undefined, { style:'currency', currency:'EUR' }).format(amount); } catch(e) { return amount.toFixed(2); }
+	}
+
+	function showPopup(title, message) {
+		var backdrop = document.querySelector('.srf-popup-backdrop[data-srf-upload-warning]');
+		if (!backdrop) {
+			backdrop = document.createElement('div');
+			backdrop.className = 'srf-popup-backdrop';
+			backdrop.setAttribute('data-srf-upload-warning', '1');
+
+			var box = document.createElement('div');
+			box.className = 'srf-popup';
+			box.innerHTML =
+				'<h3 class="srf-popup__title">' + title + '</h3>' +
+				'<p class="srf-popup__message">' + message + '</p>' +
+				'<button type="button" class="srf-popup__button">OK</button>';
+
+			box.querySelector('button').onclick = function () {
+				backdrop.style.display = 'none';
+			};
+
+			backdrop.onclick = function (e) {
+				if (e.target === backdrop) backdrop.style.display = 'none';
+			};
+
+			backdrop.appendChild(box);
+			document.body.appendChild(backdrop);
+		}
+
+		backdrop.style.display = 'flex';
+	}
+
+	function getSelectedUploadBytes() {
+		var total = 0;
+		if (!fileInput || !fileInput.files || !fileInput.files.length) return total;
+
+		for (var i = 0; i < fileInput.files.length; i++) {
+			total += Math.max(0, parseInt(fileInput.files[i].size || 0, 10));
+		}
+
+		return total;
+	}
+
+	function validateUploadLimit(clearOnFail) {
+		var selectedBytes = getSelectedUploadBytes();
+		if (selectedBytes <= 0) return true;
+
+		var remainingBytes = Math.max(0, uploadLimitBytes - uploadUsedBytes);
+		if (selectedBytes <= remainingBytes) return true;
+
+		showPopup(uploadTitle, uploadLimitBytes <= 1073741824 ? overOneGbMessage : genericUploadMsg.replace('%s', uploadLimitLabel));
+		if (clearOnFail && fileInput) {
+			fileInput.value = '';
+		}
+		return false;
 	}
 
 	function updatePriceSummary(){
@@ -437,6 +510,19 @@ if ( ! is_array( $old_variants ) ) {
 
 	quantityInput.addEventListener('change', updatePriceSummary);
 	quantityInput.addEventListener('input', updatePriceSummary);
+
+	fileInput.addEventListener('change', function () {
+		if (!validateUploadLimit(true)) {
+			updatePriceSummary();
+			return;
+		}
+	});
+
+	form.addEventListener('submit', function (e) {
+		if (!validateUploadLimit(false)) {
+			e.preventDefault();
+		}
+	});
 
 	rebuild();
 })();

@@ -93,8 +93,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				'srfFrontend',
 				array(
 					'can_submit'    => $can_submit,
-					'popup_title'   => __( 'Business account required', 'service-requests-form' ),
-					'popup_message' => __( 'To submit a service request you must have a Business account. Please contact our IT team to open a Business account.', 'service-requests-form' ),
+					'popup_title'   => __( 'Login required', 'service-requests-form' ),
+					'popup_message' => __( 'Please log in to submit a service request.', 'service-requests-form' ),
 					'popup_button'  => __( 'OK', 'service-requests-form' ),
 				)
 			);
@@ -363,6 +363,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			if ( $quota > 0 ) {
 				return $quota;
 			}
+
+			$user = get_userdata( $user_id );
+			$roles = ( $user && is_array( $user->roles ) ) ? $user->roles : array();
+			if ( array_intersect( $roles, array( 'business_user', 'administrator' ) ) ) {
+				return 10 * 1024 * 1024 * 1024;
+			}
 			return self::DEFAULT_USER_QUOTA_BYTES;
 		}
 
@@ -481,6 +487,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$used  = self::get_user_used_bytes( $user_id );
 
 			if ( ( $used + $bytes_to_add ) > $quota ) {
+				if ( $quota <= self::DEFAULT_USER_QUOTA_BYTES ) {
+					throw new Exception(
+						__( 'Over 1 GB storage is only possible for Business accounts. Please contact our IT team.', 'service-requests-form' )
+					);
+				}
+
 				throw new Exception(
 					sprintf(
 						__( 'Storage quota exceeded. You have used %1$s of %2$s.', 'service-requests-form' ),
@@ -1034,7 +1046,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 				// Permission
 				if ( ! self::current_user_can_submit() ) {
-					$errors[] = __( 'Only Business accounts can submit a service request. Please contact our IT team to open a Business account.', 'service-requests-form' );
+					$errors[] = __( 'Please log in to submit a service request.', 'service-requests-form' );
 				}
 
 				// Nonce
@@ -1208,7 +1220,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						$uploaded_bytes = 0;
 
 						try {
-							list( $attachment_ids, $uploaded_bytes ) = self::handle_request_uploads( $post_id );
+							list( $attachment_ids, $uploaded_bytes ) = self::handle_request_uploads( $post_id, self::get_user_quota_bytes( $user_id ) );
 							if ( ! is_array( $attachment_ids ) ) {
 								$attachment_ids = array();
 							}
@@ -1297,13 +1309,16 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 								'services'            => $services,
 								'selected_service_id' => $selected_service_id,
 								'errors'              => $errors,
-								'old_data'            => $old_data,
-								'success'             => $success,
-								'profile_data'        => $profile_data,
-								'shipping_address'    => $shipping_address,
-								'my_account_url'      => $my_account_url,
-							)
-						);
+							'old_data'            => $old_data,
+							'success'             => $success,
+							'profile_data'        => $profile_data,
+							'shipping_address'    => $shipping_address,
+							'my_account_url'      => $my_account_url,
+							'upload_limit_bytes'  => self::get_user_quota_bytes( get_current_user_id() ),
+							'upload_limit_label'  => size_format( self::get_user_quota_bytes( get_current_user_id() ) ),
+							'upload_used_bytes'   => self::get_user_used_bytes( get_current_user_id() ),
+						)
+					);
 						?>
 					</div>
 
@@ -1653,9 +1668,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// Helpers
 		// ===============================
 		protected static function current_user_can_submit() {
-		if ( ! is_user_logged_in() ) return false;
-		$roles = (array) wp_get_current_user()->roles;
-		return array_intersect($roles, array('business_user','administrator'));
+		return is_user_logged_in();
 		}
 
 		protected static function load_template( $template_name, $vars = array() ) {
