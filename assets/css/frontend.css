@@ -695,6 +695,11 @@
     width: min(92vw, 1280px);
     max-width: 1280px;
     margin: 0 auto;
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid #dde3ec;
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
 
 .srf-project-steps {
@@ -733,10 +738,10 @@
 
 .srf-project-panel {
     display: none;
-    background: #fff;
-    border: 1px solid #dde3ec;
-    border-radius: 16px;
-    padding: 1.5rem;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
 }
 
 .srf-project-panel.is-active {
@@ -1417,8 +1422,12 @@
 }
 
 @media (max-width: 900px) {
-    .srf-project-panel {
+    .srf-project-form {
         padding: 1.1rem;
+    }
+
+    .srf-project-panel {
+        padding: 0;
     }
 
     .srf-project-grid,
@@ -1457,10 +1466,11 @@
 @media (max-width: 640px) {
     .srf-project-form {
         width: min(96vw, 640px);
+        padding: 0.95rem;
     }
 
     .srf-project-panel {
-        padding: 0.95rem;
+        padding: 0;
     }
 
     .srf-project-quote-options__grid,
