@@ -79,8 +79,16 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			self::inject_service_data();
 		}
 
-		protected static function is_coming_soon_enabled() {
-			return (bool) get_option( 'srf_coming_soon_enabled', false );
+		protected static function is_coming_soon_enabled( $context = 'service' ) {
+			$legacy = (bool) get_option( 'srf_coming_soon_enabled', false );
+
+			if ( 'project' === $context ) {
+				$value = get_option( 'srf_coming_soon_project_enabled', null );
+				return null === $value ? $legacy : (bool) $value;
+			}
+
+			$value = get_option( 'srf_coming_soon_service_enabled', null );
+			return null === $value ? $legacy : (bool) $value;
 		}
 
 		protected static function render_coming_soon_banner( $context = 'service' ) {
@@ -1010,7 +1018,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 		// ===============================
 		public static function shortcode_service_request_form() {
 			self::enqueue_frontend_base_assets();
-			if ( self::is_coming_soon_enabled() ) {
+			if ( self::is_coming_soon_enabled( 'service' ) ) {
 				return self::render_coming_soon_banner( 'service' );
 			}
 
@@ -1379,7 +1387,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 		public static function shortcode_project_request_form() {
 			self::enqueue_frontend_base_assets();
-			if ( self::is_coming_soon_enabled() ) {
+			if ( self::is_coming_soon_enabled( 'project' ) ) {
 				return self::render_coming_soon_banner( 'project' );
 			}
 

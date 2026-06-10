@@ -20,6 +20,8 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 		const OPTION_DELETE_ON_UNINSTALL  = 'srf_quote_delete_data_on_uninstall';
 		const OPTION_NOTIFY_ADMIN_EMAIL   = 'srf_quote_notify_admin_email';
 		const OPTION_COMING_SOON          = 'srf_coming_soon_enabled';
+		const OPTION_COMING_SOON_SERVICE  = 'srf_coming_soon_service_enabled';
+		const OPTION_COMING_SOON_PROJECT  = 'srf_coming_soon_project_enabled';
 
 		public static function init() {
 			add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
@@ -209,6 +211,26 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 				)
 			);
 
+			register_setting(
+				'srf_settings_group',
+				self::OPTION_COMING_SOON_SERVICE,
+				array(
+					'type'              => 'boolean',
+					'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ),
+					'default'           => false,
+				)
+			);
+
+			register_setting(
+				'srf_settings_group',
+				self::OPTION_COMING_SOON_PROJECT,
+				array(
+					'type'              => 'boolean',
+					'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ),
+					'default'           => false,
+				)
+			);
+
 			if ( class_exists( 'SRF_WooCommerce' ) ) {
 				register_setting(
 					'srf_settings_group',
@@ -328,7 +350,11 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			$guest_ordering      = (bool) get_option( self::OPTION_GUEST_ORDERING, true );
 			$delete_on_uninstall = (bool) get_option( self::OPTION_DELETE_ON_UNINSTALL, false );
 			$notify_admin_email  = (string) get_option( self::OPTION_NOTIFY_ADMIN_EMAIL, '' );
-			$coming_soon_enabled = (bool) get_option( self::OPTION_COMING_SOON, false );
+			$legacy_coming_soon  = (bool) get_option( self::OPTION_COMING_SOON, false );
+			$coming_soon_service = get_option( self::OPTION_COMING_SOON_SERVICE, null );
+			$coming_soon_project = get_option( self::OPTION_COMING_SOON_PROJECT, null );
+			$coming_soon_service = null === $coming_soon_service ? $legacy_coming_soon : (bool) $coming_soon_service;
+			$coming_soon_project = null === $coming_soon_project ? $legacy_coming_soon : (bool) $coming_soon_project;
 			$service_form_page_id = class_exists( 'SRF_WooCommerce' ) ? (int) get_option( SRF_WooCommerce::OPTION_FORM_PAGE_ID, 0 ) : 0;
 			$service_after_submit = class_exists( 'SRF_WooCommerce' ) ? (string) get_option( SRF_WooCommerce::OPTION_AFTER_SUBMIT, 'checkout' ) : 'checkout';
 			?>
@@ -391,13 +417,23 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 					<h2><?php esc_html_e( '3D Quote General Settings', 'service-requests-form' ); ?></h2>
 					<table class="form-table" role="presentation">
 						<tr>
-							<th scope="row"><?php esc_html_e( 'Coming soon mode', 'service-requests-form' ); ?></th>
+							<th scope="row"><?php esc_html_e( 'Service form coming soon', 'service-requests-form' ); ?></th>
 							<td>
 								<label>
-									<input type="checkbox" name="<?php echo esc_attr( self::OPTION_COMING_SOON ); ?>" value="1" <?php checked( $coming_soon_enabled ); ?> />
-									<?php esc_html_e( 'Show a coming soon banner instead of the service and project forms.', 'service-requests-form' ); ?>
+									<input type="checkbox" name="<?php echo esc_attr( self::OPTION_COMING_SOON_SERVICE ); ?>" value="1" <?php checked( $coming_soon_service ); ?> />
+									<?php esc_html_e( 'Show a coming soon banner instead of the service request form.', 'service-requests-form' ); ?>
 								</label>
-								<p class="description"><?php esc_html_e( 'When enabled, both shortcodes will show a branded coming soon screen using the site logo.', 'service-requests-form' ); ?></p>
+							</td>
+						</tr>
+
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Project form coming soon', 'service-requests-form' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="<?php echo esc_attr( self::OPTION_COMING_SOON_PROJECT ); ?>" value="1" <?php checked( $coming_soon_project ); ?> />
+									<?php esc_html_e( 'Show a coming soon banner instead of the project request form.', 'service-requests-form' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'Each shortcode can be enabled separately. The banner uses the site logo.', 'service-requests-form' ); ?></p>
 							</td>
 						</tr>
 
