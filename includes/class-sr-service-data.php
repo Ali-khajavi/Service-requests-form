@@ -116,6 +116,7 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
 						// New format: ['key' => '...', 'values' => ['...']]
 						if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
 							$k = trim( sanitize_text_field( $row['key'] ) );
+							$required = ! isset( $row['required'] ) || ! empty( $row['required'] );
 							$vals = array();
 							foreach ( $row['values'] as $v ) {
 								$v = trim( sanitize_text_field( $v ) );
@@ -129,9 +130,10 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
 									$prices[ $uv ] = isset( $raw_prices[ $uv ] ) ? max( 0, (float) $raw_prices[ $uv ] ) : 0;
 								}
 								$variant_groups[] = array(
-									'key'    => $k,
-									'values' => $unique_vals,
-									'prices' => $prices,
+									'key'      => $k,
+									'values'   => $unique_vals,
+									'prices'   => $prices,
+									'required' => $required,
 								);
 							}
 							continue;
@@ -142,8 +144,9 @@ if ( ! class_exists( 'SR_Service_Data' ) ) {
 							$lbl = trim( sanitize_text_field( $row['label'] ) );
 							if ( $lbl !== '' ) {
 								$variant_groups[] = array(
-									'key'    => __( 'Variant', 'service-requests-form' ),
-									'values' => array( $lbl ),
+									'key'      => __( 'Variant', 'service-requests-form' ),
+									'values'   => array( $lbl ),
+									'required' => true,
 								);
 							}
 						}

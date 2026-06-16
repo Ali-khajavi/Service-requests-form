@@ -162,6 +162,7 @@ if ( ! is_array( $old_variants ) ) {
 					// New format
 					if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
 						$key  = trim( sanitize_text_field( $row['key'] ) );
+						$required = ! isset( $row['required'] ) || ! empty( $row['required'] );
 						$vals = array();
 
 						foreach ( $row['values'] as $v ) {
@@ -179,9 +180,10 @@ if ( ! is_array( $old_variants ) ) {
 								$prices[ $uv ] = isset( $raw_prices[ $uv ] ) ? max( 0, (float) $raw_prices[ $uv ] ) : 0;
 							}
 							$clean_groups[] = array(
-								'key'    => $key,
-								'values' => $unique_vals,
-								'prices' => $prices,
+								'key'      => $key,
+								'values'   => $unique_vals,
+								'prices'   => $prices,
+								'required' => $required,
 							);
 						}
 						continue;
@@ -192,8 +194,9 @@ if ( ! is_array( $old_variants ) ) {
 						$lbl = trim( sanitize_text_field( $row['label'] ) );
 						if ( $lbl !== '' ) {
 							$clean_groups[] = array(
-								'key'    => __( 'Variant', 'service-requests-form' ),
-								'values' => array( $lbl ),
+								'key'      => __( 'Variant', 'service-requests-form' ),
+								'values'   => array( $lbl ),
+								'required' => true,
 							);
 						}
 					}
@@ -218,7 +221,7 @@ if ( ! is_array( $old_variants ) ) {
 	<div class="srf-form__field srf-form__field--variants" id="srf-variants-field" style="display:none;">
 		<div id="srf-variants-wrap"></div>
 		<small class="srf-field__help">
-			<?php esc_html_e( 'Choose the option(s) required for this service.', 'service-requests-form' ); ?>
+			<?php esc_html_e( 'Choose the option(s) that apply for this service.', 'service-requests-form' ); ?>
 		</small>
 	</div>
 
@@ -333,6 +336,7 @@ if ( ! is_array( $old_variants ) ) {
 
 		var key = group.key ? String(group.key) : '';
 		var values = Array.isArray(group.values) ? group.values : [];
+		var isRequired = group.required !== false;
 
 		if (!key || !values.length) return;
 
@@ -341,7 +345,7 @@ if ( ! is_array( $old_variants ) ) {
 		row.style.marginBottom = '1rem';
 
 		var label = document.createElement('label');
-		label.textContent = key + ' *';
+		label.textContent = key + (isRequired ? ' *' : '');
 		row.appendChild(label);
 
 		// Hidden key field
@@ -354,7 +358,7 @@ if ( ! is_array( $old_variants ) ) {
 		// Select
 		var select = document.createElement('select');
 		select.name = 'srf_variants[' + idx + '][value]';
-		select.required = true;
+		select.required = isRequired;
 
 		var placeholder = document.createElement('option');
 		placeholder.value = '';

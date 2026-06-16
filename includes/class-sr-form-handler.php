@@ -1131,6 +1131,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 							// New format
 							if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
 								$key  = trim( sanitize_text_field( $row['key'] ) );
+								$required = ! isset( $row['required'] ) || ! empty( $row['required'] );
 								$vals = array();
 								foreach ( $row['values'] as $v ) {
 									$v = trim( sanitize_text_field( $v ) );
@@ -1138,8 +1139,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 								}
 								if ( $key !== '' && ! empty( $vals ) ) {
 									$groups[] = array(
-										'key'    => $key,
-										'values' => array_values( array_unique( $vals ) ),
+										'key'      => $key,
+										'values'   => array_values( array_unique( $vals ) ),
+										'required' => $required,
 									);
 								}
 								continue;
@@ -1150,8 +1152,9 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 								$lbl = trim( sanitize_text_field( $row['label'] ) );
 								if ( $lbl !== '' ) {
 									$groups[] = array(
-										'key'    => __( 'Variant', 'service-requests-form' ),
-										'values' => array( $lbl ),
+										'key'      => __( 'Variant', 'service-requests-form' ),
+										'values'   => array( $lbl ),
+										'required' => true,
 									);
 								}
 							}
@@ -1164,11 +1167,15 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 							$key     = isset( $g['key'] ) ? (string) $g['key'] : '';
 							$allowed = isset( $g['values'] ) && is_array( $g['values'] ) ? $g['values'] : array();
 							$chosen  = isset( $selected[ $key ] ) ? (string) $selected[ $key ] : '';
+							$required = ! isset( $g['required'] ) || ! empty( $g['required'] );
 
 							if ( $key === '' ) {
 								continue;
 							}
 							if ( $chosen === '' ) {
+								if ( ! $required ) {
+									continue;
+								}
 								$errors[] = sprintf( __( 'Please choose %s.', 'service-requests-form' ), $key );
 								continue;
 							}

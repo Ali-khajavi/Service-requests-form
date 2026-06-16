@@ -204,14 +204,16 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 				return false;
 			}
 			$price = self::calculate_service_price( $service_id, $selected_variants, $quantity );
+			$line_total = isset( $price['total'] ) ? (float) $price['total'] : ( isset( $price['unit_total'] ) ? (float) $price['unit_total'] * $quantity : 0 );
 			WC()->cart->empty_cart();
 			self::$adding_service_to_cart = true;
-			$key = WC()->cart->add_to_cart( $product_id, $quantity, 0, array(), array(
+			$key = WC()->cart->add_to_cart( $product_id, 1, 0, array(), array(
 				'srf_request_id' => (int) $request_id,
 				'srf_service_id' => (int) $service_id,
 				'srf_variants' => is_array( $selected_variants ) ? $selected_variants : array(),
 				'srf_quantity' => $quantity,
-				'srf_price' => isset( $price['unit_total'] ) ? (float) $price['unit_total'] : (float) $price['total'],
+				'srf_price' => $line_total,
+				'srf_price_total' => $line_total,
 				'srf_price_breakdown' => $price,
 			) );
 			self::$adding_service_to_cart = false;
@@ -227,8 +229,11 @@ if ( ! class_exists( 'SRF_WooCommerce' ) ) {
 			if ( is_admin() && ! defined( 'DOING_AJAX' ) ) { return; }
 			if ( ! $cart ) { return; }
 			foreach ( $cart->get_cart() as $cart_item ) {
-				if ( isset( $cart_item['srf_price'], $cart_item['data'] ) && is_object( $cart_item['data'] ) ) {
-					$cart_item['data']->set_price( (float) $cart_item['srf_price'] );
+				if ( isset( $cart_item['data'] ) && is_object( $cart_item['data'] ) ) {
+					$price = isset( $cart_item['srf_price_total'] ) ? (float) $cart_item['srf_price_total'] : ( isset( $cart_item['srf_price'] ) ? (float) $cart_item['srf_price'] : null );
+					if ( null !== $price ) {
+						$cart_item['data']->set_price( $price );
+					}
 				}
 			}
 		}

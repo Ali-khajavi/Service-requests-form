@@ -222,7 +222,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 
 			wp_nonce_field( 'sr_service_variations_nonce_action', 'sr_service_variations_nonce' );
 
-			$rows = get_post_meta( $post->ID, self::META_VARIATIONS, true );
+			$rows = self::get_variations( $post->ID );
 			if ( ! is_array( $rows ) ) {
 				$rows = array();
 			}
@@ -234,6 +234,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 			<div id="sr-service-variations-wrap">
 				<?php foreach ( $rows as $i => $row ) :
 					$key    = isset( $row['key'] ) ? (string) $row['key'] : '';
+					$required = ! isset( $row['required'] ) || ! empty( $row['required'] );
 					$values = '';
 
 					if ( isset( $row['values'] ) && is_array( $row['values'] ) ) {
@@ -268,6 +269,11 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 							name="sr_service_variations[<?php echo esc_attr( $i ); ?>][values]"
 							placeholder="<?php echo esc_attr__( 'Values (comma separated) e.g. 2m|0, 3m|20, 7.5m|50', 'service-requests-form' ); ?>"
 						><?php echo esc_textarea( $values ); ?></textarea>
+
+						<label style="display:inline-flex;gap:6px;align-items:center;margin-top:10px;">
+							<input type="checkbox" name="sr_service_variations[<?php echo esc_attr( $i ); ?>][required]" value="1" <?php checked( $required ); ?> />
+							<?php esc_html_e( 'Required option', 'service-requests-form' ); ?>
+						</label>
 					</div>
 				<?php endforeach; ?>
 			</div>
@@ -316,7 +322,8 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 							'<input style="flex:1" type="text" name="sr_service_variations['+idx+'][key]" placeholder="<?php echo esc_js( __( 'Key (e.g. Height)', 'service-requests-form' ) ); ?>" />' +
 							'<button type="button" class="button sr-service-var-remove" aria-label="<?php echo esc_js( __( 'Remove', 'service-requests-form' ) ); ?>">×</button>' +
 						'</div>' +
-						'<textarea style="width:100%;margin-top:10px;" rows="2" name="sr_service_variations['+idx+'][values]" placeholder="<?php echo esc_js( __( 'Values (comma separated) e.g. 2m|0, 3m|20, 7.5m|50', 'service-requests-form' ) ); ?>"></textarea>';
+						'<textarea style="width:100%;margin-top:10px;" rows="2" name="sr_service_variations['+idx+'][values]" placeholder="<?php echo esc_js( __( 'Values (comma separated) e.g. 2m|0, 3m|20, 7.5m|50', 'service-requests-form' ) ); ?>"></textarea>' +
+						'<label style="display:inline-flex;gap:6px;align-items:center;margin-top:10px;"><input type="checkbox" name="sr_service_variations['+idx+'][required]" value="1" checked /> <?php echo esc_js( __( 'Required option', 'service-requests-form' ) ); ?></label>';
 
 					var row = document.createElement('div');
 					row.className = 'sr-service-var-row';
@@ -465,6 +472,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 				foreach ( $rows as $r ) {
 					$key_raw    = isset( $r['key'] ) ? sanitize_text_field( wp_unslash( $r['key'] ) ) : '';
 					$values_raw = isset( $r['values'] ) ? (string) wp_unslash( $r['values'] ) : '';
+					$required   = ! empty( $r['required'] );
 
 					$key_raw = trim( $key_raw );
 					if ( $key_raw === '' ) {
@@ -507,6 +515,7 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 						'key'    => $key_raw,
 						'values' => $unique_vals,
 						'prices' => $clean_prices,
+						'required' => $required,
 					);
 				}
 
@@ -688,7 +697,91 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 		 */
 		public static function get_variations( $service_id ) {
 			$vars = get_post_meta( $service_id, self::META_VARIATIONS, true );
-			return is_array( $vars ) ? $vars : array();
+			if ( ! is_array( $vars ) ) {
+				return array();
+			}
+
+			$clean = array();
+			foreach ( $vars as $row ) {
+				if ( isset( $row['key'] ) && isset( $row['values'] ) && is_array( $row['values'] ) ) {
+					$key  = trim( sanitize_text_field( $row['key'] ) );
+					$vals = array();
+					foreach ( $row['values'] as $v ) {
+						$v = trim( sanitize_text_field( $v ) );
+						if ( $v !== '' ) {
+							$vals[] = $v;
+						}
+					}
+					if ( $key !== '' && ! empty( $vals ) ) {
+						$unique_vals = array_values( array_unique( $vals ) );
+						$raw_prices = isset( $row['prices'] ) && is_array( $row['prices'] ) ? $row['prices'] : array();
+						$prices = array();
+						foreach ( $unique_vals as $uv ) {
+							$prices[ $uv ] = isset( $raw_prices[ $uv ] ) ? max( 0, (float) $raw_prices[ $uv ] ) : 0;
+						}
+						$clean[] = array(
+							'key'      => $key,
+							'values'   => $unique_vals,
+							'prices'   => $prices,
+							'required' => ! isset( $row['required'] ) || ! empty( $row['required'] ),
+						);
+					}
+					continue;
+				}
+
+				if ( isset( $row['key'] ) && isset( $row['values'] ) && is_string( $row['values'] ) ) {
+					$key = trim( sanitize_text_field( $row['key'] ) );
+					$vals = array();
+					$prices = array();
+					$values_raw = trim( (string) $row['values'] );
+					if ( $values_raw !== '' ) {
+						$parts = array_map( 'trim', explode( ',', $values_raw ) );
+						foreach ( $parts as $part ) {
+							$part = sanitize_text_field( $part );
+							if ( $part === '' ) {
+								continue;
+							}
+							$extra = 0;
+							if ( strpos( $part, '|' ) !== false ) {
+								list( $part, $extra_raw ) = array_map( 'trim', explode( '|', $part, 2 ) );
+								$part = sanitize_text_field( $part );
+								$extra = max( 0, (float) str_replace( ',', '.', $extra_raw ) );
+							}
+							if ( $part !== '' ) {
+								$vals[] = $part;
+								$prices[ $part ] = $extra;
+							}
+						}
+					}
+					if ( $key !== '' && ! empty( $vals ) ) {
+						$unique_vals = array_values( array_unique( $vals ) );
+						$clean_prices = array();
+						foreach ( $unique_vals as $uv ) {
+							$clean_prices[ $uv ] = isset( $prices[ $uv ] ) ? max( 0, (float) $prices[ $uv ] ) : 0;
+						}
+						$clean[] = array(
+							'key'      => $key,
+							'values'   => $unique_vals,
+							'prices'   => $clean_prices,
+							'required' => ! isset( $row['required'] ) || ! empty( $row['required'] ),
+						);
+					}
+					continue;
+				}
+
+				if ( isset( $row['label'] ) ) {
+					$lbl = trim( sanitize_text_field( $row['label'] ) );
+					if ( $lbl !== '' ) {
+						$clean[] = array(
+							'key'      => __( 'Variant', 'service-requests-form' ),
+							'values'   => array( $lbl ),
+							'required' => ! isset( $row['required'] ) || ! empty( $row['required'] ),
+						);
+					}
+				}
+			}
+
+			return $clean;
 		}
 
 		/**
