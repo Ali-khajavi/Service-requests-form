@@ -3,7 +3,9 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.10.40
+ * Version:     0.10.55
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
  * Author:      Ali Khajavi
  * Author URI:  https://Semlingerpro.de
  * Text Domain: service-requests-form
@@ -20,13 +22,13 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.10.40';
+	public $version = '0.10.55';
 
 	private function __construct() {}
 	private function __clone() {}
 	public function __wakeup() {}
 
-/** @return Service_Requests_Form */
+	/** @return Service_Requests_Form */
 	public static function instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -67,6 +69,7 @@ final class Service_Requests_Form {
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-services-cpt.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-service-data.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-quote-db.php';
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-print-profiles.php';
 		// Admin
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-menu.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-admin-status.php';
@@ -84,8 +87,6 @@ final class Service_Requests_Form {
 	}
 
 	private function init_hooks() {
-
-		
 
 		// Translations
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ), 0 );
@@ -106,6 +107,11 @@ final class Service_Requests_Form {
 			SRF_Admin_Menu::init();
 		}
 
+		// Built-in print profiles / manual installation action.
+		if ( class_exists( 'SRF_Print_Profiles' ) ) {
+			SRF_Print_Profiles::init();
+		}
+
 		// Admin tools
 		if ( class_exists( 'SRF_Admin_Status' ) ) {
 			SRF_Admin_Status::init();
@@ -119,7 +125,6 @@ final class Service_Requests_Form {
 		if ( class_exists( 'SRF_Admin_Printers' ) ) {
 			SRF_Admin_Printers::init();
 		}
-
 		// Frontend form
 		if ( class_exists( 'SR_Form_Handler' ) ) {
 			SR_Form_Handler::init();
@@ -144,7 +149,65 @@ final class Service_Requests_Form {
 		add_action( 'plugins_loaded', array( $this, 'init_myaccount' ), 20 );
 
 		// One-time rewrite flush after plugin updates (prevents legacy endpoint rules like EP_ROOT).
+		add_action( 'admin_init', array( $this, 'maybe_run_upgrades' ), 5 );
+		add_action( 'admin_init', array( $this, 'maybe_seed_bambu_presets' ), 6 );
 		add_action( 'admin_init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
+		add_action( 'update_option_srf_bambu_presets_enabled', array( $this, 'reset_bambu_seed_version_on_enable' ), 10, 2 );
+	}
+
+	/**
+	 * Run idempotent database/profile upgrades once for each plugin version.
+	 */
+	public function maybe_run_upgrades() {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$stored = (string) get_option( 'srf_plugin_data_version', '' );
+		if ( $stored === (string) $this->version ) {
+			return;
+		}
+
+		if ( class_exists( 'SRF_Quote_DB' ) ) {
+			SRF_Quote_DB::install();
+		}
+
+		if ( class_exists( 'SRF_Print_Profiles' ) ) {
+			SRF_Print_Profiles::seed_bambu_defaults();
+		}
+
+		if ( class_exists( 'SRF_WooCommerce' ) && method_exists( 'SRF_WooCommerce', 'ensure_project_product' ) ) {
+			SRF_WooCommerce::ensure_project_product();
+		}
+
+		update_option( 'srf_plugin_data_version', (string) $this->version, false );
+	}
+
+	/**
+	 * Seed starter resources after an administrator enables them later.
+	 */
+	public function maybe_seed_bambu_presets() {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! class_exists( 'SRF_Print_Profiles' ) ) {
+			return;
+		}
+
+		if ( ! (bool) get_option( SRF_Print_Profiles::OPTION_BAMBU_PRESETS_ENABLED, true ) ) {
+			return;
+		}
+
+		$stored = (string) get_option( SRF_Print_Profiles::OPTION_PRESETS_VERSION, '' );
+		if ( SRF_Print_Profiles::PRESETS_VERSION !== $stored ) {
+			SRF_Print_Profiles::seed_bambu_defaults();
+		}
+	}
+
+	/**
+	 * Force one new seed pass when the starter preset switch changes to enabled.
+	 */
+	public function reset_bambu_seed_version_on_enable( $old_value, $new_value ) {
+		if ( ! $old_value && $new_value && class_exists( 'SRF_Print_Profiles' ) ) {
+			delete_option( SRF_Print_Profiles::OPTION_PRESETS_VERSION );
+		}
 	}
 
 	/**
@@ -300,6 +363,15 @@ function srf_activate_plugin( $network_wide = false ) {
 		SRF_Quote_DB::install();
 	}
 
+	if ( class_exists( 'SRF_Print_Profiles' ) ) {
+		SRF_Print_Profiles::seed_bambu_defaults();
+	}
+
+	if ( class_exists( 'SRF_WooCommerce' ) && method_exists( 'SRF_WooCommerce', 'ensure_project_product' ) ) {
+		SRF_WooCommerce::ensure_project_product();
+	}
+
+	update_option( 'srf_plugin_data_version', SRF_VERSION, false );
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'srf_activate_plugin' );

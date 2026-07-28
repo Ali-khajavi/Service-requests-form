@@ -1,33 +1,49 @@
 service-requests-form/
-│
-├─ service-requests-form.php
-├─ uninstall.php
-│
-├─ includes/
-│  ├─ class-sr-cpt.php                 (service_request CPT)
-│  ├─ class-sr-services-cpt.php        (sr_service CPT)
-│  ├─ class-sr-form-handler.php        (shortcode + submission + uploads + quota)
-│  ├─ class-sr-settings.php            (settings page)
-│  ├─ class-sr-service-data.php        (service data helpers)
-│  ├─ class-sr-myaccount.php           (Woo My Account tab: Service Requests + single view + secure downloads)
-│  ├─ class-srf-admin-menu.php         (NEW: parent WP admin menu: "Service and Subscription")
-│  ├─ class-srf-admin-status.php       (NEW: status metabox + triggers DONE cleanup)
-│  └─ class-srf-admin-storage.php      (NEW: admin storage dashboard + reset/cleanup tools)
-│
-├─ templates/
-│  ├─ form.php                         (frontend form)
-│  ├─ service-info.php                 (dynamic service content)
-│  ├─ frontend-list.php                (optional user request list)
-│  │
-│  └─ myaccount/
-│     └─ service-request.php           (NEW: My Account single request template)
-│
-├─ assets/
-│  ├─ css/
-│  │  ├─ frontend.css
-│  │  └─ admin.css
-│  └─ js/
-│     ├─ frontend.js                   (service switching + slider)
-│     └─ admin.js                      (gallery selector)
-│
-└─ plan.txt
+├── service-requests-form.php                    Plugin bootstrap, activation, upgrades, hooks
+├── uninstall.php                                Opt-in destructive cleanup; preserves data by default
+├── README.md                                    User and administrator guide (v0.10.55)
+├── README-DEVELOPERS.md                         Developer reference (v0.10.55)
+├── LICENSE
+├── Structure.txt
+├── assets/
+│   ├── css/
+│   │   ├── admin.css                            Administration screens
+│   │   └── frontend.css                         Both forms and three-step project UI
+│   └── js/
+│       ├── admin.js                             Service/gallery and admin behavior
+│       ├── frontend.js                          Predefined-service frontend and compatibility guards
+│       ├── project.js                           Project steps, preview, live estimate, validation
+│       ├── model-worker.js                      Background STL/OBJ parser and sampled preview
+│       ├── calculator.js                        Legacy/supporting calculator asset
+│       ├── uploader.js                          Legacy/supporting uploader asset
+│       └── viewer.js                            Legacy/supporting viewer asset
+├── includes/
+│   ├── class-sr-cpt.php                         service_request custom post type
+│   ├── class-sr-services-cpt.php                sr_service custom post type and admin fields
+│   ├── class-sr-service-data.php                Predefined service data/pricing helpers
+│   ├── class-sr-form-handler.php                Shortcodes, uploads, request creation, email, quota
+│   ├── class-sr-myaccount.php                   My Account routes, ownership, exports/downloads
+│   ├── class-sr-settings.php                    Plugin settings and project access/payment controls
+│   ├── class-srf-project-pricing.php            Authoritative formula 2.0 STL/OBJ/3MF estimator
+│   ├── class-srf-print-profiles.php             Bambu process profiles and starter data
+│   ├── class-srf-quote-db.php                   Material/printer tables and CRUD
+│   ├── class-srf-woocommerce.php                Products, cart, orders, payment lifecycle
+│   ├── class-srf-google-auth.php                Google sign-in integration
+│   ├── class-srf-admin-menu.php                 Parent administration menu
+│   ├── class-srf-admin-status.php               Status and request-file meta boxes
+│   ├── class-srf-admin-storage.php              Storage/quota administration
+│   ├── class-srf-admin-materials.php            Material administration
+│   ├── class-srf-admin-printers.php             Printer administration
+│   └── printers/
+│       ├── class-srf-printer-brand-registry.php Brand field definitions/rendering
+│       └── brands/
+│           ├── bambulab.php                     Bambu Lab fields and process key options
+│           ├── formlabs.php
+│           └── stratasys.php
+└── templates/
+    ├── form.php                                  [service_request_form]
+    ├── project-form.php                          [project_request_form] three-step template
+    ├── service-info.php                          Selected predefined service information
+    ├── frontend-list.php                         Frontend request list support
+    └── myaccount/
+        └── service-requests.php                  Customer request list/detail modal

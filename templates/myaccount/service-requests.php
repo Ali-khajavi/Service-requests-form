@@ -50,7 +50,10 @@ if ( ! empty( $view_id ) ) {
 		$phone            = (string) get_post_meta( $view_id, '_sr_phone', true );
 		$shipping_address = (string) get_post_meta( $view_id, '_sr_shipping_address', true );
 		$quote_notes      = (string) get_post_meta( $view_id, '_sr_quote_notes', true );
-		$price_total      = (float) get_post_meta( $view_id, '_sr_price_total', true );
+		$price_total      = (float) get_post_meta( $view_id, '_sr_total_price', true );
+		if ( $price_total <= 0 ) {
+			$price_total = (float) get_post_meta( $view_id, '_sr_price_total', true );
+		}
 		$order_id         = (int) get_post_meta( $view_id, '_sr_wc_order_id', true );
 
 		$material_name = (string) get_post_meta( $view_id, '_sr_material_name', true );
@@ -74,14 +77,31 @@ if ( ! empty( $view_id ) ) {
 			}
 		}
 
+		$estimated_minutes = max( 0, (int) get_post_meta( $view_id, '_sr_estimated_print_minutes', true ) );
+		$estimated_time    = '';
+		if ( $estimated_minutes > 0 ) {
+			$hours     = (int) floor( $estimated_minutes / 60 );
+			$remaining = $estimated_minutes % 60;
+			$estimated_time = $hours > 0
+				? sprintf( _n( '%1$d hour %2$d min', '%1$d hours %2$d min', $hours, 'service-requests-form' ), $hours, $remaining )
+				: sprintf( _n( '%d minute', '%d minutes', $remaining, 'service-requests-form' ), $remaining );
+		}
+
 		$project_details = array(
-			'material'     => $material_name,
-			'printer'      => $printer_name,
-			'layer_height' => (string) get_post_meta( $view_id, '_sr_layer_height', true ),
-			'infill'       => (string) get_post_meta( $view_id, '_sr_infill', true ),
-			'shell_mode'   => (string) get_post_meta( $view_id, '_sr_shell_mode', true ),
-			'scale'        => (string) get_post_meta( $view_id, '_sr_scale', true ),
-			'quantity'     => (string) get_post_meta( $view_id, '_sr_quantity', true ),
+			'material'       => $material_name,
+			'printer'        => $printer_name,
+			'profile'        => (string) get_post_meta( $view_id, '_sr_print_profile_name', true ),
+			'layer_height'   => (string) get_post_meta( $view_id, '_sr_layer_height', true ),
+			'infill'         => (string) get_post_meta( $view_id, '_sr_infill', true ),
+			'wall_loops'     => (string) get_post_meta( $view_id, '_sr_wall_loops', true ),
+			'top_layers'     => (string) get_post_meta( $view_id, '_sr_top_layers', true ),
+			'bottom_layers'  => (string) get_post_meta( $view_id, '_sr_bottom_layers', true ),
+			'infill_pattern' => (string) get_post_meta( $view_id, '_sr_infill_pattern', true ),
+			'supports'       => '1' === (string) get_post_meta( $view_id, '_sr_supports', true ) ? __( 'Yes', 'service-requests-form' ) : __( 'No', 'service-requests-form' ),
+			'shell_mode'     => (string) get_post_meta( $view_id, '_sr_shell_mode', true ),
+			'scale'          => (string) get_post_meta( $view_id, '_sr_scale', true ),
+			'quantity'       => (string) get_post_meta( $view_id, '_sr_quantity', true ),
+			'estimated_time' => $estimated_time,
 		);
 
 		// Current selected variants on request.
@@ -107,6 +127,7 @@ if ( ! empty( $view_id ) ) {
 		$file_ids = array_filter( array_map( 'absint', $file_ids ) );
 
 		$status_label = SRF_MyAccount::format_status_label( $status );
+		$status_css   = sanitize_html_class( str_replace( '_', '-', strtolower( $status ) ) );
 		$type_label   = $is_project ? __( 'Open 3D Project', 'service-requests-form' ) : __( 'Configured Service', 'service-requests-form' );
 
 		$render_detail_row = static function( $label, $value ) {
@@ -131,7 +152,7 @@ if ( ! empty( $view_id ) ) {
 		echo '<h3 class="srf-modal__title">' . esc_html__( 'Request Details', 'service-requests-form' ) . ' #' . esc_html( $view_id ) . '</h3>';
 		echo '<div class="srf-modal__meta-badges">';
 		echo '<span class="srf-pill srf-pill--type">' . esc_html( $type_label ) . '</span>';
-		echo '<span class="srf-pill srf-pill--status srf-pill--status-' . esc_attr( sanitize_html_class( strtolower( $status ) ) ) . '">' . esc_html( $status_label ) . '</span>';
+		echo '<span class="srf-pill srf-pill--status srf-pill--status-' . esc_attr( $status_css ) . '">' . esc_html( $status_label ) . '</span>';
 		if ( $is_editable ) {
 			echo '<span class="srf-pill srf-pill--edit">' . esc_html__( 'Description editable', 'service-requests-form' ) . '</span>';
 		} else {
@@ -196,11 +217,17 @@ if ( ! empty( $view_id ) ) {
 			echo '<div class="srf-detail-grid">';
 			$render_detail_row( __( 'Printer', 'service-requests-form' ), $project_details['printer'] );
 			$render_detail_row( __( 'Material', 'service-requests-form' ), $project_details['material'] );
+			$render_detail_row( __( 'Print Profile', 'service-requests-form' ), $project_details['profile'] );
 			$render_detail_row( __( 'Layer Height', 'service-requests-form' ), '' !== $project_details['layer_height'] ? $project_details['layer_height'] . ' mm' : '' );
 			$render_detail_row( __( 'Infill', 'service-requests-form' ), '' !== $project_details['infill'] ? $project_details['infill'] . '%' : '' );
+			$render_detail_row( __( 'Infill Pattern', 'service-requests-form' ), $project_details['infill_pattern'] );
+			$render_detail_row( __( 'Wall Loops', 'service-requests-form' ), $project_details['wall_loops'] );
+			$render_detail_row( __( 'Top / Bottom Layers', 'service-requests-form' ), ( '' !== $project_details['top_layers'] || '' !== $project_details['bottom_layers'] ) ? $project_details['top_layers'] . ' / ' . $project_details['bottom_layers'] : '' );
+			$render_detail_row( __( 'Supports', 'service-requests-form' ), $project_details['supports'] );
 			$render_detail_row( __( 'Shell Mode', 'service-requests-form' ), $project_details['shell_mode'] );
 			$render_detail_row( __( 'Scale', 'service-requests-form' ), '' !== $project_details['scale'] ? $project_details['scale'] . '%' : '' );
 			$render_detail_row( __( 'Quantity', 'service-requests-form' ), $project_details['quantity'] );
+			$render_detail_row( __( 'Estimated Print Time', 'service-requests-form' ), $project_details['estimated_time'] );
 			echo '</div>';
 			if ( '' !== trim( $quote_notes ) ) {
 				echo '<div class="srf-detail-text">';
@@ -299,14 +326,20 @@ if ( ! empty( $view_id ) ) {
 		.srf-pill--readonly{background:#f5f5f5;color:#555;}
 		.srf-pill--type{background:#eef4ff;color:#264b8f;}
 		.srf-pill--status-new{background:#eee9ff;color:#5b4db3;}
+		.srf-pill--status-quote-ready{background:#e9f2ff;color:#245aa5;}
 		.srf-pill--status-pending-payment{background:#fff4cc;color:#9a6a00;}
+		.srf-pill--status-paid{background:#e7f7ee;color:#1f7a45;}
 		.srf-pill--status-in-progress{background:#fff1e5;color:#b85b00;}
 		.srf-pill--status-done{background:#e7f7ee;color:#1f7a45;}
+		.srf-pill--status-payment-failed,.srf-pill--status-cancelled,.srf-pill--status-refunded{background:#fdecec;color:#a63232;}
 		.srf-status-badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f1f1;}
 		.srf-status-badge--new{background:#eee9ff;color:#5b4db3;}
+		.srf-status-badge--quote-ready{background:#e9f2ff;color:#245aa5;}
 		.srf-status-badge--pending-payment{background:#fff4cc;color:#9a6a00;}
-		.srf-status-badge--in_progress{background:#fff1e5;color:#b85b00;}
+		.srf-status-badge--paid{background:#e7f7ee;color:#1f7a45;}
+		.srf-status-badge--in-progress{background:#fff1e5;color:#b85b00;}
 		.srf-status-badge--done{background:#e7f7ee;color:#1f7a45;}
+		.srf-status-badge--payment-failed,.srf-status-badge--cancelled,.srf-status-badge--refunded{background:#fdecec;color:#a63232;}
 		.srf-detail-card{border:1px solid #e6e6e6;border-radius:10px;padding:16px;margin:0 0 16px;background:#fff;}
 		.srf-detail-card__title{margin:0 0 12px;font-size:18px;}
 		.srf-detail-grid{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:10px 16px;}
@@ -351,12 +384,15 @@ while ( $query->have_posts() ) {
 		$status = 'new';
 	}
 
-	$summary = SRF_MyAccount::get_upload_summary( $rid );
-	$price_total = (float) get_post_meta( $rid, '_sr_price_total', true );
-	$price_text = $price_total > 0 ? ( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price_total ) ) : number_format_i18n( $price_total, 2 ) ) : '—';
+	$summary     = SRF_MyAccount::get_upload_summary( $rid );
+	$price_total = (float) get_post_meta( $rid, '_sr_total_price', true );
+	if ( $price_total <= 0 ) {
+		$price_total = (float) get_post_meta( $rid, '_sr_price_total', true );
+	}
+	$price_text   = $price_total > 0 ? ( function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price_total ) ) : number_format_i18n( $price_total, 2 ) ) : '—';
 
-		$status_label = SRF_MyAccount::format_status_label( $status );
-		$status_class = 'srf-status-badge srf-status-badge--' . sanitize_html_class( $status );
+	$status_label = SRF_MyAccount::format_status_label( $status );
+	$status_class = 'srf-status-badge srf-status-badge--' . sanitize_html_class( str_replace( '_', '-', strtolower( $status ) ) );
 
 	$uploads_text = '—';
 	if ( $summary['count'] > 0 ) {

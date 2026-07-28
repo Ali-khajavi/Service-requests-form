@@ -13,6 +13,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SRF_Admin_Status {
 
 	/**
+	 * Request lifecycle statuses used by service and project orders.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function get_statuses() {
+		return array(
+			'new'             => __( 'New', 'service-requests-form' ),
+			'quote-ready'     => __( 'Quote ready', 'service-requests-form' ),
+			'pending-payment' => __( 'Pending payment', 'service-requests-form' ),
+			'paid'            => __( 'Paid / ready for production', 'service-requests-form' ),
+			'in_progress'     => __( 'In progress', 'service-requests-form' ),
+			'done'            => __( 'Done', 'service-requests-form' ),
+			'payment-failed'  => __( 'Payment failed', 'service-requests-form' ),
+			'cancelled'       => __( 'Cancelled', 'service-requests-form' ),
+			'refunded'        => __( 'Refunded', 'service-requests-form' ),
+		);
+	}
+
+	/**
 	 * Initialize hooks
 	 */
 	public static function init() {
@@ -66,18 +85,9 @@ class SRF_Admin_Status {
 		</p>
 
 		<select name="srf_request_status" id="srf_request_status" style="width:100%;">
-			<option value="new" <?php selected( $status, 'new' ); ?>>
-				<?php esc_html_e( 'New', 'service-requests-form' ); ?>
-			</option>
-			<option value="pending-payment" <?php selected( $status, 'pending-payment' ); ?>>
-				<?php esc_html_e( 'Pending purchase', 'service-requests-form' ); ?>
-			</option>
-			<option value="in_progress" <?php selected( $status, 'in_progress' ); ?>>
-				<?php esc_html_e( 'In progress', 'service-requests-form' ); ?>
-			</option>
-			<option value="done" <?php selected( $status, 'done' ); ?>>
-				<?php esc_html_e( 'Done', 'service-requests-form' ); ?>
-			</option>
+			<?php foreach ( self::get_statuses() as $status_key => $status_label ) : ?>
+				<option value="<?php echo esc_attr( $status_key ); ?>" <?php selected( $status, $status_key ); ?>><?php echo esc_html( $status_label ); ?></option>
+			<?php endforeach; ?>
 		</select>
 		<?php
 	}
@@ -180,7 +190,11 @@ class SRF_Admin_Status {
 		}
 
 		// Sanitize and save
-		$status = sanitize_text_field( wp_unslash( $_POST['srf_request_status'] ) );
+		$status   = sanitize_key( wp_unslash( $_POST['srf_request_status'] ) );
+		$statuses = self::get_statuses();
+		if ( ! isset( $statuses[ $status ] ) ) {
+			return;
+		}
 		update_post_meta( $post_id, '_sr_status', $status );
 
 		/**

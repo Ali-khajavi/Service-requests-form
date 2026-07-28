@@ -3,461 +3,405 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if ( ! isset( $errors ) || ! is_array( $errors ) ) {
-	$errors = array();
-}
-
-if ( ! isset( $old_data ) || ! is_array( $old_data ) ) {
-	$old_data = array();
-}
-
-$old = function( $key, $default = '' ) use ( $old_data ) {
-	return isset( $old_data[ $key ] ) ? $old_data[ $key ] : $default;
+$errors = isset( $errors ) && is_array( $errors ) ? $errors : array();
+$old_data = isset( $old_data ) && is_array( $old_data ) ? $old_data : array();
+$old = static function( $key, $default = '' ) use ( $old_data ) {
+	return array_key_exists( $key, $old_data ) ? $old_data[ $key ] : $default;
 };
 
-$dashboard_url   = isset( $dashboard_url ) ? (string) $dashboard_url : '';
-$upload_limit    = isset( $upload_limit ) ? (string) $upload_limit : '1 GB';
-$is_business     = ! empty( $is_business );
-$allowed_formats = isset( $allowed_formats ) ? (string) $allowed_formats : '';
-$request_uri     = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
-$current_url     = esc_url_raw( home_url( $request_uri ) );
-$my_account_url  = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url();
-$google_error    = isset( $_GET['srf_google_error'] ) ? sanitize_key( wp_unslash( $_GET['srf_google_error'] ) ) : '';
-$materials       = isset( $materials ) && is_array( $materials ) ? $materials : array();
-$printers        = isset( $printers ) && is_array( $printers ) ? $printers : array();
-
-$quote_settings  = isset( $quote_settings ) && is_array( $quote_settings ) ? $quote_settings : array();
-
-$currency_symbol = isset( $quote_settings['currency_symbol'] ) ? (string) $quote_settings['currency_symbol'] : '€';
-$tax_rate        = isset( $quote_settings['tax_rate'] ) ? (float) $quote_settings['tax_rate'] : 0;
-$service_fee     = isset( $quote_settings['service_fee'] ) ? (float) $quote_settings['service_fee'] : 5;
-$setup_fee       = isset( $quote_settings['setup_fee'] ) ? (float) $quote_settings['setup_fee'] : 0;
-$profit_margin   = isset( $quote_settings['profit_margin'] ) ? (float) $quote_settings['profit_margin'] : 20;
-
-
-$google_error_map = array(
-	'google_disabled'        => __( 'Google login is currently unavailable.', 'service-requests-form' ),
-	'google_missing_code'    => __( 'Google login was canceled or incomplete.', 'service-requests-form' ),
-	'google_invalid_state'   => __( 'Google login security validation failed. Please try again.', 'service-requests-form' ),
-	'google_token_failed'    => __( 'Could not complete Google login. Please try again.', 'service-requests-form' ),
-	'google_token_missing'   => __( 'Could not verify your Google account. Please try again.', 'service-requests-form' ),
-	'google_userinfo_failed' => __( 'Could not fetch your Google profile. Please try again.', 'service-requests-form' ),
-	'google_profile_invalid' => __( 'Google account email is missing or not verified.', 'service-requests-form' ),
-	'google_user_failed'     => __( 'Could not create or sign in your account. Please try again.', 'service-requests-form' ),
-);
+$dashboard_url          = isset( $dashboard_url ) ? (string) $dashboard_url : '';
+$upload_limit           = isset( $upload_limit ) ? (string) $upload_limit : '500 MB';
+$upload_limit_bytes     = isset( $upload_limit_bytes ) ? max( 1, (int) $upload_limit_bytes ) : 524288000;
+$allowed_formats        = isset( $allowed_formats ) ? strtolower( (string) $allowed_formats ) : 'stl, obj, 3mf';
+$allowed_csv            = preg_replace( '/\s+/', '', $allowed_formats );
+$materials              = isset( $materials ) && is_array( $materials ) ? $materials : array();
+$printers               = isset( $printers ) && is_array( $printers ) ? $printers : array();
+$print_profiles         = isset( $print_profiles ) && is_array( $print_profiles ) ? $print_profiles : array();
+$quote_settings         = isset( $quote_settings ) && is_array( $quote_settings ) ? $quote_settings : array();
+$project_public         = ! empty( $project_public );
+$checkout_enabled       = ! empty( $checkout_enabled );
+$checkout_requested     = ! empty( $checkout_requested );
+$woocommerce_available  = ! empty( $woocommerce_available );
+$payment_warning        = isset( $payment_warning ) ? (string) $payment_warning : '';
+$currency_symbol        = isset( $quote_settings['currency_symbol'] ) ? (string) $quote_settings['currency_symbol'] : '€';
+$tax_rate               = isset( $quote_settings['tax_rate'] ) ? (float) $quote_settings['tax_rate'] : 0;
+$service_fee            = isset( $quote_settings['service_fee'] ) ? (float) $quote_settings['service_fee'] : 0;
+$setup_fee              = isset( $quote_settings['setup_fee'] ) ? (float) $quote_settings['setup_fee'] : 0;
+$profit_margin          = isset( $quote_settings['profit_margin'] ) ? (float) $quote_settings['profit_margin'] : 0;
+$terms_url               = (string) get_option( 'srf_terms_url', '' );
+$initial_step            = ! empty( $errors ) && ! empty( $_POST['srf_project_form_submitted'] ) ? 2 : 1; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+$submit_label            = $checkout_enabled ? __( 'Continue to secure payment', 'service-requests-form' ) : __( 'Submit print request', 'service-requests-form' );
+$default_profile         = class_exists( 'SRF_Print_Profiles' ) ? SRF_Print_Profiles::get_default_profile_key() : 'custom';
+$selected_profile        = (string) $old( 'print_profile', $default_profile );
+$logged_in               = is_user_logged_in();
 ?>
 
 <div class="srf-project-wrapper">
-
 	<?php if ( ! empty( $errors ) ) : ?>
-		<div class="srf-form__errors">
+		<div class="srf-form__errors" role="alert" aria-live="assertive">
+			<h2><?php esc_html_e( 'Please review the following', 'service-requests-form' ); ?></h2>
 			<ul>
-				<?php foreach ( $errors as $err ) : ?>
-					<li><?php echo esc_html( $err ); ?></li>
+				<?php foreach ( $errors as $error ) : ?>
+					<li><?php echo esc_html( $error ); ?></li>
 				<?php endforeach; ?>
 			</ul>
+			<p><?php esc_html_e( 'For security, browsers do not retain selected model files after a server validation error. Please select the models again in step 2.', 'service-requests-form' ); ?></p>
 		</div>
+	<?php endif; ?>
+
+	<?php if ( $payment_warning ) : ?>
+		<div class="srf-project-notice srf-project-notice--warning" role="status"><?php echo esc_html( $payment_warning ); ?></div>
 	<?php endif; ?>
 
 	<?php if ( ! empty( $success ) ) : ?>
-		<div class="srf-project-success" data-srf-project-success data-dashboard-url="<?php echo esc_url( $dashboard_url ); ?>">
-			<div class="srf-project-success__fireworks" aria-hidden="true">
-				<span></span><span></span><span></span><span></span><span></span><span></span>
-			</div>
-
+		<section class="srf-project-success" data-srf-project-success data-dashboard-url="<?php echo esc_url( $dashboard_url ); ?>">
 			<div class="srf-project-success__box">
-				<h2><?php esc_html_e( 'Submission confirmed', 'service-requests-form' ); ?></h2>
-				<p><?php esc_html_e( 'Your files were uploaded successfully and your request has been received.', 'service-requests-form' ); ?></p>
-
-				<div class="srf-project-final-note">
-					<p><?php esc_html_e( 'Our team works Monday to Friday, 9:00am - 15:00pm.', 'service-requests-form' ); ?></p>
-					<p><?php esc_html_e( 'Your request will be processed as soon as possible, within up to 3 working days.', 'service-requests-form' ); ?></p>
-					<p><?php esc_html_e( 'We will contact you using the information in your user profile. You can also check your request status in your dashboard.', 'service-requests-form' ); ?></p>
-				</div>
-			</div>
-		</div>
-	<?php else : ?>
-
-	<?php if ( ! is_user_logged_in() ) : ?>
-		<form id="srf-project-login-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post"></form>
-	<?php endif; ?>
-
-	<form class="srf-form srf-project-form" method="post" enctype="multipart/form-data" data-srf-project-form>
-			<div class="srf-project-steps">
-				<div class="srf-project-step is-active" data-step="1">1. Project Title</div>
-				<div class="srf-project-step" data-step="2">2. Terms & Upload 3D Model</div>
-				<div class="srf-project-step" data-step="3">3. Confirmed</div>
-			</div>
-
-			<div class="srf-project-panel srf-project-panel--step1 is-active" data-srf-step-panel="1">
-
-			<div class="srf-project-grid">
-				<div class="srf-project-main">
-					<h2 class="srf-project-panel__title"><?php esc_html_e( 'Project Title', 'service-requests-form' ); ?></h2>
-					<p class="srf-project-panel__intro"><?php esc_html_e( 'Enter the project name and optional details so our team can understand your request quickly.', 'service-requests-form' ); ?></p>
-
-					<div class="srf-form__field">
-						<label for="srf-project-title">
-							<?php esc_html_e( 'Project title', 'service-requests-form' ); ?> <span class="srf-required">*</span>
-						</label>
-							<input
-								type="text"
-								id="srf-project-title"
-								name="srf_project_title"
-								value="<?php echo esc_attr( $old( 'title' ) ); ?>"
-							/>
-					</div>
-
-					<div class="srf-form__field">
-						<label for="srf-project-description">
-							<?php esc_html_e( 'Description', 'service-requests-form' ); ?> <span class="srf-required">*</span>
-						</label>
-							<textarea
-								id="srf-project-description"
-								name="srf_project_description"
-								rows="7"
-							><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
-						</div>
-				</div>
-
-				<div class="srf-project-auth">
-					<!-- Step 1 auth panel: local login + optional Google login/register -->
-					<?php if ( is_user_logged_in() ) : ?>
-						<div class="srf-project-auth__box srf-project-auth__box--loggedin" data-srf-auth-state="logged-in">
-							<h3><?php esc_html_e( 'Account verified', 'service-requests-form' ); ?></h3>
-							<p><?php esc_html_e( 'You are logged in and can continue to the next step.', 'service-requests-form' ); ?></p>
-						</div>
-					<?php else : ?>
-						<div class="srf-project-auth__box" data-srf-auth-state="guest">
-							<h3><?php esc_html_e( 'Sign in to continue', 'service-requests-form' ); ?></h3>
-							<p><?php esc_html_e( 'Use a simple login or continue directly with Google.', 'service-requests-form' ); ?></p>
-
-							<?php if ( $google_error && isset( $google_error_map[ $google_error ] ) ) : ?>
-								<div class="srf-project-auth__notice"><?php echo esc_html( $google_error_map[ $google_error ] ); ?></div>
-							<?php endif; ?>
-
-							<div class="srf-project-auth__form srf-project-auth__form--login">
-								<p class="login-username">
-									<label for="srf-project-login-user"><?php esc_html_e( 'Email or username', 'service-requests-form' ); ?></label>
-									<input type="text" name="log" id="srf-project-login-user" class="input" value="" size="20" autocomplete="username" form="srf-project-login-form" />
-								</p>
-								<p class="login-password">
-									<label for="srf-project-login-pass"><?php esc_html_e( 'Password', 'service-requests-form' ); ?></label>
-									<input type="password" name="pwd" id="srf-project-login-pass" class="input" value="" size="20" autocomplete="current-password" form="srf-project-login-form" />
-								</p>
-								<p class="login-remember">
-									<label><input name="rememberme" type="checkbox" id="srf-project-login-remember" value="forever" form="srf-project-login-form" /> <?php esc_html_e( 'Remember me', 'service-requests-form' ); ?></label>
-								</p>
-								<input type="hidden" name="redirect_to" value="<?php echo esc_url( remove_query_arg( 'srf_google_error', $current_url ) ); ?>" form="srf-project-login-form" />
-								<input type="hidden" name="testcookie" value="1" form="srf-project-login-form" />
-								<p class="login-submit">
-									<button type="submit" name="wp-submit" id="srf-project-login-submit" class="button button-primary" value="<?php esc_attr_e( 'Login', 'service-requests-form' ); ?>" form="srf-project-login-form"><?php esc_html_e( 'Login', 'service-requests-form' ); ?></button>
-								</p>
-							</div>
-
-							<?php if ( class_exists( 'SRF_Google_Auth' ) && SRF_Google_Auth::is_enabled() ) : ?>
-								<div class="srf-project-auth__divider"><span><?php esc_html_e( 'or', 'service-requests-form' ); ?></span></div>
-								<div class="srf-project-auth__google-actions">
-									<?php
-									echo SRF_Google_Auth::render_google_button( $current_url, 'login', __( 'Continue with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-									echo SRF_Google_Auth::render_google_button( $current_url, 'register', __( 'Register with Google', 'service-requests-form' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-									?>
-								</div>
-							<?php endif; ?>
-
-							<div class="srf-project-auth__register-link">
-								<a href="<?php echo esc_url( $my_account_url ); ?>"><?php esc_html_e( 'Visit registration form', 'service-requests-form' ); ?></a>
-							</div>
-						</div>
-					<?php endif; ?>
-				</div>
-			</div>
-
-			<div class="srf-form__actions srf-form__actions--project-step1">
-				<button type="button" class="srf-button srf-button--secondary srf-project-btn srf-project-btn--next" data-srf-next-step="1">
-					<span class="srf-button__label"><?php esc_html_e( 'Next', 'service-requests-form' ); ?></span>
-				</button>
-			</div>
-			</div>
-
-		<div class="srf-project-panel srf-project-panel--step2" data-srf-step-panel="2" hidden>
-			<h2 class="srf-project-panel__title"><?php esc_html_e( 'Terms & Upload 3D Model', 'service-requests-form' ); ?></h2>
-			<p class="srf-project-panel__intro"><?php esc_html_e( 'Accept the terms and upload your 3D files before submitting the request.', 'service-requests-form' ); ?></p>
-
-			<div class="srf-form__field srf-form__field--checkbox srf-project-check-field srf-project-card">
-				<label class="srf-project-checkbox-label" for="srf-terms">
-					<input type="checkbox" id="srf-terms" name="srf_terms" value="1" <?php checked( $old( 'terms' ), '1' ); ?> required />
-					<span><?php esc_html_e( 'I accept the Terms & Conditions.', 'service-requests-form' ); ?> <span class="srf-required">*</span></span>
-				</label>
-			</div>
-
-			<div class="srf-form__field srf-project-upload-field srf-project-card">
-				<label for="srf-files">
-					<?php esc_html_e( 'Upload 3D model file(s)', 'service-requests-form' ); ?> <span class="srf-required">*</span>
-				</label>
-
-				<div class="srf-project-file-input-wrap">
-					<input type="file" id="srf-files" name="srf_files[]" multiple required />
-				</div>
-
-				<small class="srf-field__help srf-project-help">
-					<?php
-					echo esc_html(
-						sprintf(
-							__( 'Maximum upload size: %s', 'service-requests-form' ),
-							$upload_limit
-						)
-					);
-					?>
-				</small>
-
-				<?php if ( $allowed_formats !== '' ) : ?>
-					<small class="srf-field__help srf-project-help">
-						<?php
-						echo esc_html(
-							sprintf(
-								__( 'Accepted file formats: %s', 'service-requests-form' ),
-								$allowed_formats
-							)
-						);
-						?>
-					</small>
+				<span class="srf-project-success__icon" aria-hidden="true">✓</span>
+				<h2><?php esc_html_e( 'Print request received', 'service-requests-form' ); ?></h2>
+				<p><?php esc_html_e( 'Your model files and securely calculated quote were saved. The team will review the project and contact you using the details supplied.', 'service-requests-form' ); ?></p>
+				<?php if ( $dashboard_url ) : ?>
+					<p><a class="srf-button" href="<?php echo esc_url( $dashboard_url ); ?>"><?php esc_html_e( 'View my requests', 'service-requests-form' ); ?></a></p>
 				<?php endif; ?>
+			</div>
+		</section>
+	<?php else : ?>
+		<form
+			class="srf-form srf-project-form"
+			method="post"
+			enctype="multipart/form-data"
+			data-srf-project-form
+			data-initial-step="<?php echo esc_attr( $initial_step ); ?>"
+			data-project-public="<?php echo $project_public ? '1' : '0'; ?>"
+			data-checkout-enabled="<?php echo $checkout_enabled ? '1' : '0'; ?>"
+			data-max-upload-bytes="<?php echo esc_attr( $upload_limit_bytes ); ?>"
+			data-allowed-extensions="<?php echo esc_attr( $allowed_csv ); ?>"
+			novalidate
+		>
+			<header class="srf-project-hero">
+				<div>
+					<p class="srf-project-hero__eyebrow"><?php esc_html_e( 'Custom 3D printing', 'service-requests-form' ); ?></p>
+					<h1><?php esc_html_e( 'Upload a model, configure the print, and receive an instant estimate', 'service-requests-form' ); ?></h1>
+					<p><?php esc_html_e( 'The browser creates a lightweight preview for STL and OBJ while the final checkout amount is always recalculated from the uploaded files on the server.', 'service-requests-form' ); ?></p>
+				</div>
+				<div class="srf-project-hero__trust">
+					<span><?php esc_html_e( 'Server-verified pricing', 'service-requests-form' ); ?></span>
+					<span><?php esc_html_e( 'Secure WooCommerce checkout', 'service-requests-form' ); ?></span>
+				</div>
+			</header>
 
-				<div class="srf-project-workspace" data-srf-project-workspace>
-					<div class="srf-project-workspace__viewer">
-						<div class="srf-3d-viewer srf-project-card" data-srf-3d-viewer>
-							<div class="srf-3d-viewer__header">
-								<h3 class="srf-3d-viewer__title"><?php esc_html_e( '3D Preview', 'service-requests-form' ); ?></h3>
-								<p class="srf-3d-viewer__intro"><?php esc_html_e( 'After selecting a supported 3D file, the preview will appear here.', 'service-requests-form' ); ?></p>
-							</div>
+			<nav class="srf-project-steps" aria-label="<?php esc_attr_e( 'Project order steps', 'service-requests-form' ); ?>">
+				<button type="button" class="srf-project-step is-active" data-srf-step-go="1" aria-current="step">
+					<span class="srf-project-step__number">1</span>
+					<span><strong><?php esc_html_e( 'Project', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Name and requirements', 'service-requests-form' ); ?></small></span>
+				</button>
+				<button type="button" class="srf-project-step" data-srf-step-go="2">
+					<span class="srf-project-step__number">2</span>
+					<span><strong><?php esc_html_e( 'Model', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Upload and preview', 'service-requests-form' ); ?></small></span>
+				</button>
+				<button type="button" class="srf-project-step" data-srf-step-go="3">
+					<span class="srf-project-step__number">3</span>
+					<span><strong><?php esc_html_e( 'Print & price', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Configure and pay', 'service-requests-form' ); ?></small></span>
+				</button>
+			</nav>
 
-							<div class="srf-3d-viewer__canvas-wrap" aria-live="polite">
-								<canvas
-									class="srf-3d-viewer__canvas"
-									role="img"
-									aria-label="<?php esc_attr_e( '3D model preview canvas', 'service-requests-form' ); ?>"
-								></canvas>
-								<div class="srf-3d-viewer__placeholder" data-srf-3d-placeholder>
-									<?php esc_html_e( 'No model loaded yet.', 'service-requests-form' ); ?>
-								</div>
-							</div>
+			<section class="srf-project-panel is-active" data-srf-step-panel="1" aria-hidden="false">
+				<div class="srf-project-panel__heading">
+					<p class="srf-project-panel__step"><?php esc_html_e( 'Step 1 of 3', 'service-requests-form' ); ?></p>
+					<h2><?php esc_html_e( 'Tell us about the project', 'service-requests-form' ); ?></h2>
+					<p><?php esc_html_e( 'Use a clear project name and explain the purpose, critical dimensions, finish, colour, deadline, and any assembly requirements.', 'service-requests-form' ); ?></p>
+				</div>
 
-							<div class="srf-3d-viewer__toolbar">
-								<div class="srf-3d-viewer__status" data-srf-3d-status data-state="info">
-									<?php esc_html_e( 'Viewer ready. Upload an STL or OBJ file to preview it.', 'service-requests-form' ); ?>
-								</div>
-
-								<div class="srf-3d-viewer__controls" aria-label="<?php esc_attr_e( '3D viewer controls', 'service-requests-form' ); ?>">
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="zoom-in"><?php esc_html_e( 'Zoom In', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="zoom-out"><?php esc_html_e( 'Zoom Out', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-front"><?php esc_html_e( 'Front', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-left"><?php esc_html_e( 'Left', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-right"><?php esc_html_e( 'Right', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-top"><?php esc_html_e( 'Top', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="view-iso"><?php esc_html_e( 'Iso', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="fit-view"><?php esc_html_e( 'Fit View', 'service-requests-form' ); ?></button>
-									<button type="button" class="srf-button srf-button--secondary srf-3d-viewer__button" data-action="reset-view"><?php esc_html_e( 'Reset View', 'service-requests-form' ); ?></button>
-								</div>
-							</div>
-
-							<div class="srf-3d-viewer__meta">
-								<div class="srf-3d-viewer__meta-item">
-									<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'File', 'service-requests-form' ); ?></span>
-									<strong data-field="filename">—</strong>
-								</div>
-								<div class="srf-3d-viewer__meta-item">
-									<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Format', 'service-requests-form' ); ?></span>
-									<strong data-field="format">—</strong>
-								</div>
-								<div class="srf-3d-viewer__meta-item">
-									<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Triangles', 'service-requests-form' ); ?></span>
-									<strong data-field="triangles">—</strong>
-								</div>
-								<div class="srf-3d-viewer__meta-item">
-									<span class="srf-3d-viewer__meta-label"><?php esc_html_e( 'Bounds', 'service-requests-form' ); ?></span>
-									<strong data-field="bounds">—</strong>
-								</div>
-							</div>
+				<div class="srf-project-grid srf-project-grid--details">
+					<div class="srf-project-card">
+						<div class="srf-form__field">
+							<label for="srf-project-title"><?php esc_html_e( 'Project name', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+							<input type="text" id="srf-project-title" name="srf_project_title" value="<?php echo esc_attr( $old( 'title' ) ); ?>" maxlength="180" required autocomplete="off" />
+						</div>
+						<div class="srf-form__field">
+							<label for="srf-project-description"><?php esc_html_e( 'Project description', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+							<textarea id="srf-project-description" name="srf_project_description" rows="8" maxlength="6000" required><?php echo esc_textarea( $old( 'description' ) ); ?></textarea>
+							<p class="srf-form__help"><?php esc_html_e( 'Do not include passwords, medical records, or other sensitive personal information.', 'service-requests-form' ); ?></p>
 						</div>
 					</div>
 
-					<aside class="srf-project-workspace__sidebar">
-						<div class="srf-project-quote-options srf-project-card" data-srf-quote-options>
-							<div class="srf-project-quote-options__header">
-								<h3 class="srf-project-quote-options__title"><?php esc_html_e( 'Print settings', 'service-requests-form' ); ?></h3>
-								<p class="srf-project-quote-options__intro"><?php esc_html_e( 'Choose the material, printer, and print parameters for this 3D request.', 'service-requests-form' ); ?></p>
-							</div>
-
-							<div class="srf-project-quote-options__grid">
-								<div class="srf-form__field">
-									<label for="srf-material-id">
-										<?php esc_html_e( 'Material', 'service-requests-form' ); ?> <span class="srf-required">*</span>
-									</label>
-									<select id="srf-material-id" name="srf_material_id" required>
-										<option value=""><?php esc_html_e( 'Select material', 'service-requests-form' ); ?></option>
-										<?php foreach ( $materials as $material ) : ?>
-											<option
-												value="<?php echo esc_attr( (int) $material->id ); ?>"
-												data-price-per-gram="<?php echo esc_attr( (float) $material->price_per_gram ); ?>"
-												data-price-per-cm3="<?php echo esc_attr( (float) $material->price_per_cm3 ); ?>"
-												data-density="<?php echo esc_attr( (float) $material->density ); ?>"
-												data-machine-factor="<?php echo esc_attr( (float) $material->machine_time_factor ); ?>"
-												data-surface-factor="<?php echo esc_attr( (float) $material->surface_quality_factor ); ?>"
-												data-wastage-factor="<?php echo esc_attr( (float) $material->wastage_factor ); ?>"
-												<?php selected( $old( 'material_id' ), (string) (int) $material->id ); ?>
-											>
-												<?php echo esc_html( $material->name ); ?>
-											</option>
-										<?php endforeach; ?>
-									</select>
-								</div>
-
-								<div class="srf-form__field">
-									<label for="srf-printer-id">
-										<?php esc_html_e( 'Printer', 'service-requests-form' ); ?> <span class="srf-required">*</span>
-									</label>
-									<select id="srf-printer-id" name="srf_printer_id" required>
-										<option value=""><?php esc_html_e( 'Select printer', 'service-requests-form' ); ?></option>
-										<?php foreach ( $printers as $printer ) : ?>
-											<?php
-											$supported_ids = array();
-											if ( ! empty( $printer->supported_material_ids ) && is_array( $printer->supported_material_ids ) ) {
-												$supported_ids = array_map( 'intval', $printer->supported_material_ids );
-											}
-											?>
-											<option
-												value="<?php echo esc_attr( (int) $printer->id ); ?>"
-												data-supported-materials="<?php echo esc_attr( wp_json_encode( $supported_ids ) ); ?>"
-												data-hourly-cost="<?php echo esc_attr( (float) $printer->hourly_cost ); ?>"
-												data-default-speed="<?php echo esc_attr( (float) $printer->default_speed ); ?>"
-												data-min-layer-height="<?php echo esc_attr( (float) $printer->min_layer_height ); ?>"
-												data-max-layer-height="<?php echo esc_attr( (float) $printer->max_layer_height ); ?>"
-												<?php selected( $old( 'printer_id' ), (string) (int) $printer->id ); ?>
-											>
-												<?php echo esc_html( $printer->name ); ?>
-											</option>
-										<?php endforeach; ?>
-									</select>
-								</div>
-
-								<div class="srf-form__field srf-form__field--half">
-									<label for="srf-layer-height"><?php esc_html_e( 'Layer height (mm)', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" step="0.01" id="srf-layer-height" name="srf_layer_height" value="<?php echo esc_attr( $old( 'layer_height', '0.20' ) ); ?>" />
-								</div>
-
-								<div class="srf-form__field srf-form__field--half">
-									<label for="srf-infill"><?php esc_html_e( 'Infill (%)', 'service-requests-form' ); ?></label>
-									<input type="number" min="0" max="100" step="1" id="srf-infill" name="srf_infill" value="<?php echo esc_attr( $old( 'infill', '20' ) ); ?>" />
-								</div>
-
-								<div class="srf-form__field">
-									<label for="srf-shell-mode"><?php esc_html_e( 'Structure', 'service-requests-form' ); ?></label>
-									<select id="srf-shell-mode" name="srf_shell_mode">
-										<option value="solid" <?php selected( $old( 'shell_mode', 'solid' ), 'solid' ); ?>><?php esc_html_e( 'Solid', 'service-requests-form' ); ?></option>
-										<option value="hollow" <?php selected( $old( 'shell_mode', 'solid' ), 'hollow' ); ?>><?php esc_html_e( 'Hollow', 'service-requests-form' ); ?></option>
-									</select>
-								</div>
-
-								<div class="srf-form__field srf-form__field--half">
-									<label for="srf-scale"><?php esc_html_e( 'Scale (%)', 'service-requests-form' ); ?></label>
-									<input type="number" min="10" max="500" step="1" id="srf-scale" name="srf_scale" value="<?php echo esc_attr( $old( 'scale', '100' ) ); ?>" />
-								</div>
-
-								<div class="srf-form__field srf-form__field--half">
-									<label for="srf-quantity"><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></label>
-									<input type="number" min="1" step="1" id="srf-quantity" name="srf_quantity" value="<?php echo esc_attr( $old( 'quantity', '1' ) ); ?>" />
-								</div>
-							</div>
-
+					<aside class="srf-project-card srf-project-contact-card">
+						<?php if ( $logged_in ) : ?>
+							<p class="srf-project-contact-card__badge"><?php esc_html_e( 'Signed-in customer', 'service-requests-form' ); ?></p>
+							<h3><?php echo esc_html( $old( 'name', wp_get_current_user()->display_name ) ); ?></h3>
+							<dl>
+								<dt><?php esc_html_e( 'Email', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( $old( 'email', wp_get_current_user()->user_email ) ); ?></dd>
+								<?php if ( $old( 'company' ) ) : ?><dt><?php esc_html_e( 'Company', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( $old( 'company' ) ); ?></dd><?php endif; ?>
+								<?php if ( $old( 'phone' ) ) : ?><dt><?php esc_html_e( 'Phone', 'service-requests-form' ); ?></dt><dd><?php echo esc_html( $old( 'phone' ) ); ?></dd><?php endif; ?>
+							</dl>
+							<p class="srf-form__help"><?php esc_html_e( 'WooCommerce will confirm billing and delivery details during checkout.', 'service-requests-form' ); ?></p>
+						<?php elseif ( $project_public ) : ?>
+							<p class="srf-project-contact-card__badge"><?php esc_html_e( 'Guest order', 'service-requests-form' ); ?></p>
+							<h3><?php esc_html_e( 'Contact details', 'service-requests-form' ); ?></h3>
 							<div class="srf-form__field">
-								<label for="srf-quote-notes"><?php esc_html_e( 'Print notes', 'service-requests-form' ); ?></label>
-								<textarea id="srf-quote-notes" name="srf_quote_notes" rows="5"><?php echo esc_textarea( $old( 'notes' ) ); ?></textarea>
+								<label for="srf-guest-name"><?php esc_html_e( 'Name', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+								<input type="text" id="srf-guest-name" name="srf_guest_name" value="<?php echo esc_attr( $old( 'name' ) ); ?>" maxlength="180" required autocomplete="name" />
 							</div>
-						</div>
+							<div class="srf-form__field">
+								<label for="srf-guest-email"><?php esc_html_e( 'Email', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+								<input type="email" id="srf-guest-email" name="srf_guest_email" value="<?php echo esc_attr( $old( 'email' ) ); ?>" maxlength="190" required autocomplete="email" />
+							</div>
+							<div class="srf-form__field">
+								<label for="srf-guest-company"><?php esc_html_e( 'Company', 'service-requests-form' ); ?></label>
+								<input type="text" id="srf-guest-company" name="srf_guest_company" value="<?php echo esc_attr( $old( 'company' ) ); ?>" maxlength="180" autocomplete="organization" />
+							</div>
+							<div class="srf-form__field">
+								<label for="srf-guest-phone"><?php esc_html_e( 'Phone', 'service-requests-form' ); ?></label>
+								<input type="tel" id="srf-guest-phone" name="srf_guest_phone" value="<?php echo esc_attr( $old( 'phone' ) ); ?>" maxlength="80" autocomplete="tel" />
+							</div>
+						<?php endif; ?>
 					</aside>
 				</div>
 
-				<div
-					class="srf-project-summary srf-project-card"
-					data-srf-quote-summary
-					data-currency-symbol="<?php echo esc_attr( $currency_symbol ); ?>"
-					data-tax-rate="<?php echo esc_attr( $tax_rate ); ?>"
-					data-service-fee="<?php echo esc_attr( $service_fee ); ?>"
-					data-setup-fee="<?php echo esc_attr( $setup_fee ); ?>"
-					data-profit-margin="<?php echo esc_attr( $profit_margin ); ?>"
-				>
-					<h3 class="srf-project-summary__title"><?php esc_html_e( 'Summary', 'service-requests-form' ); ?></h3>
+				<div class="srf-project-step-error" data-srf-step-error="1" role="alert" hidden></div>
+				<div class="srf-form__actions srf-form__actions--project">
+					<span></span>
+					<button type="button" class="srf-button srf-project-btn" data-srf-next-step="2"><?php esc_html_e( 'Continue to model upload', 'service-requests-form' ); ?></button>
+				</div>
+			</section>
 
-					<div class="srf-project-summary__grid">
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Material', 'service-requests-form' ); ?></span>
-							<strong data-srf-summary-material>—</strong>
+			<section class="srf-project-panel" data-srf-step-panel="2" aria-hidden="true" hidden>
+				<div class="srf-project-panel__heading">
+					<p class="srf-project-panel__step"><?php esc_html_e( 'Step 2 of 3', 'service-requests-form' ); ?></p>
+					<h2><?php esc_html_e( 'Upload and inspect the 3D model', 'service-requests-form' ); ?></h2>
+					<p><?php esc_html_e( 'STL and OBJ files are analysed in a background browser worker so large meshes do not block the page. 3MF files are analysed securely on the server.', 'service-requests-form' ); ?></p>
+				</div>
+
+				<div class="srf-project-workspace">
+					<div class="srf-project-card srf-project-upload-card">
+						<label class="srf-project-dropzone" data-srf-dropzone for="srf-project-files">
+							<span class="srf-project-dropzone__icon" aria-hidden="true">⬆</span>
+							<strong><?php esc_html_e( 'Drop 3D models here', 'service-requests-form' ); ?></strong>
+							<span><?php esc_html_e( 'or select files from your device', 'service-requests-form' ); ?></span>
+							<span class="srf-button srf-button--secondary"><?php esc_html_e( 'Select models', 'service-requests-form' ); ?></span>
+							<input id="srf-project-files" class="srf-project-file-input" type="file" name="srf_files[]" accept=".stl,.obj,.3mf" multiple required data-srf-model-files />
+						</label>
+						<p class="srf-form__help"><?php echo esc_html( sprintf( __( 'Accepted: %1$s. Maximum combined upload: %2$s. Use millimetres and upload closed, printable meshes.', 'service-requests-form' ), strtoupper( $allowed_formats ), $upload_limit ) ); ?></p>
+						<div class="srf-project-file-notice" data-srf-file-notice role="status" aria-live="polite" hidden></div>
+						<div class="srf-project-analysis-progress" data-srf-analysis-progress hidden>
+							<progress max="1" value="0" data-srf-analysis-progress-bar></progress>
+							<span data-srf-analysis-progress-text></span>
 						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Printer', 'service-requests-form' ); ?></span>
-							<strong data-srf-summary-printer>—</strong>
+						<ul class="srf-project-file-list" data-srf-file-list hidden></ul>
+					</div>
+
+					<div class="srf-project-card srf-project-viewer" data-srf-model-viewer>
+						<div class="srf-project-viewer__header">
+							<div><h3><?php esc_html_e( 'Fast model preview', 'service-requests-form' ); ?></h3><p><?php esc_html_e( 'Drag to rotate and use the wheel or trackpad to zoom.', 'service-requests-form' ); ?></p></div>
+							<div class="srf-project-viewer__controls" aria-label="<?php esc_attr_e( 'Preview views', 'service-requests-form' ); ?>">
+								<button type="button" data-srf-view="front"><?php esc_html_e( 'Front', 'service-requests-form' ); ?></button>
+								<button type="button" data-srf-view="left"><?php esc_html_e( 'Left', 'service-requests-form' ); ?></button>
+								<button type="button" data-srf-view="top"><?php esc_html_e( 'Top', 'service-requests-form' ); ?></button>
+								<button type="button" data-srf-view="iso"><?php esc_html_e( 'Iso', 'service-requests-form' ); ?></button>
+								<button type="button" data-srf-view="fit"><?php esc_html_e( 'Fit', 'service-requests-form' ); ?></button>
+							</div>
 						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Layer height', 'service-requests-form' ); ?></span>
-							<strong data-srf-summary-layer>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></span>
-							<strong data-srf-summary-quantity>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Estimated volume', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-volume>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Estimated material cost', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-material>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Estimated printer cost', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-printer>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Service fee', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-service>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Setup fee', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-setup>—</strong>
-						</div>
-						<div class="srf-project-summary__item">
-							<span><?php esc_html_e( 'Tax', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-tax>—</strong>
-						</div>
-						<div class="srf-project-summary__item srf-project-summary__item--total">
-							<span><?php esc_html_e( 'Estimated total', 'service-requests-form' ); ?></span>
-							<strong data-srf-price-total>—</strong>
-						</div>
+						<canvas aria-label="<?php esc_attr_e( 'Interactive 3D model preview', 'service-requests-form' ); ?>"></canvas>
+						<dl class="srf-project-model-meta" data-srf-model-meta>
+							<div><dt><?php esc_html_e( 'File', 'service-requests-form' ); ?></dt><dd data-field="filename">—</dd></div>
+							<div><dt><?php esc_html_e( 'Format', 'service-requests-form' ); ?></dt><dd data-field="format">—</dd></div>
+							<div><dt><?php esc_html_e( 'Triangles', 'service-requests-form' ); ?></dt><dd data-field="triangles">—</dd></div>
+							<div><dt><?php esc_html_e( 'Bounds', 'service-requests-form' ); ?></dt><dd data-field="bounds">—</dd></div>
+							<div><dt><?php esc_html_e( 'Closed volume', 'service-requests-form' ); ?></dt><dd data-field="volume">—</dd></div>
+						</dl>
 					</div>
 				</div>
-			</div>
 
-			<div class="srf-project-final-note">
-				<p><?php esc_html_e( 'Our team works Monday to Friday, 9:00am - 15:00pm.', 'service-requests-form' ); ?></p>
-				<p><?php esc_html_e( 'Your request will be processed as soon as possible, within up to 3 working days.', 'service-requests-form' ); ?></p>
-				<p><?php esc_html_e( 'We will contact you using the information in your user profile. You can also check your request status in your dashboard.', 'service-requests-form' ); ?></p>
-			</div>
+				<div class="srf-project-step-error" data-srf-step-error="2" role="alert" hidden></div>
+				<div class="srf-form__actions srf-form__actions--project">
+					<button type="button" class="srf-button srf-button--secondary" data-srf-prev-step="1"><?php esc_html_e( 'Back', 'service-requests-form' ); ?></button>
+					<button type="button" class="srf-button" data-srf-next-step="3"><?php esc_html_e( 'Continue to print setup', 'service-requests-form' ); ?></button>
+				</div>
+			</section>
 
+			<section class="srf-project-panel" data-srf-step-panel="3" aria-hidden="true" hidden>
+				<div class="srf-project-panel__heading">
+					<p class="srf-project-panel__step"><?php esc_html_e( 'Step 3 of 3', 'service-requests-form' ); ?></p>
+					<h2><?php esc_html_e( 'Choose the print setup and review the price', 'service-requests-form' ); ?></h2>
+					<p><?php esc_html_e( 'Select a printer, compatible material, and process. Named Bambu profiles use fixed cost-driving values and are verified again on the server.', 'service-requests-form' ); ?></p>
+				</div>
+
+				<?php if ( empty( $printers ) || empty( $materials ) ) : ?>
+					<div class="srf-project-notice srf-project-notice--error" role="alert">
+						<?php esc_html_e( 'No active printer or material is available. An administrator must configure starter data under Service Requests → Settings, Materials, and Printers.', 'service-requests-form' ); ?>
+					</div>
+				<?php endif; ?>
+
+				<div class="srf-project-checkout-grid">
+					<div class="srf-project-card srf-project-configurator">
+						<div class="srf-project-configurator__grid">
+							<div class="srf-form__field">
+								<label for="srf-printer-id"><?php esc_html_e( 'Printer', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+								<select id="srf-printer-id" name="srf_printer_id" required data-srf-quote-input>
+									<option value=""><?php esc_html_e( 'Select a printer', 'service-requests-form' ); ?></option>
+									<?php foreach ( $printers as $printer ) : ?>
+										<?php
+										$supported_ids = ! empty( $printer->supported_material_ids ) && is_array( $printer->supported_material_ids ) ? array_values( array_map( 'intval', $printer->supported_material_ids ) ) : array();
+										$is_bambu = class_exists( 'SRF_Print_Profiles' ) && SRF_Print_Profiles::is_bambu_printer( $printer );
+										$suffix = class_exists( 'SRF_Print_Profiles' ) ? SRF_Print_Profiles::get_printer_suffix( $printer ) : '';
+										?>
+										<option
+											value="<?php echo esc_attr( (int) $printer->id ); ?>"
+											data-brand="<?php echo esc_attr( (string) ( $printer->brand ?? '' ) ); ?>"
+											data-model="<?php echo esc_attr( (string) ( $printer->model ?? '' ) ); ?>"
+									data-technology="<?php echo esc_attr( (string) ( $printer->technology ?? 'fdm' ) ); ?>"
+											data-printer-suffix="<?php echo esc_attr( $suffix ); ?>"
+											data-is-bambu="<?php echo $is_bambu ? '1' : '0'; ?>"
+											data-supported-materials="<?php echo esc_attr( wp_json_encode( $supported_ids ) ); ?>"
+											data-default-material-id="<?php echo esc_attr( (int) ( $printer->default_material_id ?? 0 ) ); ?>"
+											data-build-x="<?php echo esc_attr( (float) ( $printer->build_volume_x ?? 0 ) ); ?>"
+											data-build-y="<?php echo esc_attr( (float) ( $printer->build_volume_y ?? 0 ) ); ?>"
+											data-build-z="<?php echo esc_attr( (float) ( $printer->build_volume_z ?? 0 ) ); ?>"
+											data-nozzle-size="<?php echo esc_attr( (float) ( $printer->nozzle_size ?? 0.4 ) ); ?>"
+											data-line-width="<?php echo esc_attr( (float) ( $printer->fdm_default_line_width ?? 0 ) ); ?>"
+											data-min-layer-height="<?php echo esc_attr( (float) ( $printer->min_layer_height ?? 0 ) ); ?>"
+											data-max-layer-height="<?php echo esc_attr( (float) ( $printer->max_layer_height ?? 0 ) ); ?>"
+											data-default-speed="<?php echo esc_attr( (float) ( $printer->default_speed ?? 0 ) ); ?>"
+											data-speed-unit="<?php echo esc_attr( (string) ( $printer->speed_unit ?? '' ) ); ?>"
+											data-hourly-cost="<?php echo esc_attr( (float) ( $printer->hourly_cost ?? 0 ) ); ?>"
+											data-efficiency="<?php echo esc_attr( (float) ( $printer->machine_efficiency_factor ?? 1 ) ); ?>"
+											data-setup-minutes="<?php echo esc_attr( (float) ( $printer->setup_time_minutes ?? 0 ) ); ?>"
+											data-warmup-minutes="<?php echo esc_attr( (float) ( $printer->warmup_time_minutes ?? 0 ) ); ?>"
+											data-postprocess-minutes="<?php echo esc_attr( (float) ( $printer->postprocess_time_minutes ?? 0 ) ); ?>"
+											data-minimum-job-price="<?php echo esc_attr( (float) ( $printer->minimum_job_price ?? 0 ) ); ?>"
+											data-minimum-material-charge="<?php echo esc_attr( (float) ( $printer->minimum_material_charge ?? 0 ) ); ?>"
+											data-margin-override="<?php echo isset( $printer->margin_override ) ? esc_attr( (string) $printer->margin_override ) : ''; ?>"
+											data-pricing-model="<?php echo esc_attr( (string) ( $printer->pricing_model ?? 'hybrid' ) ); ?>"
+											data-support-factor="<?php echo esc_attr( (float) ( $printer->fdm_support_factor ?? 1.12 ) ); ?>"
+											<?php selected( (string) $old( 'printer_id' ), (string) (int) $printer->id ); ?>
+										><?php echo esc_html( $printer->name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+
+							<div class="srf-form__field">
+								<label for="srf-material-id"><?php esc_html_e( 'Material', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+								<select id="srf-material-id" name="srf_material_id" required data-srf-quote-input>
+									<option value=""><?php esc_html_e( 'Select a material', 'service-requests-form' ); ?></option>
+									<?php foreach ( $materials as $material ) : ?>
+										<option
+											value="<?php echo esc_attr( (int) $material->id ); ?>"
+											data-price-per-gram="<?php echo esc_attr( (float) ( $material->price_per_gram ?? 0 ) ); ?>"
+											data-price-per-cm3="<?php echo esc_attr( (float) ( $material->price_per_cm3 ?? 0 ) ); ?>"
+											data-density="<?php echo esc_attr( (float) ( $material->density ?? 0 ) ); ?>"
+											data-machine-factor="<?php echo esc_attr( (float) ( $material->machine_time_factor ?? 1 ) ); ?>"
+											data-surface-factor="<?php echo esc_attr( (float) ( $material->surface_quality_factor ?? 1 ) ); ?>"
+											data-wastage-factor="<?php echo esc_attr( (float) ( $material->wastage_factor ?? 1 ) ); ?>"
+											<?php selected( (string) $old( 'material_id' ), (string) (int) $material->id ); ?>
+										><?php echo esc_html( $material->name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+
+							<div class="srf-form__field srf-project-configurator__wide">
+								<label for="srf-print-profile"><?php esc_html_e( 'Process profile', 'service-requests-form' ); ?> <span class="srf-required">*</span></label>
+								<select id="srf-print-profile" name="srf_print_profile" required data-srf-quote-input>
+									<option value="custom" <?php selected( $selected_profile, 'custom' ); ?>><?php esc_html_e( 'Custom settings', 'service-requests-form' ); ?></option>
+									<?php foreach ( $print_profiles as $profile_key => $profile ) : ?>
+										<option value="<?php echo esc_attr( $profile_key ); ?>" <?php selected( $selected_profile, $profile_key ); ?>><?php echo esc_html( $profile['name'] ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="srf-form__help"><?php esc_html_e( 'Bambu process names follow the familiar Studio-style list. They are estimator presets, not imported slicer or G-code profiles.', 'service-requests-form' ); ?></p>
+							</div>
+						</div>
+
+						<details class="srf-project-advanced" data-srf-advanced-settings>
+							<summary><?php esc_html_e( 'Advanced print settings', 'service-requests-form' ); ?></summary>
+							<div class="srf-project-profile-notice" data-srf-profile-notice hidden></div>
+							<div class="srf-project-advanced__grid">
+								<div class="srf-form__field"><label for="srf-layer-height"><?php esc_html_e( 'Layer height (mm)', 'service-requests-form' ); ?></label><input type="number" id="srf-layer-height" name="srf_layer_height" min="0.01" max="1" step="0.01" value="<?php echo esc_attr( $old( 'layer_height', '0.20' ) ); ?>" data-srf-quote-input /></div>
+								<div class="srf-form__field"><label for="srf-infill"><?php esc_html_e( 'Infill (%)', 'service-requests-form' ); ?></label><input type="number" id="srf-infill" name="srf_infill" min="0" max="100" step="1" value="<?php echo esc_attr( $old( 'infill', '15' ) ); ?>" data-srf-quote-input /></div>
+								<div class="srf-form__field"><label for="srf-wall-loops"><?php esc_html_e( 'Wall loops', 'service-requests-form' ); ?></label><input type="number" id="srf-wall-loops" name="srf_wall_loops" min="1" max="12" step="1" value="<?php echo esc_attr( $old( 'wall_loops', '2' ) ); ?>" data-srf-quote-input /></div>
+								<div class="srf-form__field"><label for="srf-top-layers"><?php esc_html_e( 'Top layers', 'service-requests-form' ); ?></label><input type="number" id="srf-top-layers" name="srf_top_layers" min="0" max="30" step="1" value="<?php echo esc_attr( $old( 'top_layers', '4' ) ); ?>" data-srf-quote-input /></div>
+								<div class="srf-form__field"><label for="srf-bottom-layers"><?php esc_html_e( 'Bottom layers', 'service-requests-form' ); ?></label><input type="number" id="srf-bottom-layers" name="srf_bottom_layers" min="0" max="30" step="1" value="<?php echo esc_attr( $old( 'bottom_layers', '3' ) ); ?>" data-srf-quote-input /></div>
+								<div class="srf-form__field"><label for="srf-infill-pattern"><?php esc_html_e( 'Infill pattern', 'service-requests-form' ); ?></label><select id="srf-infill-pattern" name="srf_infill_pattern" data-srf-quote-input><option value="grid" <?php selected( $old( 'infill_pattern', 'grid' ), 'grid' ); ?>><?php esc_html_e( 'Grid', 'service-requests-form' ); ?></option><option value="gyroid" <?php selected( $old( 'infill_pattern' ), 'gyroid' ); ?>><?php esc_html_e( 'Gyroid', 'service-requests-form' ); ?></option><option value="lines" <?php selected( $old( 'infill_pattern' ), 'lines' ); ?>><?php esc_html_e( 'Lines', 'service-requests-form' ); ?></option><option value="cubic" <?php selected( $old( 'infill_pattern' ), 'cubic' ); ?>><?php esc_html_e( 'Cubic', 'service-requests-form' ); ?></option><option value="honeycomb" <?php selected( $old( 'infill_pattern' ), 'honeycomb' ); ?>><?php esc_html_e( 'Honeycomb', 'service-requests-form' ); ?></option></select></div>
+							</div>
+						</details>
+
+						<div class="srf-project-configurator__grid srf-project-configurator__grid--secondary">
+							<div class="srf-form__field"><label for="srf-shell-mode"><?php esc_html_e( 'Structure', 'service-requests-form' ); ?></label><select id="srf-shell-mode" name="srf_shell_mode" data-srf-quote-input><option value="solid" <?php selected( $old( 'shell_mode', 'solid' ), 'solid' ); ?>><?php esc_html_e( 'Shell + selected infill', 'service-requests-form' ); ?></option><option value="hollow" <?php selected( $old( 'shell_mode' ), 'hollow' ); ?>><?php esc_html_e( 'Shell only / hollow', 'service-requests-form' ); ?></option></select></div>
+							<div class="srf-form__field"><label for="srf-scale"><?php esc_html_e( 'Scale (%)', 'service-requests-form' ); ?></label><input type="number" id="srf-scale" name="srf_scale" min="10" max="500" step="1" value="<?php echo esc_attr( $old( 'scale', '100' ) ); ?>" data-srf-quote-input /></div>
+							<div class="srf-form__field"><label for="srf-quantity"><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></label><input type="number" id="srf-quantity" name="srf_quantity" min="1" max="999" step="1" value="<?php echo esc_attr( $old( 'quantity', '1' ) ); ?>" data-srf-quote-input /></div>
+							<div class="srf-form__field srf-form__field--checkbox"><label><input type="checkbox" name="srf_supports" value="1" <?php checked( $old( 'supports', '0' ), '1' ); ?> data-srf-quote-input /> <span><?php esc_html_e( 'Generate support structures', 'service-requests-form' ); ?></span></label></div>
+						</div>
+
+						<div class="srf-form__field">
+							<label for="srf-quote-notes"><?php esc_html_e( 'Print notes', 'service-requests-form' ); ?></label>
+							<textarea id="srf-quote-notes" name="srf_quote_notes" rows="5" maxlength="4000"><?php echo esc_textarea( $old( 'notes' ) ); ?></textarea>
+						</div>
+					</div>
+
+					<aside
+						class="srf-project-card srf-project-summary"
+						data-srf-quote-summary
+						data-currency-symbol="<?php echo esc_attr( $currency_symbol ); ?>"
+						data-tax-rate="<?php echo esc_attr( $tax_rate ); ?>"
+						data-service-fee="<?php echo esc_attr( $service_fee ); ?>"
+						data-setup-fee="<?php echo esc_attr( $setup_fee ); ?>"
+						data-profit-margin="<?php echo esc_attr( $profit_margin ); ?>"
+					>
+						<div class="srf-project-summary__header"><div><p><?php esc_html_e( 'Live estimate', 'service-requests-form' ); ?></p><h3><?php esc_html_e( 'Project total', 'service-requests-form' ); ?></h3></div><strong data-srf-price-total>—</strong></div>
+						<div class="srf-project-estimate-status" data-srf-estimate-status data-type="info"><?php esc_html_e( 'Select a model, printer, and material to see an estimate.', 'service-requests-form' ); ?></div>
+						<dl class="srf-project-summary__selection">
+							<div><dt><?php esc_html_e( 'Printer', 'service-requests-form' ); ?></dt><dd data-srf-summary-printer>—</dd></div>
+							<div><dt><?php esc_html_e( 'Material', 'service-requests-form' ); ?></dt><dd data-srf-summary-material>—</dd></div>
+							<div><dt><?php esc_html_e( 'Process', 'service-requests-form' ); ?></dt><dd data-srf-summary-profile>—</dd></div>
+							<div><dt><?php esc_html_e( 'Layer', 'service-requests-form' ); ?></dt><dd data-srf-summary-layer>—</dd></div>
+							<div><dt><?php esc_html_e( 'Quantity', 'service-requests-form' ); ?></dt><dd data-srf-summary-quantity>—</dd></div>
+						</dl>
+						<dl class="srf-project-summary__costs">
+							<div><dt><?php esc_html_e( 'Estimated printed volume', 'service-requests-form' ); ?></dt><dd data-srf-price-volume>—</dd></div>
+							<div><dt><?php esc_html_e( 'Estimated material weight', 'service-requests-form' ); ?></dt><dd data-srf-price-weight>—</dd></div>
+							<div><dt><?php esc_html_e( 'Material', 'service-requests-form' ); ?></dt><dd data-srf-price-material>—</dd></div>
+							<div><dt><?php esc_html_e( 'Machine time', 'service-requests-form' ); ?></dt><dd data-srf-price-printer>—</dd></div>
+							<div><dt><?php esc_html_e( 'Fees and margin', 'service-requests-form' ); ?></dt><dd data-srf-price-fees>—</dd></div>
+							<div><dt><?php esc_html_e( 'Tax', 'service-requests-form' ); ?></dt><dd data-srf-price-tax>—</dd></div>
+							<div><dt><?php esc_html_e( 'Estimated print time', 'service-requests-form' ); ?></dt><dd data-srf-price-time>—</dd></div>
+						</dl>
+						<div class="srf-project-fit-status" data-srf-fit-status data-fit="unknown"><?php esc_html_e( 'Build-volume check occurs after model analysis.', 'service-requests-form' ); ?></div>
+						<p class="srf-project-summary__disclaimer"><?php esc_html_e( 'This is a geometry-based production estimate, not a Bambu Studio slicing result. The server is authoritative and may reject open, damaged, unsupported, or oversized models before checkout.', 'service-requests-form' ); ?></p>
+					</aside>
+				</div>
+
+				<div class="srf-project-card srf-project-terms">
+					<label>
+						<input type="checkbox" name="srf_terms" value="1" <?php checked( $old( 'terms', '0' ), '1' ); ?> required />
+						<span>
+							<?php
+							if ( $terms_url ) {
+								echo wp_kses_post( sprintf( __( 'I confirm that I have the right to manufacture these files and accept the <a href="%s" target="_blank" rel="noopener noreferrer">Terms & Conditions</a>.', 'service-requests-form' ), esc_url( $terms_url ) ) );
+							} else {
+								esc_html_e( 'I confirm that I have the right to manufacture these files and accept the Terms & Conditions.', 'service-requests-form' );
+							}
+							?>
+						</span>
+					</label>
+				</div>
+
+				<?php if ( $checkout_requested && ! $woocommerce_available ) : ?>
+					<div class="srf-project-notice srf-project-notice--warning" role="status"><?php esc_html_e( 'Online payment is enabled in plugin settings, but WooCommerce is not currently available. The quote can still be saved and the team will contact the customer.', 'service-requests-form' ); ?></div>
+				<?php endif; ?>
+
+				<div class="srf-project-step-error" data-srf-step-error="3" role="alert" hidden></div>
+				<div class="srf-form__actions srf-form__actions--project">
+					<button type="button" class="srf-button srf-button--secondary" data-srf-prev-step="2"><?php esc_html_e( 'Back', 'service-requests-form' ); ?></button>
+					<button type="submit" class="srf-button srf-project-submit" data-srf-project-submit <?php disabled( empty( $printers ) || empty( $materials ) ); ?>><span data-srf-submit-label><?php echo esc_html( $submit_label ); ?></span></button>
+				</div>
+			</section>
+
+			<div class="srf-project-honeypot" aria-hidden="true"><label for="srf-company-website"><?php esc_html_e( 'Website', 'service-requests-form' ); ?></label><input type="text" id="srf-company-website" name="srf_company_website" value="" tabindex="-1" autocomplete="off" /></div>
 			<input type="hidden" name="srf_project_form_submitted" value="1" />
 			<?php wp_nonce_field( 'srf_submit_project_request', 'srf_project_nonce' ); ?>
 
-			<div class="srf-form__actions srf-form__actions--project">
-				<button type="button" class="srf-button srf-button--secondary srf-project-btn srf-project-btn--back" data-srf-prev-step="2">
-					<span class="srf-button__label"><?php esc_html_e( 'Back', 'service-requests-form' ); ?></span>
-				</button>
-
-				<button type="submit" class="srf-button srf-project-btn srf-project-btn--submit">
-					<span class="srf-button__label"><?php esc_html_e( 'Submit request', 'service-requests-form' ); ?></span>
-				</button>
+			<div class="srf-project-submit-overlay" data-srf-submit-overlay hidden role="status" aria-live="polite">
+				<span class="srf-project-spinner" aria-hidden="true"></span>
+				<strong><?php esc_html_e( 'Uploading models and calculating the secure quote…', 'service-requests-form' ); ?></strong>
+				<small><?php esc_html_e( 'Keep this page open. Large models may take a little longer on the server.', 'service-requests-form' ); ?></small>
 			</div>
-		</div>
-	</form>
-
+		</form>
 	<?php endif; ?>
 </div>

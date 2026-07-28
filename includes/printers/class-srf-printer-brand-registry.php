@@ -8,6 +8,7 @@ if ( ! class_exists( 'SRF_Printer_Brand_Registry' ) ) {
 		public static function get_brand_options() {
 			return array(
 				'' => __( 'Select printer brand', 'service-requests-form' ),
+				'bambulab' => 'Bambu Lab',
 				'stratasys' => 'Stratasys',
 				'formlabs' => 'Formlabs',
 			);
@@ -16,6 +17,12 @@ if ( ! class_exists( 'SRF_Printer_Brand_Registry' ) ) {
 		public static function get_family_options( $brand ) {
 			$brand = sanitize_key( (string) $brand );
 			$map = array(
+				'bambulab' => array(
+					'' => __( 'Select Bambu family', 'service-requests-form' ),
+					'x1-series' => __( 'X1 Series', 'service-requests-form' ),
+					'p1-series' => __( 'P1 Series', 'service-requests-form' ),
+					'a1-series' => __( 'A1 Series', 'service-requests-form' ),
+				),
 				'stratasys' => array(
 					'' => __( 'Select Stratasys family', 'service-requests-form' ),
 					'polyjet_dental' => __( 'PolyJet / Dental', 'service-requests-form' ),
@@ -37,7 +44,7 @@ if ( ! class_exists( 'SRF_Printer_Brand_Registry' ) ) {
 			}
 			$definitions = array();
 			$base = __DIR__ . '/brands/';
-			foreach ( array( 'stratasys', 'formlabs' ) as $brand_key ) {
+			foreach ( array( 'bambulab', 'stratasys', 'formlabs' ) as $brand_key ) {
 				$file = $base . $brand_key . '.php';
 				if ( file_exists( $file ) ) {
 					$data = require $file;

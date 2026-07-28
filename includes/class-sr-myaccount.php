@@ -426,9 +426,14 @@ class SRF_MyAccount {
 
 		$map = array(
 			'new'             => __( 'New', 'service-requests-form' ),
-			'pending-payment' => __( 'Pending purchase', 'service-requests-form' ),
+			'quote-ready'     => __( 'Quote ready', 'service-requests-form' ),
+			'pending-payment' => __( 'Pending payment', 'service-requests-form' ),
+			'paid'            => __( 'Paid / ready for production', 'service-requests-form' ),
 			'in_progress'     => __( 'In progress', 'service-requests-form' ),
 			'done'            => __( 'Done', 'service-requests-form' ),
+			'payment-failed'  => __( 'Payment failed', 'service-requests-form' ),
+			'cancelled'       => __( 'Cancelled', 'service-requests-form' ),
+			'refunded'        => __( 'Refunded', 'service-requests-form' ),
 			'failed'          => __( 'Failed', 'service-requests-form' ),
 		);
 

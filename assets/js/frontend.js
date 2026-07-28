@@ -1407,6 +1407,7 @@ document.addEventListener('click', function (e) {
   }
 
   function projectFormInit() {
+    if (window.srfProject) return;
     var form = document.querySelector('[data-srf-project-form]');
     if (!form) return;
 
@@ -1497,6 +1498,7 @@ document.addEventListener('click', function (e) {
   }
 
   function projectSuccessInit() {
+    if (window.srfProject) return;
     var successBox = document.querySelector('[data-srf-project-success]');
     if (!successBox) return;
 
@@ -1821,6 +1823,7 @@ function init3DQuotePage() {
   }
 
   function initProjectQuoteOptions() {
+    if (window.srfProject) return;
     var form = document.querySelector('[data-srf-project-form]');
     if (!form) return;
 
@@ -2060,6 +2063,7 @@ function init3DQuotePage() {
   }
 
   function initProjectLiveEstimate() {
+    if (window.srfProject) return;
     var form = document.querySelector('[data-srf-project-form]');
     if (!form) return;
 
