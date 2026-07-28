@@ -1,6 +1,6 @@
 # Service Requests Form
 
-**Version: 0.10.55**  
+**Version: 0.10.60**  
 **User and administrator guide**
 
 Service Requests Form is a WordPress plugin for receiving two kinds of customer work:
@@ -8,7 +8,7 @@ Service Requests Form is a WordPress plugin for receiving two kinds of customer 
 1. **Predefined services** configured by the site administrator and displayed with `[service_request_form]`.
 2. **Custom 3D-print projects** submitted through `[project_request_form]`, including model upload, model preview, printer/material/process selection, a server-verified price, and optional WooCommerce payment.
 
-The custom-project workflow was substantially upgraded in version 0.10.55. It now has a real three-step interface, faster background STL/OBJ analysis, built-in Bambu Lab starter printers and process profiles, server-authoritative pricing, build-volume checks, and a WooCommerce payment lifecycle.
+The custom-project workflow was substantially upgraded in version 0.10.60. It now has a real three-step interface, faster background STL/OBJ analysis, built-in Bambu Lab starter printers and process profiles, server-authoritative pricing, build-volume checks, and a WooCommerce payment lifecycle.
 
 Technical implementation details are in [`README-DEVELOPERS.md`](README-DEVELOPERS.md).
 
@@ -26,7 +26,7 @@ Before installing on a production site, back up the database and `wp-content/upl
 ## Installation or update
 
 1. In WordPress, open **Plugins → Add New → Upload Plugin**.
-2. Upload the version 0.10.55 ZIP.
+2. Upload the version 0.10.60 ZIP.
 3. When updating an existing installation, approve replacing the current plugin.
 4. Activate the plugin.
 5. Open **Service and Subscription → Settings** and save the settings once.
@@ -101,7 +101,7 @@ The browser displays an immediate geometry estimate when enough local informatio
 
 ## Bambu Lab process profiles
 
-Version 0.10.55 includes these Bambu-style process choices:
+Version 0.10.60 includes these Bambu-style process choices:
 
 - 0.08mm Extra Fine
 - 0.08mm High Quality
@@ -137,7 +137,7 @@ Changing the starter hourly or material price later does not overwrite a printer
 
 ## How project pricing works
 
-Version 0.10.55 uses quote formula `2.1`. It is a geometry-based commercial estimator, not a slicer.
+Version 0.10.60 uses quote formula `2.1`. It is a geometry-based commercial estimator, not a slicer.
 
 The server calculates:
 
@@ -245,7 +245,7 @@ The **Service and Subscription** menu provides access to settings, requests, ser
 
 ## Security notes
 
-Version 0.10.55 uses nonces, capability checks, post ownership checks, server-side option resolution, extension/structure validation, upload limits, geometry limits, and server-side checkout pricing. The project form also contains a honeypot field.
+Version 0.10.60 uses nonces, capability checks, post ownership checks, server-side option resolution, extension/structure validation, upload limits, geometry limits, and server-side checkout pricing. The project form also contains a honeypot field.
 
 Uploaded WordPress Media Library files can still be reachable by their direct upload URL on many WordPress hosts. The plugin protects its own My Account download route, but it does not turn the entire uploads directory into private storage. Sites handling confidential models should use private object storage or a protected uploads architecture.
 
@@ -272,7 +272,7 @@ Service gallery and featured media are not deleted because those files may be re
 
 ### The preview is slow or unavailable
 
-Confirm that JavaScript workers are allowed by the site's Content Security Policy and that cache/minification tools are serving `assets/js/model-worker.js` and `assets/js/project.js` from version 0.10.55. Large files and all 3MF files intentionally use server analysis.
+Confirm that JavaScript workers are allowed by the site's Content Security Policy and that cache/minification tools are serving `assets/js/model-worker.js` and `assets/js/project.js` from version 0.10.60. Large files and all 3MF files intentionally use server analysis.
 
 ### A 3MF file is rejected
 
@@ -298,8 +298,11 @@ Check PHP `upload_max_filesize`, `post_max_size`, web-server/proxy limits, secur
 
 Check the configured production-notification email, WordPress administration email, SMTP/mail logs, spam filtering, and the request's email-result metadata. Paid-project email is intentionally delayed until WooCommerce reports payment.
 
-## Version 0.10.55 change summary
+## Version 0.10.60 change summary
 
+- Fixed false OBJ validation failures when valid face records appear after the first 1 MB of a large file.
+- Replaced the fixed-size OBJ sample with a constant-memory line-by-line structure scan.
+- Added support for UTF-8 BOM-prefixed OBJ files during preliminary validation.
 - Added explicit registered-only/public access for `[project_request_form]`.
 - Rebuilt the custom-project form as three functional steps.
 - Added background STL/OBJ analysis and a sampled lightweight preview.

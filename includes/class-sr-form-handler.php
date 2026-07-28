@@ -472,13 +472,49 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					throw new Exception( sprintf( __( 'The STL structure is invalid: %s.', 'service-requests-form' ), $filename ) );
 				}
 			} elseif ( 'obj' === $ext ) {
+				/*
+				 * Do not inspect only the beginning of an OBJ. Exporters normally write
+				 * every vertex before the first face, so a detailed model can have several
+				 * megabytes of valid vertex records before any "f" record appears. The
+				 * former 1 MB sample therefore rejected valid files that the browser had
+				 * already previewed successfully. Scan records incrementally instead; this
+				 * uses constant memory and stops as soon as both structures are found.
+				 */
 				$handle = @fopen( $tmp_name, 'rb' );
-				$chunk  = $handle ? fread( $handle, min( $size, 1024 * 1024 ) ) : '';
-				if ( $handle ) {
+				if ( ! $handle ) {
+					throw new Exception( sprintf( __( 'The uploaded file could not be read: %s.', 'service-requests-form' ), $filename ) );
+				}
+
+				$has_vertex = false;
+				$has_face   = false;
+				$lines_seen = 0;
+				$max_lines  = 4000000;
+
+				try {
+					while ( false !== ( $line = fgets( $handle ) ) ) {
+						$lines_seen++;
+						if ( 1 === $lines_seen ) {
+							$line = preg_replace( '/^\xEF\xBB\xBF/', '', $line );
+						}
+
+						if ( ! $has_vertex && preg_match( '/^\s*v\s+[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?\s+[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?\s+[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?(?:\s|$)/', $line ) ) {
+							$has_vertex = true;
+						}
+						if ( ! $has_face && preg_match( '/^\s*f\s+[^\s#]+\s+[^\s#]+\s+[^\s#]+(?:\s|$)/', $line ) ) {
+							$has_face = true;
+						}
+
+						if ( $has_vertex && $has_face ) {
+							break;
+						}
+						if ( $lines_seen >= $max_lines ) {
+							break;
+						}
+					}
+				} finally {
 					fclose( $handle );
 				}
-				$has_vertex = preg_match( '/^\s*v\s+[-+0-9.eE]+\s+[-+0-9.eE]+\s+[-+0-9.eE]+/m', (string) $chunk );
-				$has_face   = preg_match( '/^\s*f\s+\S+\s+\S+\s+\S+/m', (string) $chunk );
+
 				if ( ! $has_vertex || ! $has_face ) {
 					throw new Exception( sprintf( __( 'The OBJ file does not contain readable vertices and faces: %s.', 'service-requests-form' ), $filename ) );
 				}

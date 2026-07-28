@@ -233,7 +233,7 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			?>
 			<div class="wrap">
 				<h1><?php esc_html_e( 'Service Requests Settings', 'service-requests-form' ); ?></h1>
-				<p><?php esc_html_e( 'Version 0.10.55 adds a faster three-step project-order workflow, Bambu Lab starter profiles, authoritative server-side pricing, and optional WooCommerce payment.', 'service-requests-form' ); ?></p>
+				<p><?php esc_html_e( 'Version 0.10.60 includes a faster three-step project-order workflow, Bambu Lab starter profiles, authoritative server-side pricing, and optional WooCommerce payment.', 'service-requests-form' ); ?></p>
 
 				<?php if ( isset( $_GET['srf_bambu_installed'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 					<div class="notice notice-success is-dismissible"><p>
