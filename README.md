@@ -1,6 +1,6 @@
 # Service Requests Form
 
-**Version: 0.10.60**  
+**Version: 0.10.81**  
 **User and administrator guide**
 
 Service Requests Form is a WordPress plugin for receiving two kinds of customer work:
@@ -8,7 +8,7 @@ Service Requests Form is a WordPress plugin for receiving two kinds of customer 
 1. **Predefined services** configured by the site administrator and displayed with `[service_request_form]`.
 2. **Custom 3D-print projects** submitted through `[project_request_form]`, including model upload, model preview, printer/material/process selection, a server-verified price, and optional WooCommerce payment.
 
-The custom-project workflow was substantially upgraded in version 0.10.60. It now has a real three-step interface, faster background STL/OBJ analysis, built-in Bambu Lab starter printers and process profiles, server-authoritative pricing, build-volume checks, and a WooCommerce payment lifecycle.
+Version 0.10.81 fixes the project-step navigation as one non-wrapping row of three equal, professional cards. Each card is placed inside an isolated equal-width flex slot, with critical row and slot sizing also written into the generated form markup so theme or form-builder rules cannot move step 3 onto a second line. It keeps all German/English language-selection fixes from 0.10.75. It retains the background STL/OBJ analysis, Bambu Lab starter profiles, server-authoritative pricing, build-volume checks, and WooCommerce payment lifecycle introduced in earlier 0.10.x releases.
 
 Technical implementation details are in [`README-DEVELOPERS.md`](README-DEVELOPERS.md).
 
@@ -26,7 +26,7 @@ Before installing on a production site, back up the database and `wp-content/upl
 ## Installation or update
 
 1. In WordPress, open **Plugins → Add New → Upload Plugin**.
-2. Upload the version 0.10.60 ZIP.
+2. Upload the version 0.10.81 ZIP.
 3. When updating an existing installation, approve replacing the current plugin.
 4. Activate the plugin.
 5. Open **Service and Subscription → Settings** and save the settings once.
@@ -56,6 +56,27 @@ Activation and the first administrator request after an update run idempotent da
 10. Submit and pay for a small known model on staging. Compare the result with your workshop's normal slicer and update the printer/material values as needed.
 
 The starter values are examples and must be calibrated before live sales.
+
+## Language selection
+
+Open **Service and Subscription → Settings → Plugin language**.
+
+Two independent selectors are available:
+
+- **Frontend UI language** controls `[project_request_form]`, `[service_request_form]`, customer account pages, validation messages, and customer-facing plugin text.
+- **Plugin admin language** controls the Service Requests dashboard, settings, request screens, services, materials, printers, and plugin notices inside `wp-admin`.
+
+Each selector supports:
+
+- **Use WordPress language** — follows the current WordPress site/user locale;
+- **English**;
+- **German (Deutsch)**.
+
+Save the settings; the redirected page and subsequent frontend requests use the selected plugin language. The selection changes this plugin only; it does not switch the language of WordPress, WooCommerce, the active theme, or other plugins. Version 0.10.81 explicitly loads the selected plugin catalogue, avoiding dependence on the site locale, and ships the German `.po` and compiled `.mo` catalog in the plugin's `languages/` directory.
+
+## Project step navigation
+
+The custom-project navigation is ordered **1 Project → 2 Model → 3 Print & price**. It uses one `flex-flow: row nowrap` container with three equal `flex: 1 1 0` slots. A release-specific stylesheet plus critical inline row, slot, and card-width declarations protect the layout even when a theme or form builder loads aggressive button or form-row CSS later. The gap scales from 8 px to 20 px, there is no horizontal scrollbar, and translated labels stay inside their own card. On very small phones, only the secondary descriptions are hidden.
 
 ## Shortcodes
 
@@ -101,7 +122,7 @@ The browser displays an immediate geometry estimate when enough local informatio
 
 ## Bambu Lab process profiles
 
-Version 0.10.60 includes these Bambu-style process choices:
+Version 0.10.81 includes these Bambu-style process choices:
 
 - 0.08mm Extra Fine
 - 0.08mm High Quality
@@ -137,7 +158,7 @@ Changing the starter hourly or material price later does not overwrite a printer
 
 ## How project pricing works
 
-Version 0.10.60 uses quote formula `2.1`. It is a geometry-based commercial estimator, not a slicer.
+Version 0.10.81 uses quote formula `2.1`. It is a geometry-based commercial estimator, not a slicer.
 
 The server calculates:
 
@@ -245,7 +266,7 @@ The **Service and Subscription** menu provides access to settings, requests, ser
 
 ## Security notes
 
-Version 0.10.60 uses nonces, capability checks, post ownership checks, server-side option resolution, extension/structure validation, upload limits, geometry limits, and server-side checkout pricing. The project form also contains a honeypot field.
+Version 0.10.81 uses nonces, capability checks, post ownership checks, server-side option resolution, extension/structure validation, upload limits, geometry limits, and server-side checkout pricing. The project form also contains a honeypot field.
 
 Uploaded WordPress Media Library files can still be reachable by their direct upload URL on many WordPress hosts. The plugin protects its own My Account download route, but it does not turn the entire uploads directory into private storage. Sites handling confidential models should use private object storage or a protected uploads architecture.
 
@@ -272,7 +293,7 @@ Service gallery and featured media are not deleted because those files may be re
 
 ### The preview is slow or unavailable
 
-Confirm that JavaScript workers are allowed by the site's Content Security Policy and that cache/minification tools are serving `assets/js/model-worker.js` and `assets/js/project.js` from version 0.10.60. Large files and all 3MF files intentionally use server analysis.
+Confirm that JavaScript workers are allowed by the site's Content Security Policy and that cache/minification tools are serving `assets/js/model-worker.js` and `assets/js/project.js` from version 0.10.81. Large files and all 3MF files intentionally use server analysis.
 
 ### A 3MF file is rejected
 
@@ -298,21 +319,12 @@ Check PHP `upload_max_filesize`, `post_max_size`, web-server/proxy limits, secur
 
 Check the configured production-notification email, WordPress administration email, SMTP/mail logs, spam filtering, and the request's email-result metadata. Paid-project email is intentionally delayed until WooCommerce reports payment.
 
-## Version 0.10.60 change summary
+## Version 0.10.81 change summary
 
-- Fixed false OBJ validation failures when valid face records appear after the first 1 MB of a large file.
-- Replaced the fixed-size OBJ sample with a constant-memory line-by-line structure scan.
-- Added support for UTF-8 BOM-prefixed OBJ files during preliminary validation.
-- Added explicit registered-only/public access for `[project_request_form]`.
-- Rebuilt the custom-project form as three functional steps.
-- Added background STL/OBJ analysis and a sampled lightweight preview.
-- Added secure server-side STL, OBJ, and 3MF geometry pricing.
-- Added server build-volume checks with axis rotation.
-- Added ten Bambu process profiles and five starter Bambu printers.
-- Added starter Bambu PLA Basic material installation.
-- Added server-locked named process options and quote formula `2.1`.
-- Added optional WooCommerce project checkout and payment-state synchronization.
-- Added paid-only production notifications for checkout projects.
-- Added project details and lifecycle information to request/account views.
-- Added automatic upload cleanup when a request is marked Done.
-- Changed uninstall to preserve data by default and perform complete cleanup only after explicit opt-in.
+- Keeps steps **1, 2, and 3** in one non-wrapping flex row at every supported width.
+- Places each card in an isolated equal-width slot using `flex: 1 1 0`, `flex-basis: 0`, `width: 0`, and `min-width: 0` so external width and minimum-width rules cannot force a second row.
+- Adds a release-specific `assets/css/project-stepper-0.10.81.css` file so page and CDN caches cannot reuse the previous stepper rules.
+- Adds critical inline row, slot, and card-width declarations in the project-form template as a cache-safe fallback against late theme or form-builder CSS.
+- Uses a responsive 8–20 px gap with no horizontal scrolling.
+- Keeps German and English titles and descriptions inside each card; only secondary descriptions are hidden below 560 px.
+- Preserves the independent frontend/admin language selectors and all pricing, model, WooCommerce, upload-validation, and security behavior from 0.10.80.

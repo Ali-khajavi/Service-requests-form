@@ -53,6 +53,12 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				array(),
 				SRF_VERSION
 			);
+			wp_register_style(
+				'srf-project-stepper-css',
+				SRF_PLUGIN_URL . 'assets/css/project-stepper-0.10.81.css',
+				array( 'srf-frontend-css' ),
+				SRF_VERSION
+			);
 			wp_register_script(
 				'srf-frontend-js',
 				SRF_PLUGIN_URL . 'assets/js/frontend.js',
@@ -88,6 +94,10 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 		protected static function enqueue_project_request_assets() {
 			self::enqueue_frontend_base_assets();
+			if ( ! wp_style_is( 'srf-project-stepper-css', 'registered' ) ) {
+				self::register_assets();
+			}
+			wp_enqueue_style( 'srf-project-stepper-css' );
 			if ( ! wp_script_is( 'srf-project-js', 'registered' ) ) {
 				self::register_assets();
 			}
@@ -143,10 +153,36 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				'srf-frontend-js',
 				'srfFrontend',
 				array(
-					'can_submit'   => self::current_user_can_submit(),
-					'popup_title'  => __( 'Login required', 'service-requests-form' ),
-					'popup_message'=> __( 'Please log in to submit a service request.', 'service-requests-form' ),
-					'popup_button' => __( 'OK', 'service-requests-form' ),
+					'can_submit'     => self::current_user_can_submit(),
+					'popup_title'    => __( 'Login required', 'service-requests-form' ),
+					'popup_message'  => __( 'Please log in to submit a service request.', 'service-requests-form' ),
+					'popup_button'   => __( 'OK', 'service-requests-form' ),
+					'close'          => __( 'Close', 'service-requests-form' ),
+					'view_larger'    => __( 'View larger image', 'service-requests-form' ),
+					'variants'       => __( 'Variants', 'service-requests-form' ),
+					'show_more'      => __( 'Show more', 'service-requests-form' ),
+					'show_less'      => __( 'Show less', 'service-requests-form' ),
+					'choose_service'               => __( 'Please choose a service', 'service-requests-form' ),
+					'price_label'                  => __( 'Price', 'service-requests-form' ),
+					'no_model_loaded'              => __( 'No model loaded yet.', 'service-requests-form' ),
+					'viewer_ready'                 => __( 'Viewer ready. Upload an STL or OBJ file to preview it.', 'service-requests-form' ),
+					'preview_available_other'       => __( 'Preview is available for STL and OBJ files. Other files can still be uploaded.', 'service-requests-form' ),
+					'viewer_loading'               => __( 'Loading 3D preview…', 'service-requests-form' ),
+					'preview_stl_obj_only'          => __( 'Preview is currently available for STL and OBJ files.', 'service-requests-form' ),
+					'viewer_preview_ready'          => __( '3D preview ready. Drag to rotate, use Shift+drag to pan, and use the wheel or zoom buttons.', 'service-requests-form' ),
+					'viewer_load_failed'            => __( 'The viewer could not load this model.', 'service-requests-form' ),
+					'preview_failed'                => __( 'Preview failed.', 'service-requests-form' ),
+					'stl_parse_failed'              => __( 'This STL file could not be parsed.', 'service-requests-form' ),
+					'obj_parse_failed'              => __( 'This OBJ file could not be parsed.', 'service-requests-form' ),
+					'project_title_required'        => __( 'Please enter the project title first.', 'service-requests-form' ),
+					'project_description_required'  => __( 'Please enter the project description first.', 'service-requests-form' ),
+					'project_login_required'        => __( 'Please log in or register first to continue to the upload step.', 'service-requests-form' ),
+					'model_upload_required'         => __( 'Please upload a 3D model first.', 'service-requests-form' ),
+					'model_uploaded'                => __( 'Model uploaded', 'service-requests-form' ),
+					'variation_number'              => __( 'Variation %d', 'service-requests-form' ),
+					'select_named'                  => __( 'Select %s', 'service-requests-form' ),
+					'select_profile_service'        => __( 'Select profile service', 'service-requests-form' ),
+					'service_number'                => __( 'Service #%d', 'service-requests-form' ),
 				)
 			);
 			$localized = true;
@@ -173,14 +209,47 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'profilesEnabled' => $profiles_enabled,
 					'defaultProfile'  => $default_profile,
 					'messages'        => array(
-						'parsing'        => __( 'Analysing the model in the background…', 'service-requests-form' ),
-						'previewReady'   => __( 'Preview ready. The server will verify the final amount before payment.', 'service-requests-form' ),
-						'previewError'   => __( 'The browser preview could not be created. You can still submit the file for secure server-side analysis.', 'service-requests-form' ),
-						'threeMf'        => __( '3MF is securely analysed after submission. Instant browser preview is available for STL and OBJ.', 'service-requests-form' ),
-						'fileRequired'   => __( 'Select at least one STL, OBJ, or 3MF model.', 'service-requests-form' ),
-						'calculating'    => __( 'Preparing the secure quote and checkout…', 'service-requests-form' ),
-						'unknownEstimate'=> __( 'The final amount will be calculated securely after submission.', 'service-requests-form' ),
-						'doesNotFit'     => __( 'The selected model does not fit this printer at the current scale.', 'service-requests-form' ),
+						'parsing'                   => __( 'Analysing the model in the background…', 'service-requests-form' ),
+						'previewReady'              => __( 'Preview ready. The server will verify the final amount before payment.', 'service-requests-form' ),
+						'previewError'              => __( 'The browser preview could not be created. You can still submit the file for secure server-side analysis.', 'service-requests-form' ),
+						'threeMf'                   => __( '3MF is securely analysed after submission. Instant browser preview is available for STL and OBJ.', 'service-requests-form' ),
+						'fileRequired'              => __( 'Select at least one STL, OBJ, or 3MF model.', 'service-requests-form' ),
+						'calculating'               => __( 'Preparing the secure quote and checkout…', 'service-requests-form' ),
+						'unknownEstimate'           => __( 'The final amount will be calculated securely after submission.', 'service-requests-form' ),
+						'doesNotFit'                => __( 'The selected model does not fit this printer at the current scale.', 'service-requests-form' ),
+						'completeRequired'          => __( 'Complete the required fields before continuing.', 'service-requests-form' ),
+						'waitAnalysis'              => __( 'Please wait while the model is analysed.', 'service-requests-form' ),
+						'couldNotReadFile'          => __( 'Could not read the file.', 'service-requests-form' ),
+						'previewStopped'            => __( 'The background model analyser stopped unexpectedly.', 'service-requests-form' ),
+						'analysisCancelled'         => __( 'Model analysis was cancelled.', 'service-requests-form' ),
+						'analysisUnsupported'       => __( 'Background model analysis is not supported in this browser.', 'service-requests-form' ),
+						'selectPreviewModel'        => __( 'Select an STL or OBJ model', 'service-requests-form' ),
+						'useSelectButton'           => __( 'Use the Select models button to add these files in this browser.', 'service-requests-form' ),
+						'fileTotalExceeds'          => __( 'The selected files total %1$s, above the %2$s upload limit.', 'service-requests-form' ),
+						'waiting'                   => __( 'Waiting', 'service-requests-form' ),
+						'serverAnalysis'            => __( 'Server analysis', 'service-requests-form' ),
+						'largeServerAnalysis'       => __( 'Large file: server analysis', 'service-requests-form' ),
+						'analysing'                 => __( 'Analysing…', 'service-requests-form' ),
+						'ready'                     => __( 'Ready', 'service-requests-form' ),
+						'profileLocked'             => __( 'This named Bambu process controls layer height, infill, walls, and top/bottom layers. Choose Custom settings to edit them.', 'service-requests-form' ),
+						'customSettings'            => __( 'Custom settings', 'service-requests-form' ),
+						'invalidLayer'              => __( 'The selected layer height is outside this printer’s supported range.', 'service-requests-form' ),
+						'selectPrinterBuild'        => __( 'Select a printer to check build volume.', 'service-requests-form' ),
+						'buildCheckDuringAnalysis'  => __( 'Build-volume check occurs during secure server analysis.', 'service-requests-form' ),
+						'instantEstimateCheckout'   => __( 'Instant geometry estimate. The uploaded files are recalculated securely on the server before this amount is placed in checkout.', 'service-requests-form' ),
+						'instantEstimateSaved'      => __( 'Instant geometry estimate. The server recalculates and stores the final quote when you submit.', 'service-requests-form' ),
+						'fitsScale'                 => __( 'Fits the selected build volume at %s%% scale.', 'service-requests-form' ),
+						'buildCheckServer'          => __( 'Build-volume check will be completed securely on the server.', 'service-requests-form' ),
+						'workerErrors'              => array(
+							'The model does not contain readable triangles.' => __( 'The model does not contain readable triangles.', 'service-requests-form' ),
+							'The STL file is too small.' => __( 'The STL file is too small.', 'service-requests-form' ),
+							'The binary STL structure is invalid.' => __( 'The binary STL structure is invalid.', 'service-requests-form' ),
+							'This OBJ is too complex for an instant browser preview. It can still be analysed securely on the server.' => __( 'This OBJ is too complex for an instant browser preview. It can still be analysed securely on the server.', 'service-requests-form' ),
+							'The OBJ file does not contain readable vertices and faces.' => __( 'The OBJ file does not contain readable vertices and faces.', 'service-requests-form' ),
+							'No model data was supplied.' => __( 'No model data was supplied.', 'service-requests-form' ),
+							'Instant preview supports STL and OBJ. This model will be analysed securely on the server.' => __( 'Instant preview supports STL and OBJ. This model will be analysed securely on the server.', 'service-requests-form' ),
+							'The model could not be analysed in the browser.' => __( 'The model could not be analysed in the browser.', 'service-requests-form' ),
+						),
 					),
 				)
 			);

@@ -1,14 +1,19 @@
 service-requests-form/
 ├── service-requests-form.php                    Plugin bootstrap, activation, upgrades, hooks
 ├── uninstall.php                                Opt-in destructive cleanup; preserves data by default
-├── README.md                                    User and administrator guide (v0.10.60)
-├── README-DEVELOPERS.md                         Developer reference (v0.10.60)
+├── README.md                                    User and administrator guide (v0.10.81)
+├── README-DEVELOPERS.md                         Developer reference (v0.10.81)
 ├── LICENSE
 ├── Structure.txt
+├── languages/
+│   ├── service-requests-form-de_DE.po            German translation source
+│   ├── service-requests-form-de_DE.mo            Compiled German translation
+│   └── service-requests-form.pot                 Translation template
 ├── assets/
 │   ├── css/
 │   │   ├── admin.css                            Administration screens
-│   │   └── frontend.css                         Both forms and three-step project UI
+│   │   ├── frontend.css                         Shared frontend form and project UI styles
+│   │   └── project-stepper-0.10.81.css          Release-specific one-row project stepper override
 │   └── js/
 │       ├── admin.js                             Service/gallery and admin behavior
 │       ├── frontend.js                          Predefined-service frontend and compatibility guards
@@ -23,8 +28,9 @@ service-requests-form/
 │   ├── class-sr-service-data.php                Predefined service data/pricing helpers
 │   ├── class-sr-form-handler.php                Shortcodes, uploads, request creation, email, quota
 │   ├── class-sr-myaccount.php                   My Account routes, ownership, exports/downloads
-│   ├── class-sr-settings.php                    Plugin settings and project access/payment controls
-│   ├── class-srf-project-pricing.php            Authoritative formula 2.0 STL/OBJ/3MF estimator
+│   ├── class-sr-settings.php                    Plugin settings, language, access, payment controls
+│   ├── class-srf-language.php                    Frontend/admin plugin-only locale selection
+│   ├── class-srf-project-pricing.php            Authoritative formula 2.1 STL/OBJ/3MF estimator
 │   ├── class-srf-print-profiles.php             Bambu process profiles and starter data
 │   ├── class-srf-quote-db.php                   Material/printer tables and CRUD
 │   ├── class-srf-woocommerce.php                Products, cart, orders, payment lifecycle

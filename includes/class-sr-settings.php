@@ -24,6 +24,8 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 		const OPTION_COMING_SOON_PROJECT = 'srf_coming_soon_project_enabled';
 		const OPTION_PROJECT_ACCESS_MODE = 'srf_project_access_mode';
 		const OPTION_PROJECT_CHECKOUT    = 'srf_project_checkout_enabled';
+		const OPTION_FRONTEND_LANGUAGE  = 'srf_frontend_language';
+		const OPTION_ADMIN_LANGUAGE     = 'srf_admin_language';
 
 		public static function init() {
 			add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
@@ -98,6 +100,8 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			register_setting( 'srf_settings_group', self::OPTION_ALLOWED_EXTENSIONS, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_extensions_csv' ), 'default' => 'stl,obj,3mf' ) );
 			register_setting( 'srf_settings_group', self::OPTION_NOTIFY_ADMIN_EMAIL, array( 'type' => 'string', 'sanitize_callback' => 'sanitize_email', 'default' => '' ) );
 			register_setting( 'srf_settings_group', self::OPTION_PROJECT_ACCESS_MODE, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_project_access_mode' ), 'default' => 'registered' ) );
+			register_setting( 'srf_settings_group', self::OPTION_FRONTEND_LANGUAGE, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_language' ), 'default' => 'site' ) );
+			register_setting( 'srf_settings_group', self::OPTION_ADMIN_LANGUAGE, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_language' ), 'default' => 'site' ) );
 
 			if ( class_exists( 'SRF_Print_Profiles' ) ) {
 				register_setting( 'srf_settings_group', SRF_Print_Profiles::OPTION_BAMBU_HOURLY_COST, array( 'type' => 'number', 'sanitize_callback' => array( __CLASS__, 'sanitize_non_negative_float' ), 'default' => 8 ) );
@@ -136,6 +140,15 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 		public static function sanitize_project_access_mode( $value ) {
 			$value = sanitize_key( (string) $value );
 			return in_array( $value, array( 'everyone', 'public' ), true ) ? 'public' : 'registered';
+		}
+
+		public static function sanitize_language( $value ) {
+			if ( class_exists( 'SRF_Language' ) ) {
+				return SRF_Language::sanitize_language( $value );
+			}
+
+			$value = is_scalar( $value ) ? (string) $value : 'site';
+			return in_array( $value, array( 'site', 'en_US', 'de_DE' ), true ) ? $value : 'site';
 		}
 
 		public static function sanitize_extensions_csv( $value ) {
@@ -230,10 +243,13 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			$service_after_submit = class_exists( 'SRF_WooCommerce' ) ? (string) get_option( SRF_WooCommerce::OPTION_AFTER_SUBMIT, 'checkout' ) : 'checkout';
 			$project_after_submit = class_exists( 'SRF_WooCommerce' ) ? (string) get_option( SRF_WooCommerce::OPTION_PROJECT_AFTER_SUBMIT, 'checkout' ) : 'checkout';
 			$bambu_action_url     = wp_nonce_url( admin_url( 'admin-post.php?action=srf_install_bambu_profiles' ), 'srf_install_bambu_profiles' );
+			$frontend_language    = self::sanitize_language( get_option( self::OPTION_FRONTEND_LANGUAGE, 'site' ) );
+			$admin_language       = self::sanitize_language( get_option( self::OPTION_ADMIN_LANGUAGE, 'site' ) );
+			$language_choices     = class_exists( 'SRF_Language' ) ? SRF_Language::choices() : array( 'site' => __( 'Use WordPress language', 'service-requests-form' ), 'en_US' => __( 'English', 'service-requests-form' ), 'de_DE' => __( 'German (Deutsch)', 'service-requests-form' ) );
 			?>
 			<div class="wrap">
 				<h1><?php esc_html_e( 'Service Requests Settings', 'service-requests-form' ); ?></h1>
-				<p><?php esc_html_e( 'Version 0.10.60 includes a faster three-step project-order workflow, Bambu Lab starter profiles, authoritative server-side pricing, and optional WooCommerce payment.', 'service-requests-form' ); ?></p>
+				<p><?php esc_html_e( 'Version 0.10.81 keeps all three project steps in one fixed row by isolating each card from theme and form-builder layout rules.', 'service-requests-form' ); ?></p>
 
 				<?php if ( isset( $_GET['srf_bambu_installed'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 					<div class="notice notice-success is-dismissible"><p>
@@ -249,6 +265,34 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 
 				<form method="post" action="options.php">
 					<?php settings_fields( 'srf_settings_group' ); ?>
+
+					<h2><?php esc_html_e( 'Plugin language', 'service-requests-form' ); ?></h2>
+					<p><?php esc_html_e( 'Choose the language used by this plugin without changing the language of the rest of the website.', 'service-requests-form' ); ?></p>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><label for="srf_frontend_language"><?php esc_html_e( 'Frontend UI language', 'service-requests-form' ); ?></label></th>
+							<td>
+								<select id="srf_frontend_language" name="<?php echo esc_attr( self::OPTION_FRONTEND_LANGUAGE ); ?>">
+									<?php foreach ( $language_choices as $language_value => $language_label ) : ?>
+										<option value="<?php echo esc_attr( $language_value ); ?>" <?php selected( $frontend_language, $language_value ); ?>><?php echo esc_html( $language_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e( 'Controls the project form, predefined service form, customer account pages, validation messages, and customer-facing plugin text.', 'service-requests-form' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="srf_admin_language"><?php esc_html_e( 'Plugin admin language', 'service-requests-form' ); ?></label></th>
+							<td>
+								<select id="srf_admin_language" name="<?php echo esc_attr( self::OPTION_ADMIN_LANGUAGE ); ?>">
+									<?php foreach ( $language_choices as $language_value => $language_label ) : ?>
+										<option value="<?php echo esc_attr( $language_value ); ?>" <?php selected( $admin_language, $language_value ); ?>><?php echo esc_html( $language_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e( 'Controls Service Requests dashboard, settings, requests, services, materials, printers, and plugin notices in wp-admin.', 'service-requests-form' ); ?></p>
+							</td>
+						</tr>
+					</table>
+					<p class="description"><strong><?php esc_html_e( 'Save changes and reload the page to apply a new language.', 'service-requests-form' ); ?></strong></p>
 
 					<h2><?php esc_html_e( 'Form availability', 'service-requests-form' ); ?></h2>
 					<table class="form-table" role="presentation">

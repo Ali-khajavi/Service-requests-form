@@ -83,6 +83,19 @@
     }
   }
 
+  function message(key, fallback) {
+    return messages && messages[key] ? String(messages[key]) : String(fallback || '');
+  }
+
+  function interpolate(template, values) {
+    return String(template || '').replace(/%(\d+)\$s/g, function (match, index) {
+      var value = values[toInteger(index, 1) - 1];
+      return value === undefined || value === null ? '' : String(value);
+    }).replace(/%s/g, function () {
+      return values.length ? String(values.shift()) : '';
+    }).replace(/%%/g, '%');
+  }
+
   function readFileBuffer(file) {
     if (file && typeof file.arrayBuffer === 'function') {
       return file.arrayBuffer();
@@ -90,7 +103,7 @@
     return new Promise(function (resolve, reject) {
       var reader = new FileReader();
       reader.onload = function () { resolve(reader.result); };
-      reader.onerror = function () { reject(reader.error || new Error('Could not read the file.')); };
+      reader.onerror = function () { reject(reader.error || new Error(message('couldNotReadFile', 'Could not read the file.'))); };
       reader.readAsArrayBuffer(file);
     });
   }
@@ -137,12 +150,12 @@
       if (payload.ok) {
         pending.resolve(payload);
       } else {
-        pending.reject(new Error(payload.message || 'The browser preview could not be created.'));
+        pending.reject(new Error((messages.workerErrors && messages.workerErrors[payload.message]) || payload.message || message('previewError', 'The browser preview could not be created.')));
       }
     };
     this.worker.onerror = function () {
       Object.keys(self.pending).forEach(function (key) {
-        self.pending[key].reject(new Error('The background model analyser stopped unexpectedly.'));
+        self.pending[key].reject(new Error(message('previewStopped', 'The background model analyser stopped unexpectedly.')));
       });
       self.pending = {};
     };
@@ -155,7 +168,7 @@
       this.worker = null;
     }
     Object.keys(this.pending).forEach(function (key) {
-      this.pending[key].reject(new Error('Model analysis was cancelled.'));
+      this.pending[key].reject(new Error(message('analysisCancelled', 'Model analysis was cancelled.')));
     }, this);
     this.pending = {};
   };
@@ -164,7 +177,7 @@
     var self = this;
     return new Promise(function (resolve, reject) {
       if (!self.worker && !self.start()) {
-        reject(new Error('Background model analysis is not supported in this browser.'));
+        reject(new Error(message('analysisUnsupported', 'Background model analysis is not supported in this browser.')));
         return;
       }
       self.sequence += 1;
@@ -357,7 +370,7 @@
       context.fillText('3D preview', size.width / 2, size.height / 2 - 8);
       context.font = '13px system-ui, sans-serif';
       context.fillStyle = '#718096';
-      context.fillText('Select an STL or OBJ model', size.width / 2, size.height / 2 + 18);
+      context.fillText(message('selectPreviewModel', 'Select an STL or OBJ model'), size.width / 2, size.height / 2 + 18);
       return;
     }
 
@@ -483,7 +496,7 @@
           self.fileInput.files = dropped;
           self.handleFileSelection(Array.prototype.slice.call(dropped));
         } catch (error) {
-          self.setFileNotice('Use the Select models button to add these files in this browser.', 'warning');
+          self.setFileNotice(message('useSelectButton', 'Use the Select models button to add these files in this browser.'), 'warning');
         }
       });
     }
@@ -595,7 +608,7 @@
   ProjectOrderForm.prototype.validateStep = function (step) {
     this.setStepError(step, '');
     if (!this.validatePanelFields(step)) {
-      this.setStepError(step, 'Complete the required fields before continuing.');
+      this.setStepError(step, message('completeRequired', 'Complete the required fields before continuing.'));
       return false;
     }
 
@@ -609,7 +622,7 @@
         return false;
       }
       if (this.analysisPending) {
-        this.setStepError(step, messages.parsing || 'Please wait while the model is analysed.');
+        this.setStepError(step, message('waitAnalysis', 'Please wait while the model is analysed.'));
         return false;
       }
     }
@@ -650,7 +663,7 @@
       }
     });
     if (total > this.maxUploadBytes) {
-      errors.push('The selected files total ' + formatBytes(total) + ', above the ' + formatBytes(this.maxUploadBytes) + ' upload limit.');
+      errors.push(interpolate(message('fileTotalExceeds', 'The selected files total %1$s, above the %2$s upload limit.'), [formatBytes(total), formatBytes(this.maxUploadBytes)]));
     }
 
     this.files = files;
@@ -683,7 +696,7 @@
       item.innerHTML = '<span class="srf-project-file__name"></span><span class="srf-project-file__size"></span><span class="srf-project-file__status" data-file-status></span>';
       setText(query(item, '.srf-project-file__name'), file.name);
       setText(query(item, '.srf-project-file__size'), formatBytes(file.size));
-      setText(query(item, '[data-file-status]'), 'Waiting');
+      setText(query(item, '[data-file-status]'), message('waiting', 'Waiting'));
       list.appendChild(item);
     });
     list.hidden = !this.files.length;
@@ -730,24 +743,24 @@
         var extension = extensionOf(file.name);
         if (extension === '3mf') {
           self.modelResults.push({ file: file, extension: extension, serverOnly: true });
-          self.setFileStatus(index, 'Server analysis', 'server');
+          self.setFileStatus(index, message('serverAnalysis', 'Server analysis'), 'server');
           self.setAnalysisProgress(index + 1, files.length);
           return;
         }
         if (file.size > MAX_BROWSER_PREVIEW_BYTES) {
           self.modelResults.push({ file: file, extension: extension, serverOnly: true });
-          self.setFileStatus(index, 'Large file: server analysis', 'server');
+          self.setFileStatus(index, message('largeServerAnalysis', 'Large file: server analysis'), 'server');
           self.setAnalysisProgress(index + 1, files.length);
           return;
         }
         if (!self.worker.available()) {
           self.modelResults.push({ file: file, extension: extension, serverOnly: true });
-          self.setFileStatus(index, 'Server analysis', 'server');
+          self.setFileStatus(index, message('serverAnalysis', 'Server analysis'), 'server');
           self.setAnalysisProgress(index + 1, files.length);
           return;
         }
 
-        self.setFileStatus(index, 'Analysing…', 'working');
+        self.setFileStatus(index, message('analysing', 'Analysing…'), 'working');
         return readFileBuffer(file)
           .then(function (buffer) {
             if (batch !== self.analysisBatch) { throw new Error('Cancelled'); }
@@ -757,7 +770,7 @@
             result.file = file;
             result.extension = extension;
             self.modelResults.push(result);
-            self.setFileStatus(index, 'Ready', 'ready');
+            self.setFileStatus(index, message('ready', 'Ready'), 'ready');
             if (!self.renderer.positions && result.previewPositions && result.previewPositions.length) {
               self.renderer.setModel(result.previewPositions, result.center, result.radius);
               self.updateModelMeta(result);
@@ -766,7 +779,7 @@
           .catch(function (error) {
             if (batch !== self.analysisBatch || (error && error.message === 'Cancelled')) { return; }
             self.modelResults.push({ file: file, extension: extension, serverOnly: true, browserError: error && error.message ? error.message : '' });
-            self.setFileStatus(index, 'Server analysis', 'server');
+            self.setFileStatus(index, message('serverAnalysis', 'Server analysis'), 'server');
           })
           .then(function () {
             self.setAnalysisProgress(index + 1, files.length);
@@ -993,7 +1006,7 @@
     var notice = query(this.form, '[data-srf-profile-notice]');
     if (notice) {
       notice.hidden = !locked;
-      notice.textContent = locked ? 'This named Bambu process controls layer height, infill, walls, and top/bottom layers. Choose Custom settings to edit them.' : '';
+      notice.textContent = locked ? message('profileLocked', 'This named Bambu process controls layer height, infill, walls, and top/bottom layers. Choose Custom settings to edit them.') : '';
     }
   };
 
@@ -1002,7 +1015,7 @@
     var profile = profileMap[key] || null;
     return {
       profileKey: profile ? key : 'custom',
-      profileName: profile ? profile.name : 'Custom settings',
+      profileName: profile ? profile.name : message('customSettings', 'Custom settings'),
       layerHeight: clamp(profile ? toNumber(profile.layer_height, 0.20) : toNumber(query(this.form, '[name="srf_layer_height"]') && query(this.form, '[name="srf_layer_height"]').value, 0.20), 0.01, 1),
       infill: clamp(profile ? toInteger(profile.infill, 20) : toInteger(query(this.form, '[name="srf_infill"]') && query(this.form, '[name="srf_infill"]').value, 20), 0, 100),
       wallLoops: clamp(profile ? toInteger(profile.wall_loops || profile.wall_count, 2) : toInteger(query(this.form, '[name="srf_wall_loops"]') && query(this.form, '[name="srf_wall_loops"]').value, 2), 1, 12),
@@ -1182,12 +1195,12 @@
       setText(query(summary, '[data-srf-price-total]'), '—');
       if (status) {
         status.textContent = quote && quote.invalidLayer
-          ? 'The selected layer height is outside this printer’s supported range.'
+          ? message('invalidLayer', 'The selected layer height is outside this printer’s supported range.')
           : (messages.unknownEstimate || 'Select a model, printer, and material to see an estimate.');
         status.setAttribute('data-type', quote && quote.invalidLayer ? 'error' : 'info');
       }
       if (fit) {
-        fit.textContent = this.metricsComplete ? 'Select a printer to check build volume.' : 'Build-volume check occurs during secure server analysis.';
+        fit.textContent = this.metricsComplete ? message('selectPrinterBuild', 'Select a printer to check build volume.') : message('buildCheckDuringAnalysis', 'Build-volume check occurs during secure server analysis.');
         fit.setAttribute('data-fit', 'unknown');
       }
       return;
@@ -1203,19 +1216,19 @@
     setText(query(summary, '[data-srf-price-total]'), quote.fits === false ? '—' : money(quote.total, symbol));
     if (status) {
       status.textContent = this.checkoutEnabled
-        ? 'Instant geometry estimate. The uploaded files are recalculated securely on the server before this amount is placed in checkout.'
-        : 'Instant geometry estimate. The server recalculates and stores the final quote when you submit.';
+        ? message('instantEstimateCheckout', 'Instant geometry estimate. The uploaded files are recalculated securely on the server before this amount is placed in checkout.')
+        : message('instantEstimateSaved', 'Instant geometry estimate. The server recalculates and stores the final quote when you submit.');
       status.setAttribute('data-type', 'success');
     }
     if (fit) {
       if (quote.fits === true) {
-        fit.textContent = 'Fits the selected build volume at ' + options.scale + '% scale.';
+        fit.textContent = interpolate(message('fitsScale', 'Fits the selected build volume at %s%% scale.'), [options.scale]);
         fit.setAttribute('data-fit', 'yes');
       } else if (quote.fits === false) {
         fit.textContent = messages.doesNotFit || 'The model does not fit this printer at the current scale.';
         fit.setAttribute('data-fit', 'no');
       } else {
-        fit.textContent = 'Build-volume check will be completed securely on the server.';
+        fit.textContent = message('buildCheckServer', 'Build-volume check will be completed securely on the server.');
         fit.setAttribute('data-fit', 'unknown');
       }
     }

@@ -1,0 +1,3074 @@
+# Translation template for Service Requests Form.
+msgid ""
+msgstr ""
+"Project-Id-Version: Service Requests Form 0.10.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-28 10:47+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Semlinger AI Team\n"
+"Language-Team: German\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Service Requests Form build script\n"
+
+#: includes/class-sr-services-cpt.php
+#, php-format
+msgid "%d image(s)"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "3D preview ready. Drag to rotate, use Shift+drag to pan, and use the wheel or zoom buttons."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "3D Project Details"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "3D project form"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "3D quote materials"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "3D quote printers"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "3MF is securely analysed after submission. Instant browser preview is available for STL and OBJ."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "[3D Print Project #%1$d] %2$s"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "[Paid 3D Print Project #%1$d] %2$s"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "[Service Request #%1$d] %2$s"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "A custom 3D print project and secure quote have been submitted."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "A custom 3D print project has been paid and is ready for production review."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "A material with the same slug already exists."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "A new service request has been submitted."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "A payable quote could not be created. Please ask the site administrator to configure material and printer costs."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "A valid email address is missing from your profile."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "A valid email address is required."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "A valid material and printer are required for pricing."
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "A1 Series"
+msgstr ""
+
+#: templates/project-form.php
+#, php-format
+msgid "Accepted: %1$s. Maximum combined upload: %2$s. Use millimetres and upload closed, printable meshes."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Access denied."
+msgstr ""
+
+#: includes/class-srf-admin-storage.php templates/myaccount/service-requests.php
+msgid "Action"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Actions"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Active"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Active service entries"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Add an optional service video that appears at the top of the service information area on the frontend."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Add Material"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Add New"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Add New Request"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php includes/class-srf-admin-menu.php
+msgid "Add New Service"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Add Printer"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Add Request"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Add Service"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Add variant group"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Add variant groups for this service (optional). To add extra cost, write values like: 2m|0, 3m|20, Express|50."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Adds Bambu PLA Basic plus X1 Carbon, P1S, P1P, A1, and A1 mini when missing. Existing material and printer rows are never overwritten. Configure real workshop costs under Materials and Printers before going live."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Admin Link:"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Advanced print settings"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "After predefined service submit"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "After project quote"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "After the admin chooses a brand, the plugin loads that brand profile from the printers folder. Stratasys is separated first, Formlabs is added next, and more brands can be plugged in later without growing one giant file."
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "All published requests"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "All Services"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "AMS / AMS lite capable"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Analysing the model in the background…"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Analysing…"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Are you sure?"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Automatic checkout pricing supports STL, OBJ, and 3MF. Keep these extensions enabled for the project-order workflow."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "Automatic fixed pricing supports STL, OBJ, and 3MF files. Unsupported printable format(s): %s."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Available colors"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Back"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Background model analysis is not supported in this browser."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php includes/printers/brands/stratasys.php
+msgid "Balanced"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Bambu Lab family"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Bambu Lab FDM printer profile fields used by the project-order form and its built-in process presets."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Bambu Lab starter profiles"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Bambu process names follow the familiar Studio-style list. They are estimator presets, not imported slicer or G-code profiles."
+msgstr ""
+
+#: includes/class-sr-settings.php
+#, php-format
+msgid "Bambu starter data checked. Added %1$d material and %2$d printers. Existing rows were not overwritten."
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Bambu Studio platform"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Bambu Studio printer preset"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php templates/form.php
+msgid "Base price"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Biocompatible track available"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Bottom exposure time"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Bottom layers"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Bounds"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Brand"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Brand-specific parameters for Formlabs SLA and dental workflows."
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Brand-specific parameters for Stratasys systems such as J5, J850, F-series, and other industrial workflows."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Brand-specific printer profile"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Brands are loaded step by step from the printers folder. Start with Stratasys or Formlabs, then extend later."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Build"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Build and hardware limits"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Build mode"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Build platform type"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Build-volume check occurs after model analysis."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Build-volume check occurs during secure server analysis."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Build-volume check will be completed securely on the server."
+msgstr ""
+
+#: includes/class-srf-print-profiles.php
+msgid "Built-in Bambu Lab starter printer for the custom 3D project form. Calibrate throughput, hourly cost, setup time, and minimum charges for your own workshop."
+msgstr ""
+
+#: service-requests-form.php
+msgid "Business User"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Cancel Editing"
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "Cancelled"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Capabilities"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Capabilities and stations"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Capabilities and validation"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Cart"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Checkout"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Choose one of the checked supported service profiles as the default for this printer."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Choose the language used by this plugin without changing the language of the rest of the website."
+msgstr ""
+
+#: templates/form.php
+msgid "Choose the option(s) that apply for this service."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Choose the print setup and review the price"
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "Clear storage"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Client ID"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Client secret"
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/myaccount/service-requests.php
+msgid "Close"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Closed volume"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Coming Soon"
+msgstr ""
+
+#: includes/class-sr-cpt.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Company"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Company is missing from your profile."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Company: %s"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Complete the required fields before continuing."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Configure and pay"
+msgstr ""
+
+#: includes/class-srf-print-profiles.php
+msgid "Configure available colours in Materials"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Configured Service"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Contact details"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Continue to model upload"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Continue to print setup"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Continue to secure payment"
+msgstr ""
+
+#: includes/class-sr-form-handler.php includes/class-srf-google-auth.php
+msgid "Continue with Google"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Controls Service Requests dashboard, settings, requests, services, materials, printers, and plugin notices in wp-admin."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Controls the project form, predefined service form, customer account pages, validation messages, and customer-facing plugin text."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Cost and time model"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not complete Google login. Please try again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Could not create attachment for \"%s\"."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not create or sign in your account. Please try again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not fetch your Google profile. Please try again."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "Could not open 3MF file: %s"
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "Could not read OBJ file: %s"
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "Could not read STL file: %s"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not read the file."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Could not save your changes."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not save your project request. Please try again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not save your request. Please try again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Could not verify your Google account. Please try again."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Create a full printer definition that controls capabilities, validation, UI fields, and quote behavior for every 3D printer technology."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Create new request"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Cubic"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Cure time (minutes)"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Currency code"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Currency symbol"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Custom 3D Print"
+msgstr ""
+
+#: includes/class-sr-form-handler.php includes/class-srf-woocommerce.php
+msgid "Custom 3D print project"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Custom 3D Print Project"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Custom 3D printing"
+msgstr ""
+
+#: includes/class-sr-form-handler.php includes/class-srf-print-profiles.php includes/class-srf-project-pricing.php templates/project-form.php
+msgid "Custom settings"
+msgstr ""
+
+#: includes/class-sr-cpt.php includes/class-sr-form-handler.php
+msgid "Customer"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Customer Details"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Customer:"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Dashboard"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Data retention"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php templates/myaccount/service-requests.php
+msgid "Date"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Dedicated wash / cleanup station required"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Default exposure time"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Default material"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Default process preset key"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Default service profile"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Default support material"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Default wall thickness (mm)"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Define materials, pricing values, and factors that will feed the 3D quote engine."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Delete"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Delete plugin data on uninstall"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Delete this material?"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Delete this printer?"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Density"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Dental / Medical"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Dental and medical workflow"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Description"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Description editable"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Description:"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Do not include passwords, medical records, or other sensitive personal information."
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-menu.php includes/class-srf-admin-status.php
+msgid "Done"
+msgstr ""
+
+#: includes/class-sr-cpt.php
+msgid "Download (HTML)"
+msgstr ""
+
+#: includes/class-sr-cpt.php templates/myaccount/service-requests.php
+msgid "Download HTML"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Drag to rotate and use the wheel or trackpad to zoom."
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Drain hole min diameter (mm)"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Drop 3D models here"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "During the merge, quote/order handling stays connected to the Service Requests workflow and WooCommerce My Account request area."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Edit"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Edit linked product"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Edit Material"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Edit Printer"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Edit Service"
+msgstr ""
+
+#: includes/class-sr-cpt.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Email"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Email or username"
+msgstr ""
+
+#: includes/class-sr-cpt.php templates/myaccount/service-requests.php
+msgid "Email Template"
+msgstr ""
+
+#: includes/class-sr-cpt.php
+msgid "Email Template (HTML)"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Email: %s"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Enable Bambu presets"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Enable Google login"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Enable material-mixing workflows such as Vero combinations."
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Enabled"
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Enclosed build chamber"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "English"
+msgstr ""
+
+#: templates/form.php
+msgid "Enter how many units you want."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Estimated material weight"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php templates/project-form.php
+msgid "Estimated print time"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Estimated Print Time"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Estimated print time: %s"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Estimated printed volume"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Everyone, including guests"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Example: J5 DentaJet, J850 Prime, Form 3B+, Form 4B."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Export not available."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Failed"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Failure / risk factor"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Falls back to the WordPress administration email when blank."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Fast model preview"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "FDM"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Fees and margin"
+msgstr ""
+
+#: templates/project-form.php
+msgid "File"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "File \"%1$s\" exceeds the maximum size (%2$s)."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "File \"%s\" is empty."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "File not found."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "File type not allowed: \"%s\"."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "File type not allowed: %1$s. Allowed model formats: %2$s."
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Finish cost factor"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Finish time factor"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Fit"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Fits the selected build volume at %s%% scale."
+msgstr ""
+
+#: templates/project-form.php
+msgid "For security, browsers do not retain selected model files after a server validation error. Please select the models again in step 2."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Form availability"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Format"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Formlabs family"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Front"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Frontend UI language"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "General information"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Generate support structures"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "German (Deutsch)"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Go to My Account"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Google account email is missing or not verified."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Google login"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Google login is currently unavailable."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Google login security validation failed. Please try again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Google login was canceled or incomplete."
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "GrabCAD / workflow profile"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Grid"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Guest name and email are collected in the project form. WooCommerce collects billing and delivery information during checkout."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Guest order"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Gyroid"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Hidden checkout item generated from a securely calculated 3D print project quote."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php includes/printers/brands/stratasys.php
+msgid "High quality"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php includes/printers/brands/stratasys.php
+msgid "High speed"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Honeycomb"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Hourly"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "https://..."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Hybrid"
+msgstr ""
+
+#: templates/form.php
+#, php-format
+msgid "I accept the <a href=\"%s\" target=\"_blank\" rel=\"noopener\">Terms & Conditions</a>."
+msgstr ""
+
+#: templates/form.php
+msgid "I accept the Terms & Conditions."
+msgstr ""
+
+#: templates/project-form.php
+#, php-format
+msgid "I confirm that I have the right to manufacture these files and accept the <a href=\"%s\" target=\"_blank\" rel=\"noopener noreferrer\">Terms & Conditions</a>."
+msgstr ""
+
+#: templates/project-form.php
+msgid "I confirm that I have the right to manufacture these files and accept the Terms & Conditions."
+msgstr ""
+
+#: templates/form.php
+msgid "I don’t have a file yet / not needed"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Images"
+msgstr ""
+
+#: templates/frontend-list.php
+msgid "In a future update, this area will show a list of your submitted requests."
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "In progress"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "In Progress"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Inactive"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Infill"
+msgstr ""
+
+#: templates/project-form.php
+#, php-format
+msgid "Infill (%)"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Infill pattern"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Infill Pattern"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Infill: %d%%"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Install missing Bambu material and printers"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Instant geometry estimate. The server recalculates and stores the final quote when you submit."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Instant geometry estimate. The uploaded files are recalculated securely on the server before this amount is placed in checkout."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Instant preview supports STL and OBJ. This model will be analysed securely on the server."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Interactive 3D model preview"
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Invalid download link."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Invalid export link."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Invalid material ID."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Invalid option selected for %s."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Invalid printer ID."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Invalid request."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Iso"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Keep this page open. Large models may take a little longer on the server."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Key (e.g. Height)"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Large file: server analysis"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php templates/project-form.php
+msgid "Layer"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Layer Height"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Layer height (mm)"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Layer height is above the maximum supported by the selected printer (%s mm)."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Layer height is below the minimum supported by the selected printer (%s mm)."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Layer height: %s mm"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Layer resolution (microns)"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Leave blank to use the plugin-generated callback URL."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Leave this at 0 if the service does not need pricing."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Left"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Lift distance"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Lift speed"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Limits"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Lines"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Live estimate"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Loading 3D preview…"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Login"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Login required"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php includes/printers/brands/stratasys.php
+msgid "Machine platform and workflow"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Machine time"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Machine time factor"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Manage services, requests, files, storage, and 3D quote resources in one place."
+msgstr ""
+
+#: includes/class-srf-woocommerce.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Material"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Material catalogue"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Material colors, finishes, and support definitions are managed in the Materials tab. Here you only decide which materials this printer accepts."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Material compatibility"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Material created successfully."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Material deleted successfully."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Material name is required."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Material updated successfully."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Material: %s"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-menu.php
+msgid "Materials"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Maximum total upload (MB)"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php templates/project-form.php
+msgid "Model"
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "Model \"%1$s\" is %2$s × %3$s × %4$s mm at the selected scale and does not fit this printer build volume (%5$s × %6$s × %7$s mm), even after rotating it."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Model analysis was cancelled."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Model uploaded"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Name"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Name and requirements"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Name is missing from your profile."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Name: %s"
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-menu.php includes/class-srf-admin-status.php
+msgid "New"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "New Request"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "New Service"
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/myaccount/service-requests.php
+msgid "No"
+msgstr ""
+
+#: templates/project-form.php
+msgid "No active printer or material is available. An administrator must configure starter data under Service Requests → Settings, Materials, and Printers."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "No default material"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "No default service profile"
+msgstr ""
+
+#: includes/class-srf-admin-status.php
+msgid "No files uploaded for this request."
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/myaccount/service-requests.php
+msgid "No files uploaded."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "No images"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "No materials available yet. Add materials first."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "No materials found yet."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "No model data was supplied."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "No model loaded yet."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "No printers found yet."
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "No requests yet."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "No service options were stored for this request."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "No services available yet. Add or publish services first."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "No services found in Trash."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "No services found."
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "No users found."
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "No users have used storage yet."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "None"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Offer the built-in Bambu process list on Bambu printers."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "OK"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "One per line. Example: A1, A2, Clear, FullColor"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "One per line. Example: matte, glossy"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "One per line. Example: stl, obj, 3mf, step"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "One per line. Example: SUP705, SUP706B"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Online payment is enabled in plugin settings, but WooCommerce is not currently available. The quote can still be saved and the team will contact the customer."
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Open"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Open 3D Project"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Open Service Requests"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Open Settings"
+msgstr ""
+
+#: templates/form.php
+msgid "Option"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Optional JSON object to map this main material to one or more support materials."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "or"
+msgstr ""
+
+#: templates/project-form.php
+msgid "or select files from your device"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Order Link: %s"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Orders"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Orientation factor"
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/form.php
+msgid "Over 1 GB storage is only possible for Business accounts. Please contact our IT team."
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "P1 Series"
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "Paid / ready for production"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Password"
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "Payment failed"
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "Pending payment"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Permanently delete plugin requests, request uploads, services, generated products, quote tables, settings, and plugin user metadata when the plugin is uninstalled. Leave disabled to preserve all data."
+msgstr ""
+
+#: includes/class-sr-cpt.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Phone"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Phone number is missing from your profile."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Phone: %s"
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "PHP ZipArchive and DOM extensions are required to analyse 3MF files."
+msgstr ""
+
+#: templates/form.php
+msgid "Please choose"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Please choose %s."
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/form.php
+msgid "Please choose a service"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please choose a service."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please complete your account profile before submitting a service request."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please enter a valid quantity."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please enter the project description first."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please enter the project title first."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please log in before ordering a custom 3D print."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please log in before submitting a service request."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please log in or ask the site administrator to enable public project requests."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please log in or register first to continue to the upload step."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please log in to submit a service request."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Please log in to view your requests."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Please review the following"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please select a material."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please select a printer."
+msgstr ""
+
+#: templates/service-info.php
+msgid "Please select a service"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please set up your shipping address in My Account before submitting a request."
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Please submit the service request form before purchasing this service."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please upload a 3D model first."
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Please upload a model and calculate a project quote before purchasing this item."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please upload at least one file, or check \"I don’t have a file yet / not needed\"."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please upload at least one file."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Please wait while the model is analysed."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Plugin admin language"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Plugin language"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "PolyJet / Dental"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "PolyJet and material behavior"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Post-cure factor"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Post-process factor"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Predefined service"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Predefined service form"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Predefined service form page"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "PreForm profile"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Preparing the secure quote and checkout…"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Preview failed."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Preview is available for STL and OBJ files. Other files can still be uploaded."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Preview is currently available for STL and OBJ files."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Preview ready. The server will verify the final amount before payment."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Preview views"
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/myaccount/service-requests.php templates/service-info.php
+msgid "Price"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Price per cm³"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Price per gram"
+msgstr ""
+
+#: templates/form.php
+msgid "Price summary"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Price/cm³"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Price/gram"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Pricing"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Print & price"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Print notes"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Print profile"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Print Profile"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Print profile: %s"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Print quantity"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Print request received"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php includes/class-srf-woocommerce.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Printer"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Printer catalogue"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Printer created successfully."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Printer deleted successfully."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Printer family"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Printer name is required."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Printer updated successfully."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Printer: %s"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php includes/class-srf-admin-printers.php
+msgid "Printers"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Printing Notes"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Process"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Process profile"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Production Configuration:"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Production notification email"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Profiles (profile services)"
+msgstr ""
+
+#: includes/class-sr-settings.php
+#, php-format
+msgid "Profit margin (%)"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php templates/project-form.php
+msgid "Project"
+msgstr ""
+
+#: templates/form.php templates/project-form.php
+msgid "Project description"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Project description is required."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Project model extensions"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Project name"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Project order steps"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Project payment"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Project quote and upload defaults"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php templates/myaccount/service-requests.php
+msgid "Project Request"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Project Title"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Project title is required."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Project total"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Purchasable directly in WooCommerce shop"
+msgstr ""
+
+#: templates/form.php templates/myaccount/service-requests.php templates/project-form.php
+msgid "Quantity"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Quantity: %d"
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "Quota"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Quote calculation version"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Quote database is not available."
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "Quote ready"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Read only"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Ready"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Recent Requests"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Redirect URI override"
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-status.php
+msgid "Refunded"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Register with Google"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Registered website users only"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Remember me"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Remove"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php templates/myaccount/service-requests.php
+msgid "Request"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Request Description"
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Request description updated successfully."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Request Details"
+msgstr ""
+
+#: includes/class-srf-admin-status.php
+msgid "Request Files"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Request ID"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Request ID: %d"
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Request not found."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Request Overview"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Request service"
+msgstr ""
+
+#: includes/class-srf-admin-status.php
+msgid "Request Status"
+msgstr ""
+
+#: includes/class-sr-cpt.php
+msgid "Request Summary"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Request type"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Request Type"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Request Type: %s"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Require the calculated project amount to be paid through WooCommerce."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Required option"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Resin print behavior"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Resin tank generation"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Save changes and reload the page to apply a new language."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Save description"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Save Material"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Save Printer"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Scale"
+msgstr ""
+
+#: templates/project-form.php
+#, php-format
+msgid "Scale (%)"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Scale: %d%%"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Search Services"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Secure WooCommerce checkout"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Security check failed. Please refresh the page and try again."
+msgstr ""
+
+#: includes/class-sr-myaccount.php includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "Security check failed. Please try again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Select %s"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Select / Edit Gallery"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Select a material"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Select a model, printer, and material to see an estimate."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Select a page"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Select a printer"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Select a printer to check build volume."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Select a printer, compatible material, and process. Named Bambu profiles use fixed cost-driving values and are verified again on the server."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Select an STL or OBJ model"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Select at least one STL, OBJ, or 3MF model."
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Select Bambu family"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Select build style"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Select family"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Select Formlabs family"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Select mode"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Select models"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Select one or more images to display as a slider for this service."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Select pricing model"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Select printer brand"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Select profile service"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Select Service Images"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "Select Stratasys family"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Select technology"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Select the page containing [service_request_form]."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Select unit"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Selected service is not valid."
+msgstr ""
+
+#: templates/form.php
+msgid "Semlinger Dental Services"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Server analysis"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Server-verified pricing"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Server-verified quote"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Server-verified quote: %1$s%2$s %3$s"
+msgstr ""
+
+#: includes/class-sr-cpt.php includes/class-sr-services-cpt.php includes/class-srf-admin-menu.php templates/form.php templates/myaccount/service-requests.php templates/service-info.php
+msgid "Service"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Service #%d"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Service / Project: %s"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Service and Subscription"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Service fee"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Service Gallery / Slider"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Service Options"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Service price"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Service Pricing / WooCommerce Product"
+msgstr ""
+
+#: includes/class-sr-cpt.php includes/class-srf-woocommerce.php
+msgid "Service Request"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Service Request ID"
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "Service Request Storage"
+msgstr ""
+
+#: includes/class-sr-cpt.php includes/class-sr-myaccount.php templates/myaccount/service-requests.php
+msgid "Service Requests"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Service Requests Settings"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Service Variations"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Service Video"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php includes/class-srf-admin-menu.php templates/form.php
+msgid "Services"
+msgstr ""
+
+#: includes/class-sr-settings.php includes/class-srf-admin-menu.php
+msgid "Settings"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Setup fee"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Shell + selected infill"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Shell Mode"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Shell only / hollow"
+msgstr ""
+
+#: includes/class-sr-cpt.php
+msgid "Shipping"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Shipping Address"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Shipping address is missing from your profile."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Shipping Address:"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Show a coming-soon screen instead of [project_request_form]."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Show a coming-soon screen instead of [service_request_form]."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Show Google login and registration buttons."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Show less"
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/service-info.php
+msgid "Show more"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Sign in to continue"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Signed-in customer"
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "SLA / Resin"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Slug"
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "Standard users are limited to 1GB total upload storage. Business accounts can have a higher quota. When a request is marked DONE, files are deleted and the user storage is freed."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Starter data"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Starter PLA price per kg"
+msgstr ""
+
+#: includes/class-srf-print-profiles.php
+msgid "Starter PLA row for Bambu Lab project quotes. Review its price, density, wastage, colours, and stock before accepting live orders."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Starter printer hourly cost"
+msgstr ""
+
+#: includes/class-sr-cpt.php includes/class-srf-admin-materials.php includes/class-srf-admin-menu.php includes/class-srf-admin-printers.php includes/class-srf-admin-status.php templates/myaccount/service-requests.php
+msgid "Status"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Status: %s"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Step 1 of 3"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Step 2 of 3"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Step 3 of 3"
+msgstr ""
+
+#: templates/project-form.php
+msgid "STL and OBJ files are analysed in a background browser worker so large meshes do not block the page. 3MF files are analysed securely on the server."
+msgstr ""
+
+#: includes/class-srf-admin-menu.php includes/class-srf-admin-storage.php
+msgid "Storage"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Storage quota exceeded. You have used %1$s of %2$s."
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Stratasys family"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Structure"
+msgstr ""
+
+#: templates/form.php
+msgid "Submit"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Submit print request"
+msgstr ""
+
+#: includes/class-srf-woocommerce.php
+msgid "Submit service request"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Sum of all users usage"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Support density factor"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Support material factor"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Support material mapping (JSON)"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Support touchpoint factor"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Supported color modes / shades"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Supported finishes"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Supported materials"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Supported service profiles"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Supported support materials"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Supports"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Supports biocompatible materials"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Supports digital materials"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Supports full-color builds"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Supports hollow models"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Supports: %s"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/printers/brands/stratasys.php
+msgid "Surface quality factor"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Tax"
+msgstr ""
+
+#: includes/class-sr-settings.php
+#, php-format
+msgid "Tax rate (%)"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Technology"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Tell us about the project"
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "Template not found."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF build contains too many items to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF contains invalid vertex coordinates."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF contains too many component references to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF contains too many object resources to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF contains too many triangles to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF contains too many vertices to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF expands to too many triangles to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF model definition is too large to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The 3MF package contains too many entries to analyse safely."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The 3MF package could not be opened: %s."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The 3MF package does not contain a model: %s."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The 3MF package is invalid: %s."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The background model analyser stopped unexpectedly."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "The base price is synced to the linked WooCommerce product. Variant extra costs are added after the service request form is submitted."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The binary STL structure is invalid."
+msgstr ""
+
+#: templates/project-form.php
+msgid "The browser creates a lightweight preview for STL and OBJ while the final checkout amount is always recalculated from the uploaded files on the server."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The browser preview could not be created. You can still submit the file for secure server-side analysis."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The combined model upload exceeds the maximum total size (%s)."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The final amount will be calculated securely after submission."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "The material could not be deleted."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "The material could not be saved."
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "The menu is now connected. The next merge step will add the full materials CRUD page here using the new SRF quote database tables."
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "The menu is now connected. The next merge step will add the full printers CRUD page here using the new SRF quote database tables."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The model could not be analysed in the browser."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The model does not contain a measurable closed volume. Repair the mesh and upload it again."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The model does not contain readable triangles."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The OBJ file does not contain readable vertices and faces."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The OBJ file does not contain readable vertices and faces: %s."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "The printer could not be deleted."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "The printer could not be saved."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The project pricing engine is not available."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The project request form is being prepared. Please check back soon."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The request and secure quote were saved, but payment could not be started. Our team will contact you, or you can try again after WooCommerce is available."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The request could not be submitted."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The selected files total %1$s, above the %2$s upload limit."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "The selected layer height is above this printer maximum (%s mm)."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "The selected layer height is below this printer minimum (%s mm)."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The selected layer height is outside this printer’s supported range."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The selected material is not available."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The selected model does not fit this printer at the current scale."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The selected printer does not support the selected material."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The selected printer is not available."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The service request form is being prepared. Please check back soon."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The STL file is too small."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The STL structure is invalid: %s."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "The uploaded file could not be read: %s."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "The uploaded models contain too many triangles to analyse safely in one request."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "The viewer could not load this model."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "The web server and PHP upload limits can still be lower."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "The WooCommerce product will be created automatically when this service is saved."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "These images will be used in the front-end slider for this service."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "This %s file does not contain printable triangles."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This 3MF file could not be parsed."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This 3MF file does not contain a readable model definition."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This 3MF file has no model node."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This ASCII STL is incomplete."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This binary STL header is incomplete."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This binary STL is incomplete."
+msgstr ""
+
+#: templates/project-form.php
+msgid "This is a geometry-based production estimate, not a Bambu Studio slicing result. The server is authoritative and may reject open, damaged, unsupported, or oversized models before checkout."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "This named Bambu process controls layer height, infill, walls, and top/bottom layers. Choose Custom settings to edit them."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This OBJ contains too many triangles to analyse safely."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This OBJ contains too many vertices to analyse safely."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "This OBJ file could not be parsed."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "This OBJ is too complex for an instant browser preview. It can still be analysed securely on the server."
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "This request can no longer be edited."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "This request is no longer editable from your account because work has already started."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "This STL contains too many triangles to analyse safely."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "This STL file could not be parsed."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Thumbnail"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Tick each service profile that this printer supports. These checked services are then exposed in Project Step 2 for this printer."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Time based"
+msgstr ""
+
+#: includes/class-sr-cpt.php
+msgid "Tip: open HTML and Print → Save as PDF"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Top"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Top / Bottom Layers"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Top layers"
+msgstr ""
+
+#: templates/form.php
+msgid "Total"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Total Requests"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Total Storage Used"
+msgstr ""
+
+#: includes/class-srf-admin-status.php
+msgid "Total:"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Tray capacity factor"
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Tray packing factor"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Triangles"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "UI field controls"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "UI profile"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Unchecked: customers must submit the service request form first. Checked: customers can also buy this service directly from the shop/product page."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Unknown upload error."
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+#, php-format
+msgid "Unsupported model file: %s"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Update Material"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Update Printer"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Upload a model, configure the print, and receive an instant estimate"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Upload and inspect the 3D model"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Upload and preview"
+msgstr ""
+
+#: includes/class-srf-project-pricing.php
+msgid "Upload at least one STL, OBJ, or 3MF model for automatic pricing."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Upload error for \"%s\"."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Upload failed for \"%1$s\": %2$s"
+msgstr ""
+
+#: templates/form.php
+msgid "Upload file(s)"
+msgstr ""
+
+#: templates/form.php
+msgid "Upload limit reached"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Uploaded Files"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Uploaded Files:"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Uploading models and calculating the secure quote…"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php templates/myaccount/service-requests.php
+msgid "Uploads"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Use a clear project name and explain the purpose, critical dimensions, finish, colour, deadline, and any assembly requirements."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Use Ctrl/Cmd to select multiple materials supported by this printer."
+msgstr ""
+
+#: includes/printers/brands/stratasys.php
+msgid "Use for J8-series full-color workflows."
+msgstr ""
+
+#: includes/printers/brands/bambulab.php
+msgid "Use plugin default"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "Use the existing Service Requests list as the current order/request management screen. The dedicated quote-order table integration can be merged after materials, printers, and pricing are wired into SRF."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Use the Select models button to add these files in this browser."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Use these images"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Use WordPress language"
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "Used"
+msgstr ""
+
+#: includes/class-srf-admin-storage.php
+msgid "User"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Values (comma separated) e.g. 2m|0, 3m|20, 7.5m|50"
+msgstr ""
+
+#: includes/class-sr-form-handler.php includes/class-sr-service-data.php includes/class-sr-services-cpt.php templates/form.php templates/service-info.php
+msgid "Variant"
+msgstr ""
+
+#: includes/class-sr-cpt.php includes/class-sr-form-handler.php includes/class-sr-services-cpt.php templates/service-info.php
+msgid "Variants"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Variants:"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "Variation %d"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Version 0.10.81 keeps all three project steps in one fixed row by isolating each card from theme and form-builder layout rules."
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Video description"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Video title"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "Video URL"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "View"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "View larger image"
+msgstr ""
+
+#: templates/project-form.php
+msgid "View my requests"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "View Requests"
+msgstr ""
+
+#: includes/class-sr-services-cpt.php
+msgid "View Service"
+msgstr ""
+
+#: includes/class-srf-admin-menu.php
+msgid "View Services"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Viewer ready. Upload an STL or OBJ file to preview it."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Visit registration form"
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "Volume based"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Waiting"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Wall loops"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "Wall Loops"
+msgstr ""
+
+#: includes/printers/brands/formlabs.php
+msgid "Wash time (minutes)"
+msgstr ""
+
+#: includes/class-srf-admin-materials.php
+msgid "Wastage factor"
+msgstr ""
+
+#: templates/project-form.php
+msgid "Website"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "When enabled, the request remains Pending payment and the production notification is sent only after the WooCommerce order becomes paid."
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "Who can order a custom print?"
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "WooCommerce order"
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+#, php-format
+msgid "WooCommerce Order: #%d"
+msgstr ""
+
+#: includes/class-sr-settings.php
+msgid "WooCommerce routing"
+msgstr ""
+
+#: templates/project-form.php
+msgid "WooCommerce will confirm billing and delivery details during checkout."
+msgstr ""
+
+#: includes/printers/class-srf-printer-brand-registry.php
+msgid "X1 Series"
+msgstr ""
+
+#: includes/class-sr-form-handler.php templates/myaccount/service-requests.php
+msgid "Yes"
+msgstr ""
+
+#: includes/class-sr-myaccount.php
+msgid "You are not allowed to edit this request."
+msgstr ""
+
+#: includes/class-srf-print-profiles.php
+msgid "You are not allowed to install printer profiles."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "You can still update your description while the request status is New. File replacement and 3D model changes are not available here."
+msgstr ""
+
+#: templates/form.php
+#, php-format
+msgid "You can upload CAD/3D/scan files here. Total storage limit: %s."
+msgstr ""
+
+#: includes/class-srf-admin-materials.php includes/class-srf-admin-printers.php
+msgid "You do not have permission to do that."
+msgstr ""
+
+#: templates/myaccount/service-requests.php
+msgid "You have no requests yet."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "You must accept the Terms & Conditions."
+msgstr ""
+
+#: templates/project-form.php
+msgid "Your model files and securely calculated quote were saved. The team will review the project and contact you using the details supplied."
+msgstr ""
+
+#: includes/class-sr-form-handler.php
+msgid "Your name is required."
+msgstr ""
+
+#: templates/frontend-list.php
+msgid "Your previous service requests"
+msgstr ""
+
+#: templates/form.php
+msgid "Your request has been sent successfully."
+msgstr ""
+
+#: templates/form.php
+#, php-format
+msgid "Your upload exceeds your available storage limit of %s. Please contact our IT team."
+msgstr ""
+
+#: includes/class-srf-admin-printers.php
+msgid "…"
+msgstr ""

@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.10.60
+ * Version:     0.10.81
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Ali Khajavi
@@ -22,7 +22,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.10.60';
+	public $version = '0.10.81';
 
 	private function __construct() {}
 	private function __clone() {}
@@ -64,6 +64,9 @@ final class Service_Requests_Form {
 
 	private function includes() {
 
+		// Language selection must be available before translated UI is registered.
+		require_once SRF_PLUGIN_DIR . 'includes/class-srf-language.php';
+
 		// Core / CPT
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-cpt.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-services-cpt.php';
@@ -87,6 +90,10 @@ final class Service_Requests_Form {
 	}
 
 	private function init_hooks() {
+
+		if ( class_exists( 'SRF_Language' ) ) {
+			SRF_Language::init();
+		}
 
 		// Translations
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ), 0 );
@@ -243,6 +250,11 @@ final class Service_Requests_Form {
 	}
 
 	public function load_textdomain() {
+		if ( class_exists( 'SRF_Language' ) ) {
+			SRF_Language::load_textdomain();
+			return;
+		}
+
 		load_plugin_textdomain(
 			'service-requests-form',
 			false,

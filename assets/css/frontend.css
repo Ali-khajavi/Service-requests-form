@@ -2535,7 +2535,6 @@
     }
 
     .srf-project-hero__trust,
-    .srf-project-wrapper .srf-project-steps,
     .srf-project-configurator__grid,
     .srf-project-advanced__grid {
         grid-template-columns: 1fr;
@@ -2603,3 +2602,6 @@
         transition-duration: 0.01ms !important;
     }
 }
+
+/* v0.10.81: the project-only one-row stepper override is loaded from
+   assets/css/project-stepper-0.10.81.css after this shared stylesheet. */

@@ -1,11 +1,11 @@
 # Service Requests Form — Developer Reference
 
-**Plugin version: 0.10.60**  
+**Plugin version: 0.10.81**  
 **Main file: `service-requests-form.php`**  
 **Text domain: `service-requests-form`**  
 **Minimum declared versions: WordPress 6.0, PHP 7.4**
 
-This document describes the source shipped in version 0.10.60. The administrator/customer guide is [`README.md`](README.md).
+This document describes the source shipped in version 0.10.81. The administrator/customer guide is [`README.md`](README.md).
 
 ## Architecture overview
 
@@ -30,7 +30,8 @@ service-requests-form/
 ├── assets/
 │   ├── css/
 │   │   ├── admin.css
-│   │   └── frontend.css
+│   │   ├── frontend.css
+│   │   └── project-stepper-0.10.81.css
 │   └── js/
 │       ├── admin.js
 │       ├── calculator.js
@@ -481,19 +482,44 @@ woocommerce_* hooks registered in SRF_WooCommerce
 
 The codebase also uses standard WordPress post-save, activation/deactivation, admin-post, shortcode, settings, rewrite, and mail APIs. Inspect the class source before relying on hook argument counts.
 
-## Testing performed for 0.10.60
+## Plugin language architecture
+
+`includes/class-srf-language.php` applies a locale override only to the `service-requests-form` text domain through WordPress's `plugin_locale` filter. It reads separate options for frontend and administrator requests:
+
+```text
+srf_frontend_language
+srf_admin_language
+```
+
+Allowed values are `site`, `en_US`, and `de_DE`. `site` follows WordPress's resolved locale. Frontend AJAX/REST requests are treated as frontend context so plugin-admin language does not leak into customer responses.
+
+`SR_Settings` registers both options and renders the **Plugin language** section. German source and compiled catalogs are shipped as:
+
+```text
+languages/service-requests-form-de_DE.po
+languages/service-requests-form-de_DE.mo
+languages/service-requests-form.pot
+```
+
+PHP strings use the existing `service-requests-form` text domain. Dynamic JavaScript labels are passed through `wp_localize_script()` for `srfProject`, `srfFrontend`, and `srfAdmin`. Keep new customer/admin strings in PHP localization arrays rather than adding untranslated literals to JavaScript.
+
+The project stepper uses a neutral `.srf-project-steps` `div` with `role="navigation"` and the release marker `data-srf-project-stepper="0.10.81"`. `SR_Form_Handler::register_assets()` registers `assets/css/project-stepper-0.10.81.css` after the shared frontend stylesheet, and the project shortcode enqueues it only for the custom-project form. The release-specific stylesheet defines one `flex-flow: row nowrap` container with three `.srf-project-step-slot` wrappers. Each slot uses `flex: 1 1 0`, `flex-basis: 0`, `width: 0`, and `min-width: 0`, while each button fills its slot. Matching inline `!important` declarations in `templates/project-form.php` protect the critical row, slot, and card-width properties when late theme/form-builder CSS changes wrapping, flex basis, width, minimum width, margin, float, or clear. The visual rules use a responsive 8–20 px gap; below 560 px only the secondary descriptions are hidden.
+
+## Testing performed for 0.10.81
 
 Release checks include:
 
 - PHP syntax lint for every PHP file;
 - Node syntax check for every JavaScript file;
-- CSS brace-balance check;
+- CSS brace-balance check plus one-row layout tests from 1400 px to 360 px against hostile post-plugin flex, width, margin, float, clear, overflow, and grid-placement rules;
 - geometry fixtures for a closed 10 mm cube in ASCII STL, binary STL, trailing-byte binary STL, and OBJ;
 - volume, surface-area, triangle-count, bounds, profile-label, and price-parity assertions;
 - multi-file and quantity assertions;
 - build-volume rejection and axis-permutation fit tests;
 - 3MF transform-unit and reflection-determinant tests;
 - Web Worker geometry tests for STL/OBJ and intentional 3MF server-only behavior;
+- German PO/MO catalogue completeness and placeholder-preservation checks;
+- language-option sanitizer/context tests plus explicit selected-catalogue loading tests with WordPress stubs;
 - ZIP integrity and package-root checks.
 
 A full WordPress/WooCommerce browser and payment-gateway staging test is still required for each deployment environment.
@@ -522,8 +548,8 @@ A full WordPress/WooCommerce browser and payment-gateway staging test is still r
 - 3MF requires PHP ZipArchive and DOM/XML.
 - WooCommerce shipping/tax behavior must be reviewed for the site's legal/accounting configuration because the project carrier is physical and non-taxable while the plugin quote can contain its own tax.
 
-## 0.10.60 implementation summary
+## 0.10.81 implementation summary
 
-Version 0.10.60 fixes a large-OBJ upload regression in the preliminary server validator. Version 0.10.55 inspected only the first 1 MB, which could contain vertices but no faces in normal vertex-first OBJ exports. Validation now scans records incrementally with constant memory, stops after finding both a valid vertex and face, recognizes an optional UTF-8 BOM, and retains bounded safety limits.
+Version 0.10.81 moves the project-step override into the release-specific `assets/css/project-stepper-0.10.81.css` asset and marks the navigation with `data-srf-project-stepper="0.10.81"`. The row is a non-wrapping flex container with three isolated equal-width slots. Critical inline declarations enforce `row nowrap`, zero flex basis, zero slot width, zero minimum width, and full-width cards, preventing late theme/form-builder width, minimum-width, margin, float, clear, or flex rules from moving step 3 to another row. The visual buttons retain the 92 px desktop minimum height, a responsive 8–20 px gap, translated text wrapping, and compact mobile treatment. No breakpoint uses horizontal scrolling.
 
-Version 0.10.60 adds the access-mode switch, three-step custom-project UI, Web Worker preview, formula 2.1 server pricing, robust STL/OBJ/3MF parsing, build-fit validation, Bambu process profiles/starter resources, secure project cart pricing, WooCommerce payment lifecycle, paid-only production notifications, expanded project metadata/status UI, Done cleanup, and opt-in-only destructive uninstall.
+The independent German/English frontend and administration language loading remains unchanged. All pricing, model-preview, large-OBJ validation, quantity, build-fit, Bambu profile, WooCommerce payment, paid-notification, file-cleanup, and opt-in uninstall behavior also remains in place.

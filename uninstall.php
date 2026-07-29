@@ -174,6 +174,8 @@ $option_keys = array(
 	'srf_coming_soon_project_enabled',
 	'srf_project_access_mode',
 	'srf_project_checkout_enabled',
+	'srf_frontend_language',
+	'srf_admin_language',
 
 	// Bambu starter profiles/resources.
 	'srf_bambu_presets_enabled',

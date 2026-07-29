@@ -1,6 +1,10 @@
 (function($){
     'use strict';
 
+    function srfAdminText(key, fallback) {
+        return (window.srfAdmin && window.srfAdmin[key]) ? String(window.srfAdmin[key]) : String(fallback || '');
+    }
+
     $(function(){
 
         var frame;
@@ -14,9 +18,9 @@
             }
 
             frame = wp.media({
-                title: 'Select Service Images',
+                title: srfAdminText('select_service_images', 'Select Service Images'),
                 button: {
-                    text: 'Use these images'
+                    text: srfAdminText('use_these_images', 'Use these images')
                 },
                 multiple: true
             });
@@ -55,7 +59,7 @@
 
         document.querySelectorAll('.tpq-confirm-delete').forEach(function(button) {
             button.addEventListener('click', function(event) {
-                if (!confirm(button.dataset.tpqMessage || 'Are you sure?')) {
+                if (!confirm(button.dataset.tpqMessage || srfAdminText('are_you_sure', 'Are you sure?'))) {
                     event.preventDefault();
                 }
             });

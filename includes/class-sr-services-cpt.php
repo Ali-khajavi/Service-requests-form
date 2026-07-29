@@ -581,6 +581,16 @@ if ( ! class_exists( 'SR_Services_CPT' ) ) {
 						true
 					);
 
+					wp_localize_script(
+						'srf-admin-service-gallery',
+						'srfAdmin',
+						array(
+							'select_service_images' => __( 'Select Service Images', 'service-requests-form' ),
+							'use_these_images'      => __( 'Use these images', 'service-requests-form' ),
+							'are_you_sure'         => __( 'Are you sure?', 'service-requests-form' ),
+						)
+					);
+
 					wp_enqueue_style(
 						'srf-admin-service-style',
 						SRF_PLUGIN_URL . 'assets/css/admin.css',

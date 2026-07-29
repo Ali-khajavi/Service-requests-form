@@ -89,20 +89,32 @@ $logged_in               = is_user_logged_in();
 				</div>
 			</header>
 
-			<nav class="srf-project-steps" aria-label="<?php esc_attr_e( 'Project order steps', 'service-requests-form' ); ?>">
-				<button type="button" class="srf-project-step is-active" data-srf-step-go="1" aria-current="step">
-					<span class="srf-project-step__number">1</span>
-					<span><strong><?php esc_html_e( 'Project', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Name and requirements', 'service-requests-form' ); ?></small></span>
-				</button>
-				<button type="button" class="srf-project-step" data-srf-step-go="2">
-					<span class="srf-project-step__number">2</span>
-					<span><strong><?php esc_html_e( 'Model', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Upload and preview', 'service-requests-form' ); ?></small></span>
-				</button>
-				<button type="button" class="srf-project-step" data-srf-step-go="3">
-					<span class="srf-project-step__number">3</span>
-					<span><strong><?php esc_html_e( 'Print & price', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Configure and pay', 'service-requests-form' ); ?></small></span>
-				</button>
-			</nav>
+			<div
+				class="srf-project-steps srf-project-steps--single-row"
+				role="navigation"
+				aria-label="<?php esc_attr_e( 'Project order steps', 'service-requests-form' ); ?>"
+				data-srf-project-stepper="0.10.81"
+				style="display:flex !important;flex-flow:row nowrap !important;gap:clamp(8px,1.4vw,20px) !important;align-items:stretch !important;justify-content:flex-start !important;width:100% !important;max-width:100% !important;min-width:0 !important;overflow:visible !important;"
+			>
+				<div class="srf-project-step-slot" style="display:flex !important;flex:1 1 0 !important;flex-basis:0 !important;width:0 !important;min-width:0 !important;max-width:none !important;margin:0 !important;padding:0 !important;">
+					<button type="button" class="srf-project-step srf-project-step--single-row is-active" data-srf-step-go="1" aria-current="step" style="flex:1 1 auto !important;width:100% !important;min-width:0 !important;max-width:100% !important;margin:0 !important;box-sizing:border-box !important;float:none !important;clear:none !important;">
+						<span class="srf-project-step__number">1</span>
+						<span><strong><?php esc_html_e( 'Project', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Name and requirements', 'service-requests-form' ); ?></small></span>
+					</button>
+				</div>
+				<div class="srf-project-step-slot" style="display:flex !important;flex:1 1 0 !important;flex-basis:0 !important;width:0 !important;min-width:0 !important;max-width:none !important;margin:0 !important;padding:0 !important;">
+					<button type="button" class="srf-project-step srf-project-step--single-row" data-srf-step-go="2" style="flex:1 1 auto !important;width:100% !important;min-width:0 !important;max-width:100% !important;margin:0 !important;box-sizing:border-box !important;float:none !important;clear:none !important;">
+						<span class="srf-project-step__number">2</span>
+						<span><strong><?php esc_html_e( 'Model', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Upload and preview', 'service-requests-form' ); ?></small></span>
+					</button>
+				</div>
+				<div class="srf-project-step-slot" style="display:flex !important;flex:1 1 0 !important;flex-basis:0 !important;width:0 !important;min-width:0 !important;max-width:none !important;margin:0 !important;padding:0 !important;">
+					<button type="button" class="srf-project-step srf-project-step--single-row" data-srf-step-go="3" style="flex:1 1 auto !important;width:100% !important;min-width:0 !important;max-width:100% !important;margin:0 !important;box-sizing:border-box !important;float:none !important;clear:none !important;">
+						<span class="srf-project-step__number">3</span>
+						<span><strong><?php esc_html_e( 'Print & price', 'service-requests-form' ); ?></strong><small><?php esc_html_e( 'Configure and pay', 'service-requests-form' ); ?></small></span>
+					</button>
+				</div>
+			</div>
 
 			<section class="srf-project-panel is-active" data-srf-step-panel="1" aria-hidden="false">
 				<div class="srf-project-panel__heading">

@@ -1,3 +1,10 @@
+function srfText(key, fallback) {
+  if (window.srfFrontend && window.srfFrontend[key]) {
+    return String(window.srfFrontend[key]);
+  }
+  return String(fallback || '');
+}
+
 function SRF_onReady(fn) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', fn);
@@ -33,7 +40,7 @@ function SRF_onReady(fn) {
     box.className = 'srf-image-lightbox';
     box.innerHTML =
       '<div class="srf-image-lightbox__inner">' +
-        '<button type="button" class="srf-image-lightbox__close" aria-label="Close">&times;</button>' +
+        '<button type="button" class="srf-image-lightbox__close" aria-label="' + srfText('close', 'Close') + '">&times;</button>' +
         '<img class="srf-image-lightbox__img" src="" alt="">' +
       '</div>';
 
@@ -75,8 +82,8 @@ function SRF_onReady(fn) {
     btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'srf-service-slider__zoom';
-    btn.setAttribute('aria-label', 'View larger image');
-    btn.setAttribute('title', 'View larger image');
+    btn.setAttribute('aria-label', srfText('view_larger', 'View larger image'));
+    btn.setAttribute('title', srfText('view_larger', 'View larger image'));
     btn.innerHTML = '&#128269;';
     viewport.appendChild(btn);
 
@@ -234,7 +241,7 @@ function SRF_onReady(fn) {
       if (items.length) {
         variantsHtml =
           '<div class="srf-service-info__variants">' +
-            '<h3 class="srf-service-info__subtitle">Variants</h3>' +
+            '<h3 class="srf-service-info__subtitle">' + escapeHtml(srfText('variants', 'Variants')) + '</h3>' +
             '<ul class="srf-service-info__variants-list">' + items.join('') + '</ul>' +
           '</div>';
       }
@@ -275,7 +282,7 @@ function SRF_onReady(fn) {
     if (basePrice > 0) {
       priceHtml =
         '<div class="srf-service-info__price">' +
-          '<strong>Price:</strong> ' +
+          '<strong>' + escapeHtml(srfText('price_label', 'Price')) + ':</strong> ' +
           '<span>' + escapeHtml(basePriceFormatted || String(basePrice.toFixed(2))) + '</span>' +
         '</div>';
     }
@@ -287,7 +294,7 @@ function SRF_onReady(fn) {
         sliderHtml +
         '<h2 class="srf-service-info__title">' + escapeHtml(title) + '</h2>' +
         '<div class="srf-service-info__text is-collapsed" data-srf-collapsible="text">' + content + '</div>' +
-        '<button type="button" class="srf-service-info__toggle" data-srf-toggle="text">Show more</button>' +
+        '<button type="button" class="srf-service-info__toggle" data-srf-toggle="text">' + escapeHtml(srfText('show_more', 'Show more')) + '</button>' +
         variantsHtml +
       '</div>'
     );
@@ -336,7 +343,7 @@ function SRF_onReady(fn) {
     function updateServiceInfo(serviceId) {
       if (!serviceId) {
         host.innerHTML =
-          '<div class="srf-service-info"><h2 class="srf-service-info__title">Please select a service</h2></div>';
+          '<div class="srf-service-info"><h2 class="srf-service-info__title">' + escapeHtml(srfText('choose_service', 'Please select a service')) + '</h2></div>';
         return;
       }
 
@@ -378,7 +385,7 @@ document.addEventListener('click', function (e) {
   if (!txt) return;
 
   var collapsed = txt.classList.toggle('is-collapsed');
-  btn.textContent = collapsed ? 'Show more' : 'Show less';
+  btn.textContent = collapsed ? srfText('show_more', 'Show more') : srfText('show_less', 'Show less');
 });
 
 
@@ -478,7 +485,7 @@ document.addEventListener('click', function (e) {
     var value = String(select.value || '');
     var textNode = container.querySelector('[data-srf-service-trigger-text]');
     var selected = select.options[select.selectedIndex];
-    var activeTitle = selected ? selected.text : 'Please choose a service';
+    var activeTitle = selected ? selected.text : srfText('choose_service', 'Please choose a service');
     var activeThumb = '';
     var options = container.querySelectorAll('[data-srf-service-option]');
 
@@ -594,8 +601,8 @@ document.addEventListener('click', function (e) {
     this.bindEvents();
     this.resize(true);
     this.drawEmpty();
-    this.updatePlaceholder('No model loaded yet.', true);
-    this.updateStatus('Viewer ready. Upload an STL or OBJ file to preview it.', 'info');
+    this.updatePlaceholder(srfText('no_model_loaded', 'No model loaded yet.'), true);
+    this.updateStatus(srfText('viewer_ready', 'Viewer ready. Upload an STL or OBJ file to preview it.'), 'info');
     this.updateStats({});
   }
 
@@ -701,7 +708,7 @@ document.addEventListener('click', function (e) {
 
     if (!file) {
       this.clearModel();
-      this.updateStatus('Preview is available for STL and OBJ files. Other files can still be uploaded.', 'warning');
+      this.updateStatus(srfText('preview_available_other', 'Preview is available for STL and OBJ files. Other files can still be uploaded.'), 'warning');
       return;
     }
 
@@ -732,7 +739,7 @@ document.addEventListener('click', function (e) {
 
     this.mesh = null;
     this.drawEmpty();
-    this.updatePlaceholder('No model loaded yet.', true);
+    this.updatePlaceholder(srfText('no_model_loaded', 'No model loaded yet.'), true);
     this.updateStats({});
   };
 
@@ -874,7 +881,7 @@ document.addEventListener('click', function (e) {
     }
 
     this.updatePlaceholder('', false);
-    this.updateStatus('Loading 3D preview…', 'loading');
+    this.updateStatus(srfText('viewer_loading', 'Loading 3D preview…'), 'loading');
 
     if (extension !== 'stl' && extension !== 'obj') {
       this.mesh = null;
@@ -885,7 +892,7 @@ document.addEventListener('click', function (e) {
         triangles: 0,
         bounds: '—'
       });
-      this.updateStatus('Preview is currently available for STL and OBJ files.', 'warning');
+      this.updateStatus(srfText('preview_stl_obj_only', 'Preview is currently available for STL and OBJ files.'), 'warning');
       return;
     }
 
@@ -913,7 +920,7 @@ document.addEventListener('click', function (e) {
           triangles: mesh.triangleCount,
           bounds: formatBounds(mesh.bounds)
         });
-        self.updateStatus('3D preview ready. Drag to rotate, use Shift+drag to pan, and use the wheel or zoom buttons.', 'success');
+        self.updateStatus(srfText('viewer_preview_ready', '3D preview ready. Drag to rotate, use Shift+drag to pan, and use the wheel or zoom buttons.'), 'success');
         self.render();
       } catch (error) {
         self.mesh = null;
@@ -924,8 +931,8 @@ document.addEventListener('click', function (e) {
           triangles: 0,
           bounds: '—'
         });
-        self.updateStatus('The viewer could not load this model.', 'error');
-        self.updatePlaceholder((error && error.message) ? error.message : 'Preview failed.', true);
+        self.updateStatus(srfText('viewer_load_failed', 'The viewer could not load this model.'), 'error');
+        self.updatePlaceholder((error && error.message) ? error.message : srfText('preview_failed', 'Preview failed.'), true);
       }
     };
 
@@ -938,8 +945,8 @@ document.addEventListener('click', function (e) {
         triangles: 0,
         bounds: '—'
       });
-      self.updateStatus('The viewer could not load this model.', 'error');
-      self.updatePlaceholder('Preview failed.', true);
+      self.updateStatus(srfText('viewer_load_failed', 'The viewer could not load this model.'), 'error');
+      self.updatePlaceholder(srfText('preview_failed', 'Preview failed.'), true);
     };
 
     if (extension === 'stl') {
@@ -1219,7 +1226,7 @@ document.addEventListener('click', function (e) {
     }
 
     if (!vertices.length || vertices.length % 3 !== 0) {
-      throw new Error('This STL file could not be parsed.');
+      throw new Error(srfText('stl_parse_failed', 'This STL file could not be parsed.'));
     }
 
     var bounds = createBounds();
@@ -1298,7 +1305,7 @@ document.addEventListener('click', function (e) {
     }
 
     if (!sourceVertices.length || !triangles.length) {
-      throw new Error('This OBJ file could not be parsed.');
+      throw new Error(srfText('obj_parse_failed', 'This OBJ file could not be parsed.'));
     }
 
     return buildMesh(triangles, bounds);
@@ -1464,19 +1471,19 @@ document.addEventListener('click', function (e) {
         var description = descriptionInput ? descriptionInput.value.trim() : '';
 
         if (!title) {
-          alert('Please enter the project title first.');
+          alert(srfText('project_title_required', 'Please enter the project title first.'));
           if (titleInput) titleInput.focus();
           return;
         }
 
         if (!description) {
-          alert('Please enter the project description first.');
+          alert(srfText('project_description_required', 'Please enter the project description first.'));
           if (descriptionInput) descriptionInput.focus();
           return;
         }
 
         if (!isLoggedIn()) {
-          alert('Please log in or register first to continue to the upload step.');
+          alert(srfText('project_login_required', 'Please log in or register first to continue to the upload step.'));
           return;
         }
 
@@ -1589,7 +1596,7 @@ function init3DQuotePage() {
   form.addEventListener('submit', function(e) {
     if (!state.model || !state.model.url) {
       e.preventDefault();
-      alert('Please upload a 3D model first.');
+      alert(srfText('model_upload_required', 'Please upload a 3D model first.'));
       return;
     }
   });
@@ -1599,7 +1606,7 @@ function init3DQuotePage() {
 
     var status = document.querySelector('.tpq-upload-status');
     if (status && state.model) {
-      status.textContent = (state.model.name || 'Model uploaded') +
+      status.textContent = (state.model.name || srfText('model_uploaded', 'Model uploaded')) +
         (state.model.size ? ' (' + formatSize(state.model.size) + ')' : '');
     }
 
@@ -1739,7 +1746,7 @@ function init3DQuotePage() {
 
     for (var i = 0; i < variants.length; i++) {
       var group = variants[i] || {};
-      var key = group.key || ('Variation ' + (i + 1));
+      var key = group.key || srfText('variation_number', 'Variation %d').replace('%d', String(i + 1));
       var values = Array.isArray(group.values) ? group.values : [];
       if (!values.length) continue;
 
@@ -1758,7 +1765,7 @@ function init3DQuotePage() {
 
       var placeholder = document.createElement('option');
       placeholder.value = '';
-      placeholder.textContent = 'Select ' + key;
+      placeholder.textContent = srfText('select_named', 'Select %s').replace('%s', key);
       select.appendChild(placeholder);
 
       for (var j = 0; j < values.length; j++) {
@@ -1792,7 +1799,7 @@ function init3DQuotePage() {
     profileSelect.innerHTML = '';
     var baseOption = document.createElement('option');
     baseOption.value = '';
-    baseOption.textContent = 'Select profile service';
+    baseOption.textContent = srfText('select_profile_service', 'Select profile service');
     profileSelect.appendChild(baseOption);
 
     if (!supportedIds.length || !window.srfServiceData) {
@@ -1807,7 +1814,7 @@ function init3DQuotePage() {
       if (!service) continue;
       var opt = document.createElement('option');
       opt.value = String(id);
-      opt.textContent = service.title || ('Service #' + id);
+      opt.textContent = service.title || srfText('service_number', 'Service #%d').replace('%d', String(id));
       profileSelect.appendChild(opt);
     }
 
