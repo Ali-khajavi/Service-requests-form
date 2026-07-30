@@ -100,7 +100,7 @@ msgstr "A1-Serie"
 #: templates/project-form.php
 #, php-format
 msgid "Accepted: %1$s. Maximum combined upload: %2$s. Use millimetres and upload closed, printable meshes."
-msgstr "Akzeptiert: %1$s. Maximaler gemeinsamer Upload: %2$s. Verwenden Sie Millimeter und laden Sie geschlossene, druckbare Netze hoch."
+msgstr "Unterstützte Dateiformate: %1$s. Maximale Uploadgröße: insgesamt %2$s. Bitte stellen Sie sicher, dass Ihr Modell geschlossen, fehlerfrei und in Millimetern angelegt ist."
 
 #: includes/class-sr-myaccount.php
 msgid "Access denied."
@@ -687,7 +687,7 @@ msgstr "Mindestdurchmesser der Ablauföffnung (mm)"
 
 #: templates/project-form.php
 msgid "Drop 3D models here"
-msgstr "3D-Modelle hier ablegen"
+msgstr "3D-Modell hierher ziehen"
 
 #: includes/class-srf-admin-menu.php
 msgid "During the merge, quote/order handling stays connected to the Service Requests workflow and WooCommerce My Account request area."
@@ -938,7 +938,7 @@ msgstr "Name und E-Mail von Gästen werden im Projektformular erfasst. WooCommer
 
 #: templates/project-form.php
 msgid "Guest order"
-msgstr "Gastbestellung"
+msgstr "Bestellung als Gast"
 
 #: templates/project-form.php
 msgid "Gyroid"
@@ -1417,7 +1417,7 @@ msgstr "oder"
 
 #: templates/project-form.php
 msgid "or select files from your device"
-msgstr "oder Dateien vom Gerät auswählen"
+msgstr "oder über Ihr Gerät auswählen"
 
 #: includes/class-sr-form-handler.php
 #, php-format
@@ -1636,7 +1636,7 @@ msgstr "Eine Vorschau ist derzeit für STL- und OBJ-Dateien verfügbar."
 
 #: includes/class-sr-form-handler.php
 msgid "Preview ready. The server will verify the final amount before payment."
-msgstr "Vorschau bereit. Der Server prüft den endgültigen Betrag vor der Zahlung."
+msgstr "Die Vorschau wurde erfolgreich erstellt. Vor Abschluss der Bestellung prüfen wir Ihre Modelldaten erneut und berechnen den endgültigen Fertigungspreis."
 
 #: templates/project-form.php
 msgid "Preview views"
@@ -2313,7 +2313,7 @@ msgstr "Schritt 3 von 3"
 
 #: templates/project-form.php
 msgid "STL and OBJ files are analysed in a background browser worker so large meshes do not block the page. 3MF files are analysed securely on the server."
-msgstr "STL- und OBJ-Dateien werden im Browser im Hintergrund analysiert, damit große Netze die Seite nicht blockieren. 3MF-Dateien werden sicher auf dem Server analysiert."
+msgstr "STL- und OBJ-Dateien werden direkt im Browser für die Vorschau verarbeitet. 3MF-Dateien werden sicher auf unserem Server analysiert. Die endgültige Preisberechnung erfolgt auf Basis der hochgeladenen Modelldaten."
 
 #: includes/class-srf-admin-menu.php includes/class-srf-admin-storage.php
 msgid "Storage"
@@ -2428,7 +2428,7 @@ msgstr "Technologie"
 
 #: templates/project-form.php
 msgid "Tell us about the project"
-msgstr "Beschreiben Sie uns das Projekt"
+msgstr "Beschreiben Sie uns Ihr Projekt"
 
 #: includes/class-sr-myaccount.php
 msgid "Template not found."
@@ -2499,7 +2499,7 @@ msgstr "Die Struktur des binären STL ist ungültig."
 
 #: templates/project-form.php
 msgid "The browser creates a lightweight preview for STL and OBJ while the final checkout amount is always recalculated from the uploaded files on the server."
-msgstr "Der Browser erstellt eine schnelle Vorschau für STL und OBJ. Der endgültige Betrag für die Kasse wird auf dem Server stets anhand der hochgeladenen Dateien neu berechnet."
+msgstr "Der Browser erstellt eine schnelle Vorschau Ihrer STL- und OBJ-Dateien. Der endgültige Preis wird anschließend auf dem Server anhand der hochgeladenen Dateien präzise berechnet."
 
 #: includes/class-sr-form-handler.php
 msgid "The browser preview could not be created. You can still submit the file for secure server-side analysis."
