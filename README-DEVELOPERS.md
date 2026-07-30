@@ -1,11 +1,11 @@
 # Service Requests Form — Developer Reference
 
-**Plugin version: 0.10.81**  
+**Plugin version: 0.10.90**  
 **Main file: `service-requests-form.php`**  
 **Text domain: `service-requests-form`**  
 **Minimum declared versions: WordPress 6.0, PHP 7.4**
 
-This document describes the source shipped in version 0.10.81. The administrator/customer guide is [`README.md`](README.md).
+This document describes the source shipped in version 0.10.90. The administrator/customer guide is [`README.md`](README.md).
 
 ## Architecture overview
 
@@ -31,12 +31,13 @@ service-requests-form/
 │   ├── css/
 │   │   ├── admin.css
 │   │   ├── frontend.css
-│   │   └── project-stepper-0.10.81.css
+│   │   └── project-stepper-0.10.90.css
 │   └── js/
 │       ├── admin.js
 │       ├── calculator.js
 │       ├── frontend.js
 │       ├── model-worker.js
+│       ├── project-viewer-webgl.js
 │       ├── project.js
 │       ├── uploader.js
 │       └── viewer.js
@@ -79,7 +80,7 @@ Owns both shortcodes, asset registration/localization, form validation, customer
 
 ### `SRF_Project_Pricing`
 
-Authoritative formula `2.0` geometry/pricing engine. It parses STL, OBJ, and 3MF; aggregates model metrics; validates build volume; resolves process settings; calculates material/time/fees/margin/tax; and returns a quote snapshot.
+Authoritative formula `2.1` geometry/pricing engine. It parses STL, OBJ, and 3MF; aggregates model metrics; validates build volume; resolves process settings; calculates material/time/fees/margin/tax; and returns a quote snapshot.
 
 ### `SRF_Print_Profiles`
 
@@ -116,10 +117,12 @@ add_shortcode( 'project_request_form', array( __CLASS__, 'shortcode_project_requ
 
 Base frontend CSS/JS are registered once. The project shortcode additionally enqueues:
 
-- `assets/js/model-worker.js` as a worker URL localized to `window.srfProject`;
-- `assets/js/project.js` for the three-step UI, local analysis, canvas preview, profile controls, fit preview, and browser estimate.
+- `assets/css/project-stepper-0.10.90.css` after the shared frontend stylesheet;
+- `assets/js/project-viewer-webgl.js`, registered as the dependency-free WebGL 1 studio renderer;
+- `assets/js/project.js`, dependent on the WebGL renderer, for the three-step UI, worker orchestration, viewer state, profile controls, fit preview, browser estimate, and Canvas 2D fallback;
+- `assets/js/model-worker.js` as a worker URL localized to `window.srfProject`.
 
-Legacy project functions in `frontend.js` return early when `window.srfProject` exists, preventing duplicate handlers from an older implementation.
+The worker URL is data, not a normal script enqueue. WordPress guarantees the WebGL renderer is loaded before `project.js` through the registered dependency. Legacy project functions in `frontend.js` return early when `window.srfProject` exists, preventing duplicate handlers from an older implementation.
 
 ## Project request sequence
 
@@ -166,13 +169,52 @@ Successful response fields include:
   limits,
   center,
   radius,
-  previewPositions       // transferred Float32Array
+  hasEmbeddedColors,
+  previewPositions,       // transferred Float32Array, xyz per vertex
+  previewFlatNormals,     // transferred Float32Array
+  previewSmoothNormals,   // transferred Float32Array
+  previewColors           // transferred Float32Array or empty array
 }
 ```
 
-The worker parses binary/ASCII STL and OBJ away from the main thread. Reservoir sampling caps preview triangles while full local geometry metrics continue to be accumulated. Binary STL detection accepts valid files with trailing bytes. 3MF and files above the browser safety threshold are marked server-only.
+The worker parses binary/ASCII STL and OBJ away from the main thread. Its preview ceiling is 160,000 triangles. It keeps every triangle at or below that ceiling and uses reservoir sampling above it while continuing to accumulate full local geometry metrics. Sampling storage uses bounded typed arrays rather than one JavaScript object per triangle. OBJ input is scanned one line at a time from the decoded string and faces are triangulated as they are encountered instead of retaining a second full face list.
+
+Flat normals are generated for every preview. Up to 90,000 triangles, smooth normals are accumulated by rounded vertex position; above that threshold, a bounded-memory face/radial blend avoids a very large adjacency map. OBJ `v x y z r g b` vertex colours and common Materialise Magics/VisCAM binary STL colour conventions are exposed through `previewColors`. Binary STL detection accepts valid files with trailing bytes. 3MF and files above the browser safety threshold are marked server-only.
 
 The browser estimate is explicitly non-authoritative. Do not expose any path that prices from worker output alone.
+
+## WebGL studio viewer
+
+`assets/js/project-viewer-webgl.js` exposes:
+
+```js
+window.SRFStudioModelRenderer
+window.SRFStudioColorFromText
+```
+
+`ProjectOrderForm` instantiates `SRFStudioModelRenderer` first. If WebGL initialization throws or WebGL is unavailable, it replaces the already-context-bound canvas and instantiates the legacy `CanvasModelRenderer`. The fallback intentionally receives at most 20,000 preview triangles because its per-frame JavaScript transform, depth sort, and Canvas 2D drawing path is CPU-bound.
+
+The WebGL renderer uses two small shader programs:
+
+- a solid model program with smooth/flat normal selection, base or vertex colour, studio key/fill/ambient/specular/rim lighting, and a red invalid-fit blend;
+- an unlit RGBA program for the bed, grid, build cage, axes, shadow, and wireframe.
+
+The model is uploaded as non-indexed triangle buffers. Rendering is event-driven: upload, pointer movement, wheel zoom, view/orientation changes, quote/scale/printer/material changes, resize, or WebGL context restoration schedules one frame. There is no permanent `requestAnimationFrame` loop while the model is idle.
+
+Viewer state includes:
+
+- warm-white, grey, black, blue, red, green, representative filament colour, and embedded-file colour modes;
+- smooth/flat shading and lazy wireframe generation;
+- front, left, top, isometric, and fit views;
+- automatic selection among six axis permutations plus manual X/Y/Z 90-degree rotations;
+- printer build plate, metric grid, X/Y axes, build-volume cage, soft footprint shadow, scale/build/fit HUD, and invalid-fit styling;
+- WebGL context-loss recovery.
+
+`setSceneOptions()` receives the selected printer build dimensions, scale, material preview colour, and the browser quote fit state. The material colour is inferred from the material's `color_availability` text and name; it is representative only. Manual viewer orientation is not persisted into the request and does not alter pricing. Server build-fit validation remains authoritative.
+
+At the 160,000-triangle ceiling, each xyz or normal Float32 buffer is about 5.76 MB decimal (5.49 MiB). Positions plus flat and smooth normals use about 17.28 MB on the main thread and a similar amount in GPU buffers; embedded colours add about 5.76 MB on each side. Wireframe is created only when enabled and adds temporary/main-thread and GPU line buffers. Exact totals vary by browser and driver. The worker transfers final typed-array buffers to avoid a second structured-clone copy.
+
+Embedded colour support is deliberately limited to OBJ vertex colours and common binary STL colour extensions. OBJ MTL/texture bundles and 3MF colour/material resources are not rendered. 3MF remains server-analysis-only in the browser workflow.
 
 ## Server geometry parsers
 
@@ -503,26 +545,23 @@ languages/service-requests-form.pot
 
 PHP strings use the existing `service-requests-form` text domain. Dynamic JavaScript labels are passed through `wp_localize_script()` for `srfProject`, `srfFrontend`, and `srfAdmin`. Keep new customer/admin strings in PHP localization arrays rather than adding untranslated literals to JavaScript.
 
-The project stepper uses a neutral `.srf-project-steps` `div` with `role="navigation"` and the release marker `data-srf-project-stepper="0.10.81"`. `SR_Form_Handler::register_assets()` registers `assets/css/project-stepper-0.10.81.css` after the shared frontend stylesheet, and the project shortcode enqueues it only for the custom-project form. The release-specific stylesheet defines one `flex-flow: row nowrap` container with three `.srf-project-step-slot` wrappers. Each slot uses `flex: 1 1 0`, `flex-basis: 0`, `width: 0`, and `min-width: 0`, while each button fills its slot. Matching inline `!important` declarations in `templates/project-form.php` protect the critical row, slot, and card-width properties when late theme/form-builder CSS changes wrapping, flex basis, width, minimum width, margin, float, or clear. The visual rules use a responsive 8–20 px gap; below 560 px only the secondary descriptions are hidden.
+The project stepper uses a neutral `.srf-project-steps` `div` with `role="navigation"` and the release marker `data-srf-project-stepper="0.10.90"`. `SR_Form_Handler::register_assets()` registers `assets/css/project-stepper-0.10.90.css` after the shared frontend stylesheet, and the project shortcode enqueues it only for the custom-project form. The release-specific stylesheet defines one `flex-flow: row nowrap` container with three `.srf-project-step-slot` wrappers. Each slot uses `flex: 1 1 0`, `flex-basis: 0`, `width: 0`, and `min-width: 0`, while each button fills its slot. Matching inline `!important` declarations in `templates/project-form.php` protect the critical row, slot, and card-width properties when late theme/form-builder CSS changes wrapping, flex basis, width, minimum width, margin, float, or clear. The visual rules use a responsive 8–20 px gap; below 560 px only the secondary descriptions are hidden.
 
-## Testing performed for 0.10.81
+## Testing performed for 0.10.90
 
 Release checks include:
 
 - PHP syntax lint for every PHP file;
 - Node syntax check for every JavaScript file;
-- CSS brace-balance check plus one-row layout tests from 1400 px to 360 px against hostile post-plugin flex, width, margin, float, clear, overflow, and grid-placement rules;
-- geometry fixtures for a closed 10 mm cube in ASCII STL, binary STL, trailing-byte binary STL, and OBJ;
-- volume, surface-area, triangle-count, bounds, profile-label, and price-parity assertions;
-- multi-file and quantity assertions;
-- build-volume rejection and axis-permutation fit tests;
-- 3MF transform-unit and reflection-determinant tests;
-- Web Worker geometry tests for STL/OBJ and intentional 3MF server-only behavior;
-- German PO/MO catalogue completeness and placeholder-preservation checks;
-- language-option sanitizer/context tests plus explicit selected-catalogue loading tests with WordPress stubs;
-- ZIP integrity and package-root checks.
+- CSS brace-balance and release-stepper assertions;
+- static asset-registration/dependency and translated-template assertions;
+- Web Worker fixtures for ASCII/binary STL, coloured binary STL, OBJ vertex colours, malformed input, full preview retention below the ceiling, and reservoir capping above it;
+- worker array-length, finite-normal, embedded-colour, bounds, volume, surface-area, and transfer-message assertions;
+- a mocked DOM/WebGL lifecycle test covering renderer construction, model upload, scene options, colour/shading/wireframe/orientation state, draw calls, clear, and fallback-safe public interfaces;
+- German PO/MO catalogue completeness, fuzzy-entry, and placeholder-preservation checks;
+- version/reference, unwanted-file, package-root, and ZIP integrity checks.
 
-A full WordPress/WooCommerce browser and payment-gateway staging test is still required for each deployment environment.
+The execution environment did not provide a functional EGL/SwiftShader WebGL context for a true headless GPU screenshot. A full WordPress/WooCommerce test in a real WebGL-capable desktop/mobile browser, plus payment-gateway staging tests, is still required for each deployment environment.
 
 ## Release checklist
 
@@ -541,15 +580,21 @@ A full WordPress/WooCommerce browser and payment-gateway staging test is still r
 ## Known limitations
 
 - Formula 2.1 is a geometry heuristic, not Bambu Studio, PrusaSlicer, Cura, or G-code execution.
-- It does not model orientation optimisation, supports generated by a real slicer, acceleration, travel, purge, AMS changes, brims/rafts, tray packing, or printer-specific exclusion zones.
+- Pricing does not model slicer-generated orientation/supports, acceleration, travel, purge, AMS changes, brims/rafts, tray packing, or printer-specific exclusion zones.
+- Viewer orientation is visual only; the server independently evaluates axis-permutation fit.
 - OBJ coordinates are assumed to be millimetres.
 - Browser preview supports STL/OBJ only; 3MF is server-only.
+- Embedded browser colours support OBJ vertex colours and common binary STL extensions, not OBJ MTL/textures or 3MF material resources.
+- Extremely complex previews are sampled at 160,000 triangles. The original upload is still used for authoritative server pricing.
+- The Canvas 2D compatibility fallback is capped at 20,000 displayed triangles.
 - Direct Media Library URLs may be public depending on hosting configuration.
 - 3MF requires PHP ZipArchive and DOM/XML.
 - WooCommerce shipping/tax behavior must be reviewed for the site's legal/accounting configuration because the project carrier is physical and non-taxable while the plugin quote can contain its own tax.
 
-## 0.10.81 implementation summary
+## 0.10.90 implementation summary
 
-Version 0.10.81 moves the project-step override into the release-specific `assets/css/project-stepper-0.10.81.css` asset and marks the navigation with `data-srf-project-stepper="0.10.81"`. The row is a non-wrapping flex container with three isolated equal-width slots. Critical inline declarations enforce `row nowrap`, zero flex basis, zero slot width, zero minimum width, and full-width cards, preventing late theme/form-builder width, minimum-width, margin, float, clear, or flex rules from moving step 3 to another row. The visual buttons retain the 92 px desktop minimum height, a responsive 8–20 px gap, translated text wrapping, and compact mobile treatment. No breakpoint uses horizontal scrolling.
+Version 0.10.90 adds a custom, dependency-free WebGL 1 studio renderer and makes it the normal project preview. The worker now transfers positions, flat/smooth normals, and optional embedded colours; it retains complete previews through 160,000 triangles, uses bounded typed-array reservoir storage above the ceiling, and processes OBJ faces in one pass. The renderer provides studio lighting, display/filament/file colours, smooth/flat shading, lazy wireframe, standard views, automatic/manual axis orientation, printer build plate and cage geometry, fit guidance, and context-loss recovery without an idle animation loop.
 
-The independent German/English frontend and administration language loading remains unchanged. All pricing, model-preview, large-OBJ validation, quantity, build-fit, Bambu profile, WooCommerce payment, paid-notification, file-cleanup, and opt-in uninstall behavior also remains in place.
+The existing Canvas 2D viewer remains an automatic fallback and is capped at 20,000 displayed triangles. Common OBJ vertex colours and binary STL colour extensions are supported; MTL/textures and browser 3MF rendering are intentionally out of scope. All price, file, printer/material, fit, and checkout decisions remain server-authoritative.
+
+The release-specific `assets/css/project-stepper-0.10.90.css` and `data-srf-project-stepper="0.10.90"` marker preserve the non-wrapping three-card step row. Independent English/German frontend and administration language loading, formula 2.1, large-OBJ server validation, quantity handling, Bambu profiles, WooCommerce payment lifecycle, paid notification, Done cleanup, and opt-in destructive uninstall behavior remain in place.

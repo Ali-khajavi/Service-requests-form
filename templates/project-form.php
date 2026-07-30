@@ -93,7 +93,7 @@ $logged_in               = is_user_logged_in();
 				class="srf-project-steps srf-project-steps--single-row"
 				role="navigation"
 				aria-label="<?php esc_attr_e( 'Project order steps', 'service-requests-form' ); ?>"
-				data-srf-project-stepper="0.10.81"
+				data-srf-project-stepper="0.10.90"
 				style="display:flex !important;flex-flow:row nowrap !important;gap:clamp(8px,1.4vw,20px) !important;align-items:stretch !important;justify-content:flex-start !important;width:100% !important;max-width:100% !important;min-width:0 !important;overflow:visible !important;"
 			>
 				<div class="srf-project-step-slot" style="display:flex !important;flex:1 1 0 !important;flex-basis:0 !important;width:0 !important;min-width:0 !important;max-width:none !important;margin:0 !important;padding:0 !important;">
@@ -203,7 +203,10 @@ $logged_in               = is_user_logged_in();
 
 					<div class="srf-project-card srf-project-viewer" data-srf-model-viewer>
 						<div class="srf-project-viewer__header">
-							<div><h3><?php esc_html_e( 'Fast model preview', 'service-requests-form' ); ?></h3><p><?php esc_html_e( 'Drag to rotate and use the wheel or trackpad to zoom.', 'service-requests-form' ); ?></p></div>
+							<div>
+								<h3><?php esc_html_e( 'Studio model preview', 'service-requests-form' ); ?></h3>
+								<p><?php esc_html_e( 'GPU-accelerated solid preview with studio lighting, colour, build plate, and inspection modes.', 'service-requests-form' ); ?></p>
+							</div>
 							<div class="srf-project-viewer__controls" aria-label="<?php esc_attr_e( 'Preview views', 'service-requests-form' ); ?>">
 								<button type="button" data-srf-view="front"><?php esc_html_e( 'Front', 'service-requests-form' ); ?></button>
 								<button type="button" data-srf-view="left"><?php esc_html_e( 'Left', 'service-requests-form' ); ?></button>
@@ -212,7 +215,59 @@ $logged_in               = is_user_logged_in();
 								<button type="button" data-srf-view="fit"><?php esc_html_e( 'Fit', 'service-requests-form' ); ?></button>
 							</div>
 						</div>
-						<canvas aria-label="<?php esc_attr_e( 'Interactive 3D model preview', 'service-requests-form' ); ?>"></canvas>
+
+						<div class="srf-project-viewer__toolbar">
+							<div class="srf-project-viewer__tool-group" role="group" aria-label="<?php esc_attr_e( 'Model colour', 'service-requests-form' ); ?>">
+								<span class="srf-project-viewer__tool-label"><?php esc_html_e( 'Model colour', 'service-requests-form' ); ?></span>
+								<div class="srf-project-viewer__swatches">
+									<button type="button" class="srf-viewer-swatch is-active" data-srf-model-color="white" aria-pressed="true" aria-label="<?php esc_attr_e( 'White model', 'service-requests-form' ); ?>" title="<?php esc_attr_e( 'White', 'service-requests-form' ); ?>"><span style="--srf-swatch:#efede5"></span></button>
+									<button type="button" class="srf-viewer-swatch" data-srf-model-color="grey" aria-pressed="false" aria-label="<?php esc_attr_e( 'Grey model', 'service-requests-form' ); ?>" title="<?php esc_attr_e( 'Grey', 'service-requests-form' ); ?>"><span style="--srf-swatch:#8f9ba8"></span></button>
+									<button type="button" class="srf-viewer-swatch" data-srf-model-color="black" aria-pressed="false" aria-label="<?php esc_attr_e( 'Black model', 'service-requests-form' ); ?>" title="<?php esc_attr_e( 'Black', 'service-requests-form' ); ?>"><span style="--srf-swatch:#15191d"></span></button>
+									<button type="button" class="srf-viewer-swatch" data-srf-model-color="blue" aria-pressed="false" aria-label="<?php esc_attr_e( 'Blue model', 'service-requests-form' ); ?>" title="<?php esc_attr_e( 'Blue', 'service-requests-form' ); ?>"><span style="--srf-swatch:#2672c9"></span></button>
+									<button type="button" class="srf-viewer-swatch" data-srf-model-color="red" aria-pressed="false" aria-label="<?php esc_attr_e( 'Red model', 'service-requests-form' ); ?>" title="<?php esc_attr_e( 'Red', 'service-requests-form' ); ?>"><span style="--srf-swatch:#c92d27"></span></button>
+									<button type="button" class="srf-viewer-swatch" data-srf-model-color="green" aria-pressed="false" aria-label="<?php esc_attr_e( 'Green model', 'service-requests-form' ); ?>" title="<?php esc_attr_e( 'Green', 'service-requests-form' ); ?>"><span style="--srf-swatch:#2b8d50"></span></button>
+									<button type="button" class="srf-viewer-chip" data-srf-model-color="filament" aria-pressed="false"><?php esc_html_e( 'Filament', 'service-requests-form' ); ?></button>
+									<button type="button" class="srf-viewer-chip" data-srf-model-color="embedded" aria-pressed="false" hidden disabled><?php esc_html_e( 'File colours', 'service-requests-form' ); ?></button>
+								</div>
+							</div>
+
+							<div class="srf-project-viewer__tool-group" role="group" aria-label="<?php esc_attr_e( 'Surface display', 'service-requests-form' ); ?>">
+								<span class="srf-project-viewer__tool-label"><?php esc_html_e( 'Surface', 'service-requests-form' ); ?></span>
+								<div class="srf-project-viewer__button-row">
+									<button type="button" class="is-active" data-srf-shading="smooth" aria-pressed="true"><?php esc_html_e( 'Smooth', 'service-requests-form' ); ?></button>
+									<button type="button" data-srf-shading="flat" aria-pressed="false"><?php esc_html_e( 'Flat', 'service-requests-form' ); ?></button>
+									<button type="button" data-srf-viewer-toggle="wireframe" aria-pressed="false"><?php esc_html_e( 'Wireframe', 'service-requests-form' ); ?></button>
+									<button type="button" class="is-active" data-srf-viewer-toggle="bed" aria-pressed="true"><?php esc_html_e( 'Build plate', 'service-requests-form' ); ?></button>
+								</div>
+							</div>
+
+							<div class="srf-project-viewer__tool-group" role="group" aria-label="<?php esc_attr_e( 'Model orientation', 'service-requests-form' ); ?>">
+								<span class="srf-project-viewer__tool-label"><?php esc_html_e( 'Orientation', 'service-requests-form' ); ?></span>
+								<div class="srf-project-viewer__button-row">
+									<button type="button" class="is-active" data-srf-orient="auto" aria-pressed="true"><?php esc_html_e( 'Auto', 'service-requests-form' ); ?></button>
+									<button type="button" data-srf-orient="x" aria-label="<?php esc_attr_e( 'Rotate 90 degrees around X', 'service-requests-form' ); ?>">X +90°</button>
+									<button type="button" data-srf-orient="y" aria-label="<?php esc_attr_e( 'Rotate 90 degrees around Y', 'service-requests-form' ); ?>">Y +90°</button>
+									<button type="button" data-srf-orient="z" aria-label="<?php esc_attr_e( 'Rotate 90 degrees around Z', 'service-requests-form' ); ?>">Z +90°</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="srf-project-viewer__stage">
+							<canvas data-srf-model-canvas aria-label="<?php esc_attr_e( 'Interactive 3D model preview', 'service-requests-form' ); ?>"></canvas>
+							<div class="srf-project-viewer__empty" data-srf-viewer-empty>
+								<span aria-hidden="true">◫</span>
+								<strong><?php esc_html_e( 'Studio preview ready', 'service-requests-form' ); ?></strong>
+								<small><?php esc_html_e( 'Select an STL or OBJ model to inspect it in 3D.', 'service-requests-form' ); ?></small>
+							</div>
+							<div class="srf-project-viewer__hud" aria-live="polite">
+								<span class="srf-project-viewer__engine">WebGL</span>
+								<span data-srf-viewer-scale><?php esc_html_e( 'Scale 100%', 'service-requests-form' ); ?></span>
+								<span data-srf-viewer-build><?php esc_html_e( 'Preview bed', 'service-requests-form' ); ?></span>
+								<span data-srf-viewer-fit data-fit="unknown"><?php esc_html_e( 'Select a printer for build-volume guidance', 'service-requests-form' ); ?></span>
+							</div>
+							<div class="srf-project-viewer__context-lost" role="status"><?php esc_html_e( 'The graphics context was interrupted. The preview will restore automatically.', 'service-requests-form' ); ?></div>
+						</div>
+
 						<dl class="srf-project-model-meta" data-srf-model-meta>
 							<div><dt><?php esc_html_e( 'File', 'service-requests-form' ); ?></dt><dd data-field="filename">—</dd></div>
 							<div><dt><?php esc_html_e( 'Format', 'service-requests-form' ); ?></dt><dd data-field="format">—</dd></div>
@@ -303,6 +358,7 @@ $logged_in               = is_user_logged_in();
 											data-machine-factor="<?php echo esc_attr( (float) ( $material->machine_time_factor ?? 1 ) ); ?>"
 											data-surface-factor="<?php echo esc_attr( (float) ( $material->surface_quality_factor ?? 1 ) ); ?>"
 											data-wastage-factor="<?php echo esc_attr( (float) ( $material->wastage_factor ?? 1 ) ); ?>"
+											data-color-availability="<?php echo esc_attr( (string) ( $material->color_availability ?? '' ) ); ?>"
 											<?php selected( (string) $old( 'material_id' ), (string) (int) $material->id ); ?>
 										><?php echo esc_html( $material->name ); ?></option>
 									<?php endforeach; ?>

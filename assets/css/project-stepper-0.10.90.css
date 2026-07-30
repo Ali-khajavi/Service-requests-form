@@ -1,0 +1,266 @@
+/*
+ * Service Requests Form 0.10.90
+ * Project step navigation only.
+ *
+ * The release-specific filename prevents page/CDN caches from reusing the
+ * older scrolling or wrapping stepper stylesheet. Equal-width slot wrappers
+ * isolate each card from broad theme and form-builder button/flex rules.
+ */
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] {
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    gap: clamp(8px, 1.4vw, 20px) !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 1.65rem !important;
+    padding: 4px !important;
+    border: 0 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    isolation: isolate !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-basis: 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: stretch !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    clear: none !important;
+    overflow: visible !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    position: relative !important;
+    inset: auto !important;
+    display: grid !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
+    column-gap: 14px !important;
+    row-gap: 0 !important;
+    align-items: center !important;
+    justify-items: start !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    float: none !important;
+    clear: none !important;
+    flex: 1 1 auto !important;
+    order: initial !important;
+    width: 100% !important;
+    inline-size: 100% !important;
+    min-width: 0 !important;
+    min-inline-size: 0 !important;
+    max-width: 100% !important;
+    max-inline-size: 100% !important;
+    min-height: 92px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 16px 20px !important;
+    border: 1px solid #d9e2ec !important;
+    border-radius: 14px !important;
+    box-sizing: border-box !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%) !important;
+    color: #475467 !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06) !important;
+    font-family: inherit !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+    letter-spacing: normal !important;
+    text-align: left !important;
+    text-decoration: none !important;
+    text-transform: none !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+    cursor: default !important;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row:not(:disabled) {
+    cursor: pointer !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row:not(:disabled):hover {
+    border-color: #a9bfd0 !important;
+    box-shadow: 0 9px 24px rgba(15, 23, 42, 0.09) !important;
+    transform: translateY(-1px) !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row > .srf-project-step__number {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    box-sizing: border-box !important;
+    background: #edf2f7 !important;
+    color: #475467 !important;
+    font-size: 0.86rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    text-align: center !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row > span:last-child {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+    overflow: visible !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row strong,
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row small {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    hyphens: auto !important;
+    text-overflow: clip !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row strong {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    color: #172033 !important;
+    font-size: clamp(0.88rem, 1.05vw, 1rem) !important;
+    font-weight: 750 !important;
+    line-height: 1.2 !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row small {
+    margin-top: 0.22rem !important;
+    margin-bottom: 0 !important;
+    color: #667085 !important;
+    font-size: clamp(0.72rem, 0.86vw, 0.8rem) !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row.is-active {
+    border-color: #176b87 !important;
+    background: linear-gradient(180deg, #f1fbfd 0%, #eaf7fb 100%) !important;
+    color: #164e63 !important;
+    box-shadow: 0 0 0 2px rgba(23, 107, 135, 0.12), 0 9px 24px rgba(23, 107, 135, 0.10) !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row.is-active > .srf-project-step__number {
+    background: #176b87 !important;
+    color: #ffffff !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row.is-complete {
+    border-color: #b9dfce !important;
+    background: linear-gradient(180deg, #f5fcf8 0%, #eef9f3 100%) !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row.is-complete > .srf-project-step__number {
+    background: #198754 !important;
+    color: #ffffff !important;
+}
+
+.srf-project-wrapper form.srf-project-form[data-srf-project-form]
+[data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row:focus-visible {
+    outline: 3px solid rgba(23, 107, 135, 0.30) !important;
+    outline-offset: 3px !important;
+}
+
+@media (max-width: 720px) {
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row {
+        grid-template-columns: 32px minmax(0, 1fr) !important;
+        column-gap: 8px !important;
+        min-height: 78px !important;
+        padding: 11px 9px !important;
+    }
+
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row > .srf-project-step__number {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        font-size: 0.78rem !important;
+    }
+
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row strong {
+        font-size: 0.82rem !important;
+    }
+
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row small {
+        font-size: 0.68rem !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row {
+        grid-template-columns: 1fr !important;
+        row-gap: 5px !important;
+        justify-items: center !important;
+        min-height: 72px !important;
+        padding: 9px 5px !important;
+        text-align: center !important;
+    }
+
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row > span:last-child {
+        text-align: center !important;
+    }
+
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row strong {
+        font-size: 0.76rem !important;
+        line-height: 1.12 !important;
+    }
+
+    .srf-project-wrapper form.srf-project-form[data-srf-project-form]
+    [data-srf-project-stepper="0.10.90"] > .srf-project-step-slot > button.srf-project-step--single-row small {
+        display: none !important;
+    }
+}

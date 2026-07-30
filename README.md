@@ -1,6 +1,6 @@
 # Service Requests Form
 
-**Version: 0.10.81**  
+**Version: 0.10.90**  
 **User and administrator guide**
 
 Service Requests Form is a WordPress plugin for receiving two kinds of customer work:
@@ -8,7 +8,7 @@ Service Requests Form is a WordPress plugin for receiving two kinds of customer 
 1. **Predefined services** configured by the site administrator and displayed with `[service_request_form]`.
 2. **Custom 3D-print projects** submitted through `[project_request_form]`, including model upload, model preview, printer/material/process selection, a server-verified price, and optional WooCommerce payment.
 
-Version 0.10.81 fixes the project-step navigation as one non-wrapping row of three equal, professional cards. Each card is placed inside an isolated equal-width flex slot, with critical row and slot sizing also written into the generated form markup so theme or form-builder rules cannot move step 3 onto a second line. It keeps all German/English language-selection fixes from 0.10.75. It retains the background STL/OBJ analysis, Bambu Lab starter profiles, server-authoritative pricing, build-volume checks, and WooCommerce payment lifecycle introduced in earlier 0.10.x releases.
+Version 0.10.90 adds a GPU-accelerated studio viewer to the custom-project workflow. STL and OBJ previews are rendered as solid models with professional lighting, selectable display or filament colours, smooth/flat shading, optional wireframe, a selected-printer build plate and build-volume cage, automatic orientation, and manual 90-degree rotations. Common embedded OBJ vertex colours and binary STL colour extensions can be displayed when present. The existing Canvas 2D renderer remains as a compatibility fallback. This release also preserves the one-row three-card step navigation, independent English/German frontend and administration languages, Bambu Lab starter profiles, server-authoritative pricing, build-volume validation, and WooCommerce payment lifecycle.
 
 Technical implementation details are in [`README-DEVELOPERS.md`](README-DEVELOPERS.md).
 
@@ -26,7 +26,7 @@ Before installing on a production site, back up the database and `wp-content/upl
 ## Installation or update
 
 1. In WordPress, open **Plugins → Add New → Upload Plugin**.
-2. Upload the version 0.10.81 ZIP.
+2. Upload the version 0.10.90 ZIP.
 3. When updating an existing installation, approve replacing the current plugin.
 4. Activate the plugin.
 5. Open **Service and Subscription → Settings** and save the settings once.
@@ -72,7 +72,7 @@ Each selector supports:
 - **English**;
 - **German (Deutsch)**.
 
-Save the settings; the redirected page and subsequent frontend requests use the selected plugin language. The selection changes this plugin only; it does not switch the language of WordPress, WooCommerce, the active theme, or other plugins. Version 0.10.81 explicitly loads the selected plugin catalogue, avoiding dependence on the site locale, and ships the German `.po` and compiled `.mo` catalog in the plugin's `languages/` directory.
+Save the settings; the redirected page and subsequent frontend requests use the selected plugin language. The selection changes this plugin only; it does not switch the language of WordPress, WooCommerce, the active theme, or other plugins. Version 0.10.90 explicitly loads the selected plugin catalogue, avoiding dependence on the site locale, and ships the German `.po` and compiled `.mo` catalog in the plugin's `languages/` directory.
 
 ## Project step navigation
 
@@ -107,12 +107,18 @@ The customer supplies a project name and description. Registered customers use a
 The customer uploads one or more STL, OBJ, or 3MF files.
 
 - STL and OBJ files are analysed in a Web Worker so parsing does not block the page's main interface.
-- The preview renders complete solid meshes up to 160,000 triangles and samples only exceptionally large meshes.
-- The built-in lightweight canvas viewer supports drag rotation, zoom, and standard views.
+- The worker keeps the complete preview through 160,000 triangles and uses bounded reservoir sampling only for exceptionally complex meshes.
+- A custom WebGL renderer sends the geometry, normals, and optional vertex colours to the customer's GPU. It redraws on interaction or state changes rather than running a permanent animation loop.
+- The default warm-white model uses studio-style key, fill, ambient, specular, and rim lighting. Customers may choose white, grey, black, blue, red, green, the selected material's representative filament colour, or embedded file colours when available.
+- Smooth and flat shading, wireframe, standard camera views, drag rotation, wheel/trackpad zoom, automatic orientation, and X/Y/Z 90-degree controls are available.
+- The selected printer's build plate, grid, axes, and build-volume cage are shown. A non-fitting quote changes the model/cage warning state to red.
+- If WebGL is unavailable or initialization fails, the form automatically replaces the canvas and uses the lightweight Canvas 2D compatibility preview.
 - 3MF files are deliberately analysed on the server. The form explains that an instant browser preview is not available for 3MF.
 - Files larger than the browser-preview safety threshold are also deferred to the server.
 
-The browser result is a convenience only. It is never trusted as the checkout price.
+The **File colours** control supports OBJ vertex colours and common binary STL colour extensions. OBJ `.mtl` files, external texture images, and 3MF colour/material resources are not rendered in the browser in this release. The **Filament** control infers one representative colour from the selected material's colour-availability text; it is a display aid, not a promise of exact colour matching.
+
+Orientation controls affect the visual inspection view only. The authoritative server quote still checks model dimensions and allowed axis permutations independently. The browser result is a convenience only and is never trusted as the checkout price.
 
 ### Step 3 — Configure, price, and pay
 
@@ -122,7 +128,7 @@ The browser displays an immediate geometry estimate when enough local informatio
 
 ## Bambu Lab process profiles
 
-Version 0.10.81 includes these Bambu-style process choices:
+The plugin includes these Bambu-style process choices:
 
 - 0.08mm Extra Fine
 - 0.08mm High Quality
@@ -158,7 +164,7 @@ Changing the starter hourly or material price later does not overwrite a printer
 
 ## How project pricing works
 
-Version 0.10.81 uses quote formula `2.1`. It is a geometry-based commercial estimator, not a slicer.
+Version 0.10.90 continues to use quote formula `2.1`. It is a geometry-based commercial estimator, not a slicer.
 
 The server calculates:
 
@@ -266,7 +272,7 @@ The **Service and Subscription** menu provides access to settings, requests, ser
 
 ## Security notes
 
-Version 0.10.81 uses nonces, capability checks, post ownership checks, server-side option resolution, extension/structure validation, upload limits, geometry limits, and server-side checkout pricing. The project form also contains a honeypot field.
+Version 0.10.90 uses nonces, capability checks, post ownership checks, server-side option resolution, extension/structure validation, upload limits, geometry limits, and server-side checkout pricing. The project form also contains a honeypot field.
 
 Uploaded WordPress Media Library files can still be reachable by their direct upload URL on many WordPress hosts. The plugin protects its own My Account download route, but it does not turn the entire uploads directory into private storage. Sites handling confidential models should use private object storage or a protected uploads architecture.
 
@@ -291,9 +297,11 @@ Service gallery and featured media are not deleted because those files may be re
 
 ## Troubleshooting
 
-### The preview is slow or unavailable
+### The preview is slow, blank, or unavailable
 
-Confirm that JavaScript workers are allowed by the site's Content Security Policy and that cache/minification tools are serving `assets/js/model-worker.js` and `assets/js/project.js` from version 0.10.81. Large files and all 3MF files intentionally use server analysis.
+Confirm that JavaScript workers and WebGL are allowed by the browser and the site's Content Security Policy. Cache/minification tools must serve `assets/js/model-worker.js`, `assets/js/project-viewer-webgl.js`, and `assets/js/project.js` from version 0.10.90 in dependency order. Clear WordPress, optimization-plugin, server, CDN, and browser caches after updating.
+
+The form automatically falls back to Canvas 2D when WebGL cannot initialize. Large files and all 3MF files intentionally use server analysis. On memory-limited phones, exceptionally complex STL/OBJ models may still be deferred or sampled; this does not change server-side pricing.
 
 ### A 3MF file is rejected
 
@@ -319,12 +327,15 @@ Check PHP `upload_max_filesize`, `post_max_size`, web-server/proxy limits, secur
 
 Check the configured production-notification email, WordPress administration email, SMTP/mail logs, spam filtering, and the request's email-result metadata. Paid-project email is intentionally delayed until WooCommerce reports payment.
 
-## Version 0.10.81 change summary
+## Version 0.10.90 change summary
 
-- Keeps steps **1, 2, and 3** in one non-wrapping flex row at every supported width.
-- Places each card in an isolated equal-width slot using `flex: 1 1 0`, `flex-basis: 0`, `width: 0`, and `min-width: 0` so external width and minimum-width rules cannot force a second row.
-- Adds a release-specific `assets/css/project-stepper-0.10.81.css` file so page and CDN caches cannot reuse the previous stepper rules.
-- Adds critical inline row, slot, and card-width declarations in the project-form template as a cache-safe fallback against late theme or form-builder CSS.
-- Uses a responsive 8–20 px gap with no horizontal scrolling.
-- Keeps German and English titles and descriptions inside each card; only secondary descriptions are hidden below 560 px.
-- Preserves the independent frontend/admin language selectors and all pricing, model, WooCommerce, upload-validation, and security behavior from 0.10.80.
+- Adds `assets/js/project-viewer-webgl.js`, a dependency-free WebGL 1 studio renderer for the custom-project form.
+- Replaces the default CPU-sorted Canvas 2D surface with GPU depth testing and solid shaded triangles while keeping Canvas 2D as an automatic compatibility fallback.
+- Adds warm-white studio rendering with selectable white, grey, black, blue, red, green, representative filament colour, and embedded-file colour modes.
+- Adds smooth/flat surface modes, optional wireframe, front/left/top/isometric/fit camera views, drag rotation, and wheel/trackpad zoom.
+- Adds the selected printer's build plate, grid, X/Y axes, build-volume cage, scale/build/fit HUD, and red non-fitting guidance.
+- Adds automatic axis orientation plus manual X/Y/Z 90-degree inspection controls.
+- Extends the background worker with flat and smooth normals, OBJ vertex colours, common binary STL colour extensions, and a true 160,000-triangle preview ceiling.
+- Reworks worker sampling storage to bounded typed arrays and parses OBJ faces in a single pass, reducing temporary JavaScript-object and line-array overhead on large models.
+- Adds German translations for all new viewer labels, guidance, and release notices.
+- Preserves formula 2.1, server-authoritative checkout pricing, the one-row three-step navigation, independent plugin languages, large-OBJ server validation, quantity handling, Bambu profiles, payment lifecycle, paid notifications, file cleanup, and opt-in destructive uninstall behavior.

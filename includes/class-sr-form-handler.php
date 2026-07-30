@@ -55,7 +55,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			);
 			wp_register_style(
 				'srf-project-stepper-css',
-				SRF_PLUGIN_URL . 'assets/css/project-stepper-0.10.81.css',
+				SRF_PLUGIN_URL . 'assets/css/project-stepper-0.10.90.css',
 				array( 'srf-frontend-css' ),
 				SRF_VERSION
 			);
@@ -67,9 +67,16 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				true
 			);
 			wp_register_script(
+				'srf-project-viewer-js',
+				SRF_PLUGIN_URL . 'assets/js/project-viewer-webgl.js',
+				array(),
+				SRF_VERSION,
+				true
+			);
+			wp_register_script(
 				'srf-project-js',
 				SRF_PLUGIN_URL . 'assets/js/project.js',
-				array(),
+				array( 'srf-project-viewer-js' ),
 				SRF_VERSION,
 				true
 			);
@@ -224,6 +231,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						'analysisCancelled'         => __( 'Model analysis was cancelled.', 'service-requests-form' ),
 						'analysisUnsupported'       => __( 'Background model analysis is not supported in this browser.', 'service-requests-form' ),
 						'selectPreviewModel'        => __( 'Select an STL or OBJ model', 'service-requests-form' ),
+						'viewerScale'               => __( 'Scale', 'service-requests-form' ),
+						'previewBed'                => __( 'Preview bed', 'service-requests-form' ),
+						'viewerFitUnknown'          => __( 'Select a printer for build-volume guidance', 'service-requests-form' ),
+						'viewerFits'                => __( 'Fits the selected build volume', 'service-requests-form' ),
+						'viewerDoesNotFit'          => __( 'Does not fit the selected build volume', 'service-requests-form' ),
 						'useSelectButton'           => __( 'Use the Select models button to add these files in this browser.', 'service-requests-form' ),
 						'fileTotalExceeds'          => __( 'The selected files total %1$s, above the %2$s upload limit.', 'service-requests-form' ),
 						'waiting'                   => __( 'Waiting', 'service-requests-form' ),

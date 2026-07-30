@@ -1,8 +1,8 @@
 service-requests-form/
-├── service-requests-form.php                    Plugin bootstrap, activation, upgrades, hooks
+├── service-requests-form.php                    Plugin bootstrap, activation, upgrades, hooks (v0.10.90)
 ├── uninstall.php                                Opt-in destructive cleanup; preserves data by default
-├── README.md                                    User and administrator guide (v0.10.81)
-├── README-DEVELOPERS.md                         Developer reference (v0.10.81)
+├── README.md                                    User and administrator guide (v0.10.90)
+├── README-DEVELOPERS.md                         Developer reference (v0.10.90)
 ├── LICENSE
 ├── Structure.txt
 ├── languages/
@@ -12,21 +12,22 @@ service-requests-form/
 ├── assets/
 │   ├── css/
 │   │   ├── admin.css                            Administration screens
-│   │   ├── frontend.css                         Shared frontend form and project UI styles
-│   │   └── project-stepper-0.10.81.css          Release-specific one-row project stepper override
+│   │   ├── frontend.css                         Shared forms plus WebGL studio-viewer UI
+│   │   └── project-stepper-0.10.90.css          Release-specific one-row project stepper override
 │   └── js/
-│       ├── admin.js                             Service/gallery and admin behavior
+│       ├── admin.js                             Service/gallery and administration behavior
 │       ├── frontend.js                          Predefined-service frontend and compatibility guards
-│       ├── project.js                           Project steps, preview, live estimate, validation
-│       ├── model-worker.js                      Background STL/OBJ parser and sampled preview
+│       ├── project.js                           Project steps, worker orchestration, viewer/quote state
+│       ├── project-viewer-webgl.js              GPU studio viewer, bed/cage, colours, shading, orientation
+│       ├── model-worker.js                      Background STL/OBJ geometry, normals, colours, sampling
 │       ├── calculator.js                        Legacy/supporting calculator asset
 │       ├── uploader.js                          Legacy/supporting uploader asset
-│       └── viewer.js                            Legacy/supporting viewer asset
+│       └── viewer.js                            Legacy/supporting predefined-service viewer asset
 ├── includes/
 │   ├── class-sr-cpt.php                         service_request custom post type
 │   ├── class-sr-services-cpt.php                sr_service custom post type and admin fields
 │   ├── class-sr-service-data.php                Predefined service data/pricing helpers
-│   ├── class-sr-form-handler.php                Shortcodes, uploads, request creation, email, quota
+│   ├── class-sr-form-handler.php                Shortcodes, assets, uploads, request creation, email, quota
 │   ├── class-sr-myaccount.php                   My Account routes, ownership, exports/downloads
 │   ├── class-sr-settings.php                    Plugin settings, language, access, payment controls
 │   ├── class-srf-language.php                    Frontend/admin plugin-only locale selection
@@ -48,7 +49,7 @@ service-requests-form/
 │           └── stratasys.php
 └── templates/
     ├── form.php                                  [service_request_form]
-    ├── project-form.php                          [project_request_form] three-step template
+    ├── project-form.php                          [project_request_form] three-step studio-viewer template
     ├── service-info.php                          Selected predefined service information
     ├── frontend-list.php                         Frontend request list support
     └── myaccount/

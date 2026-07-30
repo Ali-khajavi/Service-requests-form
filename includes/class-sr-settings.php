@@ -249,7 +249,7 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			?>
 			<div class="wrap">
 				<h1><?php esc_html_e( 'Service Requests Settings', 'service-requests-form' ); ?></h1>
-				<p><?php esc_html_e( 'Version 0.10.81 keeps all three project steps in one fixed row by isolating each card from theme and form-builder layout rules.', 'service-requests-form' ); ?></p>
+				<p><?php esc_html_e( 'Version 0.10.90 introduces a GPU-accelerated studio model viewer with selectable colours, smooth or flat shading, wireframe, a printer build plate, orientation controls, and build-volume guidance.', 'service-requests-form' ); ?></p>
 
 				<?php if ( isset( $_GET['srf_bambu_installed'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 					<div class="notice notice-success is-dismissible"><p>

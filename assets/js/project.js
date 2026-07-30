@@ -1,4 +1,4 @@
-/* global window, document, Worker, FileReader, ResizeObserver, requestAnimationFrame, cancelAnimationFrame */
+/* global window, document, Worker, FileReader, ResizeObserver, requestAnimationFrame, cancelAnimationFrame, SRFStudioModelRenderer, SRFStudioColorFromText */
 (function () {
   'use strict';
 
@@ -200,6 +200,7 @@
 
   function CanvasModelRenderer(container) {
     this.container = container;
+    this.isCanvasFallback = true;
     this.canvas = query(container, 'canvas');
     this.context = this.canvas ? this.canvas.getContext('2d') : null;
     this.positions = null;
@@ -436,7 +437,23 @@
     this.analysisPending = false;
     this.analysisBatch = 0;
     this.worker = new WorkerBroker(config.workerUrl || '', toInteger(config.previewTriangles, 160000));
-    this.renderer = new CanvasModelRenderer(query(form, '[data-srf-model-viewer]'));
+    var viewerContainer = query(form, '[data-srf-model-viewer]');
+    try {
+      this.renderer = typeof window.SRFStudioModelRenderer === 'function'
+        ? new window.SRFStudioModelRenderer(viewerContainer, { messages: messages })
+        : new CanvasModelRenderer(viewerContainer);
+    } catch (viewerError) {
+      if (viewerContainer) {
+        var failedCanvas = query(viewerContainer, 'canvas');
+        if (failedCanvas && failedCanvas.parentNode) {
+          var fallbackCanvas = failedCanvas.cloneNode(false);
+          failedCanvas.parentNode.replaceChild(fallbackCanvas, failedCanvas);
+        }
+        viewerContainer.classList.add('is-canvas-fallback');
+        viewerContainer.setAttribute('data-viewer-error', viewerError && viewerError.message ? viewerError.message : 'WebGL unavailable');
+      }
+      this.renderer = new CanvasModelRenderer(viewerContainer);
+    }
     this.bind();
     this.showStep(this.currentStep, false);
     this.syncPrinterOptions(true);
@@ -772,8 +789,20 @@
             self.modelResults.push(result);
             self.setFileStatus(index, message('ready', 'Ready'), 'ready');
             if (!self.renderer.positions && result.previewPositions && result.previewPositions.length) {
-              self.renderer.setModel(result.previewPositions, result.center, result.radius);
+              var viewerPositions = result.previewPositions;
+              if (self.renderer.isCanvasFallback && viewerPositions.length > 20000 * 9) {
+                viewerPositions = viewerPositions.subarray(0, 20000 * 9);
+              }
+              self.renderer.setModel(viewerPositions, result.center, result.radius, {
+                bounds: result.bounds,
+                limits: result.limits,
+                flatNormals: result.previewFlatNormals,
+                smoothNormals: result.previewSmoothNormals,
+                colors: result.previewColors,
+                hasEmbeddedColors: result.hasEmbeddedColors
+              });
               self.updateModelMeta(result);
+              self.updateViewerScene();
             }
           })
           .catch(function (error) {
@@ -895,9 +924,15 @@
   ProjectOrderForm.prototype.getMaterial = function () {
     var option = selectedOption(this.materialSelect);
     if (!option || !option.value) { return null; }
+    var colorSource = optionData(option, 'color-availability', '') + ' ' + option.textContent.trim();
+    var previewColor = typeof window.SRFStudioColorFromText === 'function'
+      ? window.SRFStudioColorFromText(colorSource)
+      : null;
     return {
       id: toInteger(option.value, 0),
       name: option.textContent.trim(),
+      colorAvailability: optionData(option, 'color-availability', ''),
+      previewColor: previewColor,
       pricePerGram: Math.max(0, toNumber(optionData(option, 'price-per-gram', 0), 0)),
       pricePerCm3: Math.max(0, toNumber(optionData(option, 'price-per-cm3', 0), 0)),
       density: Math.max(0, toNumber(optionData(option, 'density', 0), 0)),
@@ -1078,6 +1113,25 @@
     }, this);
   };
 
+  ProjectOrderForm.prototype.updateViewerScene = function (printer, material, options, quote) {
+    if (!this.renderer || typeof this.renderer.setSceneOptions !== 'function') { return; }
+    printer = printer === undefined ? this.getPrinter() : printer;
+    material = material === undefined ? this.getMaterial() : material;
+    options = options || this.getQuoteOptions();
+    quote = quote === undefined ? this.calculateQuote() : quote;
+    this.renderer.setSceneOptions({
+      printer: printer ? {
+        name: printer.name,
+        buildX: printer.buildX,
+        buildY: printer.buildY,
+        buildZ: printer.buildZ
+      } : null,
+      materialColor: material && material.previewColor ? material.previewColor : null,
+      scale: options.scale,
+      fit: quote && quote.invalidLayer !== true ? quote.fits : null
+    });
+  };
+
   ProjectOrderForm.prototype.calculateQuote = function () {
     var printer = this.getPrinter();
     var material = this.getMaterial();
@@ -1175,6 +1229,7 @@
     var material = this.getMaterial();
     var options = this.getQuoteOptions();
     var quote = this.calculateQuote();
+    this.updateViewerScene(printer, material, options, quote);
 
     setText(query(summary, '[data-srf-summary-material]'), material ? material.name : '—');
     setText(query(summary, '[data-srf-summary-printer]'), printer ? printer.name : '—');
