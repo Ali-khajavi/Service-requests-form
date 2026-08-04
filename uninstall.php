@@ -79,7 +79,22 @@ function srf_uninstall_delete_requests() {
 		foreach ( $file_ids as $attachment_id ) {
 			wp_delete_attachment( $attachment_id, true );
 		}
+		delete_post_meta( $request_id, '_sr_remote_files' );
 		wp_delete_post( $request_id, true );
+	}
+
+	$batch_ids = get_posts(
+		array(
+			'post_type'      => 'srf_upload_batch',
+			'post_status'    => 'any',
+			'fields'         => 'ids',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+		)
+	);
+
+	foreach ( $batch_ids as $batch_id ) {
+		wp_delete_post( $batch_id, true );
 	}
 }
 

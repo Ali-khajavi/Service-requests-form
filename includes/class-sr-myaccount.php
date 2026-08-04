@@ -297,15 +297,15 @@ class SRF_MyAccount {
 			return;
 		}
 
-		$attachment_id = absint( $_GET['srf_download'] );
+		$download_id   = sanitize_text_field( wp_unslash( $_GET['srf_download'] ) );
 		$request_id    = absint( $_GET['srf_request'] );
 		$nonce         = sanitize_text_field( wp_unslash( $_GET['srf_nonce'] ) );
 
-		if ( ! $attachment_id || ! $request_id ) {
+		if ( '' === $download_id || ! $request_id ) {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'srf_download_' . $request_id . '_' . $attachment_id ) ) {
+		if ( ! wp_verify_nonce( $nonce, 'srf_download_' . $request_id . '_' . $download_id ) ) {
 			wp_die( esc_html__( 'Invalid download link.', 'service-requests-form' ), 403 );
 		}
 
@@ -321,25 +321,34 @@ class SRF_MyAccount {
 			wp_die( esc_html__( 'Access denied.', 'service-requests-form' ), 403 );
 		}
 
-		$file_ids = get_post_meta( $request_id, '_sr_file_ids', true );
-		if ( ! is_array( $file_ids ) ) {
-			$file_ids = array();
-		}
-		$file_ids = array_map( 'absint', $file_ids );
-
-		if ( ! in_array( $attachment_id, $file_ids, true ) ) {
+		$file = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::find_file( $request_id, $download_id ) : null;
+		if ( ! is_array( $file ) ) {
 			wp_die( esc_html__( 'File not found.', 'service-requests-form' ), 404 );
 		}
 
-		$path = get_attached_file( $attachment_id );
-		if ( ! $path || ! file_exists( $path ) ) {
-			wp_die( esc_html__( 'File not found.', 'service-requests-form' ), 404 );
+		$provider = isset( $file['provider'] ) ? sanitize_key( (string) $file['provider'] ) : 'local';
+		$path = '';
+		$attachment_id = 0;
+		if ( 'microsoft' === $provider ) {
+			if ( ! class_exists( 'SRF_Storage_Manager' ) ) {
+				wp_die( esc_html__( 'File not found.', 'service-requests-form' ), 404 );
+			}
+			$path = SRF_Storage_Manager::instance()->download_descriptor_to_tempfile( $file, 0 );
+			if ( is_wp_error( $path ) || ! $path || ! file_exists( $path ) ) {
+				wp_die( esc_html__( 'File not found.', 'service-requests-form' ), 404 );
+			}
+		} else {
+			$attachment_id = isset( $file['attachment_id'] ) ? absint( $file['attachment_id'] ) : 0;
+			$path = $attachment_id ? get_attached_file( $attachment_id ) : '';
+			if ( ! $path || ! file_exists( $path ) ) {
+				wp_die( esc_html__( 'File not found.', 'service-requests-form' ), 404 );
+			}
 		}
 
 		nocache_headers();
 
-		$filename = basename( $path );
-		$mime     = get_post_mime_type( $attachment_id );
+		$filename = ! empty( $file['name'] ) ? (string) $file['name'] : basename( $path );
+		$mime     = ! empty( $file['mime'] ) ? (string) $file['mime'] : ( $attachment_id > 0 ? get_post_mime_type( $attachment_id ) : '' );
 		if ( ! $mime ) {
 			$mime = 'application/octet-stream';
 		}
@@ -354,6 +363,9 @@ class SRF_MyAccount {
 		}
 
 		readfile( $path );
+		if ( 'microsoft' === $provider && file_exists( $path ) ) {
+			@unlink( $path );
+		}
 		exit;
 	}
 
@@ -441,22 +453,27 @@ class SRF_MyAccount {
 	}
 
 	public static function get_upload_summary( $request_id ) {
-
-		$file_ids = get_post_meta( $request_id, '_sr_file_ids', true );
-		if ( ! is_array( $file_ids ) ) {
-			$file_ids = array();
-		}
-
-		$file_ids = array_filter( array_map( 'absint', $file_ids ) );
+		$file_ids = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $request_id ) : array();
 
 		$total_bytes = 0;
-		foreach ( $file_ids as $aid ) {
-			$bytes = (int) get_post_meta( $aid, '_srf_file_bytes', true );
-
-			if ( $bytes <= 0 ) {
-				$path = get_attached_file( $aid );
-				if ( $path && file_exists( $path ) ) {
-					$bytes = (int) filesize( $path );
+		foreach ( $file_ids as $file ) {
+			if ( is_array( $file ) ) {
+				$bytes = isset( $file['size'] ) ? max( 0, (int) $file['size'] ) : 0;
+				if ( $bytes <= 0 && ! empty( $file['attachment_id'] ) ) {
+					$aid = (int) $file['attachment_id'];
+					$path = get_attached_file( $aid );
+					if ( $path && file_exists( $path ) ) {
+						$bytes = (int) filesize( $path );
+					}
+				}
+			} else {
+				$aid = (int) $file;
+				$bytes = (int) get_post_meta( $aid, '_srf_file_bytes', true );
+				if ( $bytes <= 0 ) {
+					$path = get_attached_file( $aid );
+					if ( $path && file_exists( $path ) ) {
+						$bytes = (int) filesize( $path );
+					}
 				}
 			}
 

@@ -69,6 +69,7 @@ $logged_in               = is_user_logged_in();
 			class="srf-form srf-project-form"
 			method="post"
 			enctype="multipart/form-data"
+			data-srf-form-type="project"
 			data-srf-project-form
 			data-initial-step="<?php echo esc_attr( $initial_step ); ?>"
 			data-project-public="<?php echo $project_public ? '1' : '0'; ?>"
@@ -190,7 +191,10 @@ $logged_in               = is_user_logged_in();
 							<strong><?php esc_html_e( 'Drop 3D models here', 'service-requests-form' ); ?></strong>
 							<span><?php esc_html_e( 'or select files from your device', 'service-requests-form' ); ?></span>
 							<span class="srf-button srf-button--secondary"><?php esc_html_e( 'Select models', 'service-requests-form' ); ?></span>
-							<input id="srf-project-files" class="srf-project-file-input" type="file" name="srf_files[]" accept=".stl,.obj,.3mf" multiple required data-srf-model-files />
+							<?php $srf_direct_uploads = class_exists( 'SRF_Storage_Manager' ) && SRF_Storage_Manager::instance()->is_microsoft_enabled_for_form( 'project' ) && SRF_Storage_Manager::instance()->get_provider() instanceof SRF_Microsoft_Storage_Provider; ?>
+							<input id="srf-project-files" class="srf-project-file-input" type="file" name="srf_files[]" accept=".stl,.obj,.3mf" multiple required data-srf-model-files <?php echo $srf_direct_uploads ? 'disabled="disabled"' : ''; ?> />
+							<input type="hidden" name="srf_upload_batch_id" value="<?php echo esc_attr( (int) $old( 'upload_batch_id', 0 ) ); ?>" data-srf-upload-batch-id />
+							<input type="hidden" name="srf_upload_batch_token" value="<?php echo esc_attr( (string) $old( 'upload_batch_token', '' ) ); ?>" data-srf-upload-batch-token />
 						</label>
 						<p class="srf-form__help"><?php echo esc_html( sprintf( __( 'Accepted: %1$s. Maximum combined upload: %2$s. Use millimetres and upload closed, printable meshes.', 'service-requests-form' ), strtoupper( $allowed_formats ), $upload_limit ) ); ?></p>
 						<div class="srf-project-file-notice" data-srf-file-notice role="status" aria-live="polite" hidden></div>

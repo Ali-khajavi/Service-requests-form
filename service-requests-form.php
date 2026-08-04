@@ -3,7 +3,7 @@
  * Plugin Name: Service Requests Form
  * Plugin URI:  https://Semlingerpro.de
  * Description: Front-end service request form with admin management and service content dashboard.
- * Version:     0.10.91
+ * Version:     0.10.92
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Ali Khajavi
@@ -22,7 +22,7 @@ final class Service_Requests_Form {
 	private static $instance = null;
 
 	/** @var string */
-	public $version = '0.10.91';
+	public $version = '0.10.92';
 
 	private function __construct() {}
 	private function __clone() {}
@@ -87,6 +87,15 @@ final class Service_Requests_Form {
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-google-auth.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-sr-settings.php';
 		require_once SRF_PLUGIN_DIR . 'includes/class-srf-woocommerce.php';
+
+		// Storage / cloud upload foundation.
+		require_once SRF_PLUGIN_DIR . 'includes/storage/interface-srf-storage-provider.php';
+		require_once SRF_PLUGIN_DIR . 'includes/storage/class-srf-request-files.php';
+		require_once SRF_PLUGIN_DIR . 'includes/storage/class-srf-storage-manager.php';
+		require_once SRF_PLUGIN_DIR . 'includes/storage/class-srf-local-storage-provider.php';
+		require_once SRF_PLUGIN_DIR . 'includes/storage/class-srf-microsoft-graph-client.php';
+		require_once SRF_PLUGIN_DIR . 'includes/storage/class-srf-microsoft-storage-provider.php';
+		require_once SRF_PLUGIN_DIR . 'includes/storage/class-srf-upload-batch.php';
 	}
 
 	private function init_hooks() {
@@ -150,6 +159,10 @@ final class Service_Requests_Form {
 		// WooCommerce service products / checkout integration
 		if ( class_exists( 'SRF_WooCommerce' ) ) {
 			add_action( 'plugins_loaded', array( 'SRF_WooCommerce', 'init' ), 30 );
+		}
+
+		if ( class_exists( 'SRF_Upload_Batch' ) ) {
+			SRF_Upload_Batch::init();
 		}
 
 		// My Account

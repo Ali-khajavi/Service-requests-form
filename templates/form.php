@@ -54,7 +54,7 @@ if ( ! is_array( $old_variants ) ) {
 }
 ?>
 
-<form class="srf-form" method="post" enctype="multipart/form-data">
+<form class="srf-form" method="post" enctype="multipart/form-data" data-srf-form-type="service">
 
 	<div class="srf-service-picker">
 		<h2 class="srf-service-picker__title"><?php esc_html_e( 'Semlinger Dental Services', 'service-requests-form' ); ?></h2>
@@ -257,7 +257,10 @@ if ( ! is_array( $old_variants ) ) {
 		<label for="srf-files">
 			<?php esc_html_e( 'Upload file(s)', 'service-requests-form' ); ?>
 		</label>
-		<input type="file" id="srf-files" name="srf_files[]" multiple />
+		<?php $srf_direct_uploads = class_exists( 'SRF_Storage_Manager' ) && SRF_Storage_Manager::instance()->is_microsoft_enabled_for_form( 'service' ) && SRF_Storage_Manager::instance()->get_provider() instanceof SRF_Microsoft_Storage_Provider; ?>
+		<input type="file" id="srf-files" name="srf_files[]" multiple <?php echo $srf_direct_uploads ? 'disabled="disabled"' : ''; ?> />
+		<input type="hidden" name="srf_upload_batch_id" value="<?php echo esc_attr( (int) $old( 'upload_batch_id', 0 ) ); ?>" data-srf-upload-batch-id />
+		<input type="hidden" name="srf_upload_batch_token" value="<?php echo esc_attr( (string) $old( 'upload_batch_token', '' ) ); ?>" data-srf-upload-batch-token />
 		<small class="srf-field__help">
 			<?php
 			echo esc_html(

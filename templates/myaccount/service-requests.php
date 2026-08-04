@@ -120,11 +120,7 @@ if ( ! empty( $view_id ) ) {
 		$groups = is_array( $variant_defs ) ? $variant_defs : array();
 
 		// Uploaded files for this request.
-		$file_ids = get_post_meta( $view_id, '_sr_file_ids', true );
-		if ( ! is_array( $file_ids ) ) {
-			$file_ids = array();
-		}
-		$file_ids = array_filter( array_map( 'absint', $file_ids ) );
+		$file_ids = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $view_id ) : array();
 
 		$status_label = SRF_MyAccount::format_status_label( $status );
 		$status_css   = sanitize_html_class( str_replace( '_', '-', strtolower( $status ) ) );
@@ -268,19 +264,21 @@ if ( ! empty( $view_id ) ) {
 			echo '<p class="srf-empty-note">' . esc_html__( 'No files uploaded.', 'service-requests-form' ) . '</p>';
 		} else {
 			echo '<ul class="srf-file-list">';
-			foreach ( $file_ids as $aid ) {
-				$aid = (int) $aid;
-				if ( ! $aid ) {
+			foreach ( $file_ids as $file ) {
+				if ( ! is_array( $file ) ) {
 					continue;
 				}
-				$filename = get_the_title( $aid );
-				if ( ! $filename ) {
-					$url = wp_get_attachment_url( $aid );
-					$filename = $url ? basename( $url ) : ( 'File #' . $aid );
+				$download_id = isset( $file['download_id'] ) ? (string) $file['download_id'] : '';
+				if ( '' === $download_id ) {
+					continue;
 				}
-				$nonce = wp_create_nonce( 'srf_download_' . $view_id . '_' . $aid );
+				$filename = ! empty( $file['name'] ) ? (string) $file['name'] : ( ! empty( $file['attachment_id'] ) ? get_the_title( (int) $file['attachment_id'] ) : '' );
+				if ( '' === $filename ) {
+					$filename = 'File #' . $download_id;
+				}
+				$nonce = wp_create_nonce( 'srf_download_' . $view_id . '_' . $download_id );
 				$download_url = SRF_MyAccount::url_list( array(
-					'srf_download' => $aid,
+					'srf_download' => $download_id,
 					'srf_request'  => $view_id,
 					'srf_nonce'    => $nonce,
 				) );

@@ -67,6 +67,13 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				true
 			);
 			wp_register_script(
+				'srf-cloud-uploader-js',
+				SRF_PLUGIN_URL . 'assets/js/cloud-uploader.js',
+				array( 'srf-frontend-js' ),
+				SRF_VERSION,
+				true
+			);
+			wp_register_script(
 				'srf-project-viewer-js',
 				SRF_PLUGIN_URL . 'assets/js/project-viewer-webgl.js',
 				array(),
@@ -95,6 +102,7 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				self::register_assets();
 			}
 			wp_enqueue_script( 'srf-frontend-js' );
+			self::maybe_enqueue_cloud_uploader( 'service' );
 			self::localize_service_script();
 			self::inject_service_data();
 		}
@@ -109,7 +117,43 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				self::register_assets();
 			}
 			wp_enqueue_script( 'srf-project-js' );
+			self::maybe_enqueue_cloud_uploader( 'project' );
 			self::localize_project_script();
+		}
+
+		protected static function maybe_enqueue_cloud_uploader( $form_type ) {
+			$form_type = sanitize_key( (string) $form_type );
+			if ( ! class_exists( 'SRF_Storage_Manager' ) || ! class_exists( 'SR_Settings' ) ) {
+				return;
+			}
+
+			$manager = SRF_Storage_Manager::instance();
+			if ( ! $manager->is_microsoft_enabled_for_form( $form_type ) || ! ( $manager->get_provider() instanceof SRF_Microsoft_Storage_Provider ) ) {
+				return;
+			}
+
+			if ( ! wp_script_is( 'srf-cloud-uploader-js', 'registered' ) ) {
+				self::register_assets();
+			}
+
+			wp_enqueue_script( 'srf-cloud-uploader-js' );
+
+			wp_localize_script(
+				'srf-cloud-uploader-js',
+				'srfCloudUploader',
+				array(
+					'restUrl' => esc_url_raw( rest_url( 'srf/v1' ) ),
+					'nonce' => wp_create_nonce( 'srf_upload_batch' ),
+					'useDirectUploads' => true,
+					'formType' => $form_type,
+					'provider' => 'microsoft',
+					'messages' => array(
+						'uploading' => __( 'Uploading files securely...', 'service-requests-form' ),
+						'failed' => __( 'The cloud upload could not be completed.', 'service-requests-form' ),
+						'ready' => __( 'Files uploaded securely.', 'service-requests-form' ),
+					),
+				)
+			);
 		}
 
 		protected static function is_coming_soon_enabled( $context = 'service' ) {
@@ -993,9 +1037,57 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			return $errors;
 		}
 
+		protected static function get_submitted_upload_batch() {
+			$batch_id = isset( $_POST['srf_upload_batch_id'] ) ? absint( wp_unslash( $_POST['srf_upload_batch_id'] ) ) : 0;
+			$batch_token = isset( $_POST['srf_upload_batch_token'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_upload_batch_token'] ) ) : '';
+
+			if ( ! $batch_id || '' === $batch_token || ! class_exists( 'SRF_Storage_Manager' ) ) {
+				return null;
+			}
+
+			$batch = SRF_Storage_Manager::instance()->get_batch_descriptor( $batch_id, $batch_token );
+			return is_wp_error( $batch ) ? null : $batch;
+		}
+
 		protected static function handle_request_uploads( $post_id, $custom_max_bytes = 0, $project_only = false ) {
 			$post_id = (int) $post_id;
 			$project_only = (bool) $project_only;
+			$batch = self::get_submitted_upload_batch();
+
+			if ( is_array( $batch ) && ! empty( $batch['files'] ) && class_exists( 'SRF_Storage_Manager' ) ) {
+				$provider = SRF_Storage_Manager::instance()->get_provider();
+				if ( ! ( $provider instanceof SRF_Microsoft_Storage_Provider ) ) {
+					return array( array(), 0 );
+				}
+
+				$files = SRF_Storage_Manager::instance()->consume_batch_for_request( $batch, $post_id );
+				if ( is_wp_error( $files ) ) {
+					throw new Exception( $files->get_error_message() );
+				}
+
+				$total_bytes = 0;
+				foreach ( (array) $files as $file ) {
+					$total_bytes += isset( $file['size'] ) ? max( 0, (int) $file['size'] ) : 0;
+				}
+
+				$max = (int) $custom_max_bytes > 0 ? (int) $custom_max_bytes : self::get_max_file_bytes();
+				if ( $project_only && $total_bytes > $max ) {
+					throw new Exception(
+						sprintf(
+							__( 'The combined model upload exceeds the maximum total size (%s).', 'service-requests-form' ),
+							size_format( $max )
+						)
+					);
+				}
+
+				if ( $user_id && $total_bytes > 0 ) {
+					self::add_user_used_bytes( $user_id, $total_bytes );
+				}
+
+				update_post_meta( $post_id, '_sr_remote_files', $files );
+				delete_post_meta( $post_id, '_sr_file_ids' );
+				return array( array(), $total_bytes );
+			}
 
 			if ( empty( $_FILES['srf_files'] ) ) {
 				return array( array(), 0 );
@@ -1190,7 +1282,6 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$shipping_address = (string) get_post_meta( $post_id, '_sr_shipping_address', true );
 			$description      = (string) get_post_meta( $post_id, '_sr_description', true );
 			$status           = (string) get_post_meta( $post_id, '_sr_status', true );
-			$file_ids         = get_post_meta( $post_id, '_sr_file_ids', true );
 			$variants         = get_post_meta( $post_id, '_sr_variants', true );
 			$order_id         = (int) get_post_meta( $post_id, '_sr_wc_order_id', true );
 
@@ -1304,18 +1395,23 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 			$lines[] = $edit_link;
 			$lines[] = '';
 			$lines[] = __( 'Uploaded Files:', 'service-requests-form' );
-
-			if ( is_array( $file_ids ) && ! empty( $file_ids ) ) {
-				foreach ( $file_ids as $attachment_id ) {
-					$attachment_id = (int) $attachment_id;
-					if ( ! $attachment_id ) {
+			$files = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $post_id ) : array();
+			if ( is_array( $files ) && ! empty( $files ) ) {
+				foreach ( $files as $file ) {
+					if ( ! is_array( $file ) ) {
 						continue;
 					}
 
-					$url       = wp_get_attachment_url( $attachment_id );
-					$file_name = get_the_title( $attachment_id );
+					$label = ! empty( $file['name'] ) ? (string) $file['name'] : __( 'Unnamed file', 'service-requests-form' );
+					if ( 'microsoft' === ( isset( $file['provider'] ) ? sanitize_key( (string) $file['provider'] ) : '' ) ) {
+						$lines[] = '- ' . $label . ': ' . __( 'Stored in Microsoft cloud', 'service-requests-form' );
+						continue;
+					}
+
+					$attachment_id = ! empty( $file['attachment_id'] ) ? (int) $file['attachment_id'] : 0;
+					$url = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
 					if ( $url ) {
-						$lines[] = '- ' . ( $file_name ? $file_name : ( 'File #' . $attachment_id ) ) . ': ' . $url;
+						$lines[] = '- ' . $label . ': ' . $url;
 					}
 				}
 			} else {
@@ -1364,6 +1460,31 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 
 			$post_id = (int) $post_id;
 			$user_id = (int) $user_id;
+
+			$remote_files = get_post_meta( $post_id, '_sr_remote_files', true );
+			if ( is_array( $remote_files ) && ! empty( $remote_files ) && class_exists( 'SR_Settings' ) && class_exists( 'SRF_Storage_Manager' ) ) {
+				if ( (bool) get_option( SR_Settings::OPTION_MS_DELETE_ON_DONE, false ) ) {
+					$manager = SRF_Storage_Manager::instance();
+					$remaining = array();
+					foreach ( $remote_files as $file ) {
+						if ( ! is_array( $file ) ) {
+							continue;
+						}
+						$result = $manager->delete_descriptor( $file );
+						if ( is_wp_error( $result ) ) {
+							$file['_srf_cleanup_pending'] = 1;
+							$remaining[] = $file;
+						}
+					}
+					if ( ! empty( $remaining ) ) {
+						update_post_meta( $post_id, '_sr_remote_files', $remaining );
+						update_post_meta( $post_id, '_sr_remote_cleanup_pending', 1 );
+					} else {
+						delete_post_meta( $post_id, '_sr_remote_files' );
+						delete_post_meta( $post_id, '_sr_remote_cleanup_pending' );
+					}
+				}
+			}
 
 			$file_ids = get_post_meta( $post_id, '_sr_file_ids', true );
 			if ( ! is_array( $file_ids ) || empty( $file_ids ) ) {
@@ -1448,6 +1569,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'description' => isset( $_POST['srf_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_description'] ) ) : '',
 					'no_file'     => ! empty( $_POST['srf_no_file'] ) ? '1' : '0',
 					'terms'       => ! empty( $_POST['srf_terms'] ) ? '1' : '0',
+					'upload_batch_id' => isset( $_POST['srf_upload_batch_id'] ) ? absint( wp_unslash( $_POST['srf_upload_batch_id'] ) ) : 0,
+					'upload_batch_token' => isset( $_POST['srf_upload_batch_token'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_upload_batch_token'] ) ) : '',
 				);
 
 				$old_data['name']    = isset( $profile_data['name'] ) ? (string) $profile_data['name'] : '';
@@ -1586,6 +1709,10 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				$no_file_checked = ! empty( $_POST['srf_no_file'] );
 				$names           = isset( $_FILES['srf_files']['name'] ) ? $_FILES['srf_files']['name'] : array();
 				$has_any         = is_array( $names ) ? ( count( array_filter( $names ) ) > 0 ) : ! empty( $names );
+				if ( ! $has_any ) {
+					$batch = self::get_submitted_upload_batch();
+					$has_any = is_array( $batch ) && ! empty( $batch['files'] );
+				}
 
 				if ( ! $no_file_checked && ! $has_any ) {
 					$errors[] = __( 'Please upload at least one file, or check "I don’t have a file yet / not needed".', 'service-requests-form' );
@@ -1662,6 +1789,20 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 							update_post_meta( $post_id, '_sr_file_ids', $attachment_ids );
 
 						} catch ( Exception $e ) {
+							$batch = self::get_submitted_upload_batch();
+							if ( is_array( $batch ) && class_exists( 'SRF_Storage_Manager' ) ) {
+								SRF_Storage_Manager::instance()->cleanup_batch( (int) $batch['id'], 'failed' );
+							}
+							$remote_files = get_post_meta( $post_id, '_sr_remote_files', true );
+							if ( is_array( $remote_files ) && class_exists( 'SRF_Storage_Manager' ) ) {
+								$manager = SRF_Storage_Manager::instance();
+								foreach ( $remote_files as $remote_file ) {
+									if ( is_array( $remote_file ) ) {
+										$manager->delete_descriptor( $remote_file );
+									}
+								}
+								delete_post_meta( $post_id, '_sr_remote_files' );
+							}
 
 							// Roll back attachments
 							if ( ! empty( $attachment_ids ) ) {
@@ -1820,6 +1961,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				'scale'          => '100',
 				'quantity'       => '1',
 				'notes'          => '',
+				'upload_batch_id' => 0,
+				'upload_batch_token' => '',
 			);
 			$success         = false;
 			$payment_warning = '';
@@ -1864,6 +2007,8 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 					'scale'          => isset( $_POST['srf_scale'] ) ? (string) max( 10, min( 500, (int) wp_unslash( $_POST['srf_scale'] ) ) ) : '100',
 					'quantity'       => isset( $_POST['srf_quantity'] ) ? (string) max( 1, min( 999, (int) wp_unslash( $_POST['srf_quantity'] ) ) ) : '1',
 					'notes'          => isset( $_POST['srf_quote_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['srf_quote_notes'] ) ) : '',
+					'upload_batch_id' => isset( $_POST['srf_upload_batch_id'] ) ? absint( wp_unslash( $_POST['srf_upload_batch_id'] ) ) : 0,
+					'upload_batch_token' => isset( $_POST['srf_upload_batch_token'] ) ? sanitize_text_field( wp_unslash( $_POST['srf_upload_batch_token'] ) ) : '',
 				);
 
 				if ( is_user_logged_in() ) {
@@ -1989,6 +2134,10 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 				$names   = isset( $_FILES['srf_files']['name'] ) ? $_FILES['srf_files']['name'] : array();
 				$has_any = is_array( $names ) ? count( array_filter( $names ) ) > 0 : ! empty( $names );
 				if ( ! $has_any ) {
+					$batch = self::get_submitted_upload_batch();
+					$has_any = is_array( $batch ) && ! empty( $batch['files'] );
+				}
+				if ( ! $has_any ) {
 					$errors[] = __( 'Please upload at least one file.', 'service-requests-form' );
 				}
 
@@ -2051,16 +2200,31 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						$attachment_ids = array();
 						$uploaded_bytes = 0;
 						$quote          = array();
+						$temp_files     = array();
 
 						try {
 							list( $attachment_ids, $uploaded_bytes ) = self::handle_request_uploads( $post_id, self::get_project_upload_limit_bytes(), true );
 							update_post_meta( $post_id, '_sr_file_ids', is_array( $attachment_ids ) ? $attachment_ids : array() );
 
 							$attachment_paths = array();
-							foreach ( $attachment_ids as $attachment_id ) {
-								$file_path = get_attached_file( (int) $attachment_id );
-								if ( $file_path ) {
-									$attachment_paths[] = $file_path;
+							$remote_files = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $post_id ) : array();
+							foreach ( $remote_files as $file ) {
+								if ( ! is_array( $file ) ) {
+									continue;
+								}
+
+								if ( ! empty( $file['path'] ) && file_exists( (string) $file['path'] ) ) {
+									$attachment_paths[] = (string) $file['path'];
+									continue;
+								}
+
+								if ( 'microsoft' === ( isset( $file['provider'] ) ? sanitize_key( (string) $file['provider'] ) : '' ) && class_exists( 'SRF_Storage_Manager' ) ) {
+									$temp = SRF_Storage_Manager::instance()->download_descriptor_to_tempfile( $file, (int) get_option( SR_Settings::OPTION_MS_PROJECT_PROCESSING_MAX_BYTES, 134217728 ) );
+									if ( is_wp_error( $temp ) ) {
+										throw new Exception( $temp->get_error_message() );
+									}
+									$temp_files[] = $temp;
+									$attachment_paths[] = $temp;
 								}
 							}
 
@@ -2131,6 +2295,25 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 								update_post_meta( $post_id, $meta_key, $meta_value );
 							}
 						} catch ( Exception $e ) {
+							$batch = self::get_submitted_upload_batch();
+							if ( is_array( $batch ) && class_exists( 'SRF_Storage_Manager' ) ) {
+								SRF_Storage_Manager::instance()->cleanup_batch( (int) $batch['id'], 'failed' );
+							}
+							$remote_files = get_post_meta( $post_id, '_sr_remote_files', true );
+							if ( is_array( $remote_files ) && class_exists( 'SRF_Storage_Manager' ) ) {
+								$manager = SRF_Storage_Manager::instance();
+								foreach ( $remote_files as $remote_file ) {
+									if ( is_array( $remote_file ) ) {
+										$manager->delete_descriptor( $remote_file );
+									}
+								}
+								delete_post_meta( $post_id, '_sr_remote_files' );
+							}
+							foreach ( $temp_files as $temp_file ) {
+								if ( is_string( $temp_file ) && file_exists( $temp_file ) ) {
+									@unlink( $temp_file );
+								}
+							}
 							foreach ( $attachment_ids as $aid ) {
 								wp_delete_attachment( (int) $aid, true );
 							}
@@ -2142,6 +2325,11 @@ if ( ! class_exists( 'SR_Form_Handler' ) ) {
 						}
 
 						if ( empty( $errors ) ) {
+							foreach ( $temp_files as $temp_file ) {
+								if ( is_string( $temp_file ) && file_exists( $temp_file ) ) {
+									@unlink( $temp_file );
+								}
+							}
 							$redirect_args = array( 'srf_project_submitted' => '1' );
 
 							if ( $checkout_enabled && class_exists( 'SRF_WooCommerce' ) && method_exists( 'SRF_WooCommerce', 'add_project_request_to_cart' ) ) {

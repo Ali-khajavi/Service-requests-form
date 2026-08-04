@@ -100,12 +100,7 @@ class SRF_Admin_Status {
 	 */
 	public static function render_files_meta_box( $post ) {
 
-		$file_ids = get_post_meta( $post->ID, '_sr_file_ids', true );
-		if ( ! is_array( $file_ids ) ) {
-			$file_ids = array();
-		}
-
-		$file_ids = array_filter( array_map( 'absint', $file_ids ) );
+		$file_ids = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $post->ID ) : array();
 
 		if ( empty( $file_ids ) ) {
 			echo '<p>' . esc_html__( 'No files uploaded for this request.', 'service-requests-form' ) . '</p>';
@@ -116,21 +111,16 @@ class SRF_Admin_Status {
 
 		echo '<ul style="margin:0; padding-left:18px;">';
 
-		foreach ( $file_ids as $aid ) {
-			$url  = wp_get_attachment_url( $aid );
-			$path = get_attached_file( $aid );
-			$name = get_the_title( $aid );
-			if ( ! $name ) {
-				$name = basename( (string) $path );
+		foreach ( $file_ids as $file ) {
+			if ( ! is_array( $file ) ) {
+				continue;
 			}
 
-			$size = 0;
-			if ( $path && file_exists( $path ) ) {
-				$fs = @filesize( $path );
-				if ( false !== $fs ) {
-					$size = (int) $fs;
-				}
-			}
+			$url  = ! empty( $file['attachment_id'] ) ? wp_get_attachment_url( (int) $file['attachment_id'] ) : '';
+			$path = ! empty( $file['path'] ) ? (string) $file['path'] : '';
+			$name = ! empty( $file['name'] ) ? (string) $file['name'] : ( $path ? basename( $path ) : '' );
+
+			$size = isset( $file['size'] ) ? max( 0, (int) $file['size'] ) : 0;
 
 			$total += $size;
 

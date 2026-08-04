@@ -231,9 +231,7 @@ class SR_CPT {
 		$ship     = (string) get_post_meta( $rid, '_sr_shipping_address', true );
 		$status   = (string) get_post_meta( $rid, '_sr_status', true );
 		$variants = get_post_meta( $rid, '_sr_variants', true );
-		$files    = get_post_meta( $rid, '_sr_file_ids', true );
-		if ( ! is_array( $files ) ) $files = array();
-		$files = array_filter( array_map( 'absint', $files ) );
+		$files    = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $rid ) : array();
 
 		$desc = (string) $post->post_content;
 
@@ -301,19 +299,20 @@ class SR_CPT {
 					<div class="small">No files uploaded.</div>
 				<?php else : ?>
 					<ul>
-						<?php foreach ( $files as $aid ) :
-							$url  = wp_get_attachment_url( $aid );
-							$name = get_the_title( $aid );
-							if ( ! $name && $url ) $name = basename( $url );
-							?>
-							<li>
-								<?php if ( $url ) : ?>
-									<a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $name ? $name : ('File #' . $aid) ); ?></a>
-								<?php else : ?>
-									<?php echo esc_html( $name ? $name : ('File #' . $aid) ); ?>
-								<?php endif; ?>
-							</li>
-						<?php endforeach; ?>
+					<?php foreach ( $files as $file ) :
+						if ( ! is_array( $file ) ) { continue; }
+						$url  = ! empty( $file['attachment_id'] ) ? wp_get_attachment_url( (int) $file['attachment_id'] ) : '';
+						$name = ! empty( $file['name'] ) ? (string) $file['name'] : ( ! empty( $url ) ? basename( $url ) : '' );
+						$download_id = ! empty( $file['download_id'] ) ? (string) $file['download_id'] : '';
+						?>
+						<li>
+							<?php if ( $url ) : ?>
+								<a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $name ? $name : ( 'File #' . $download_id ) ); ?></a>
+							<?php else : ?>
+								<?php echo esc_html( $name ? $name : ( 'File #' . $download_id ) ); ?>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
 					</ul>
 				<?php endif; ?>
 			</div>

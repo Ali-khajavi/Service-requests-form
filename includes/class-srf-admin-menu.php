@@ -190,16 +190,31 @@ class SRF_Admin_Menu {
 			return 0;
 		}
 
-		$file_ids = get_post_meta( $request_id, '_sr_file_ids', true );
-		if ( ! is_array( $file_ids ) || empty( $file_ids ) ) {
+		$file_ids = class_exists( 'SRF_Request_Files' ) ? SRF_Request_Files::get_files( $request_id ) : array();
+		if ( empty( $file_ids ) ) {
 			return 0;
 		}
 
 		$total = 0;
-		foreach ( $file_ids as $attachment_id ) {
-			$attachment_id = (int) $attachment_id;
-			$path          = $attachment_id ? get_attached_file( $attachment_id ) : '';
+		foreach ( $file_ids as $file ) {
+			if ( is_array( $file ) ) {
+				if ( isset( $file['size'] ) ) {
+					$total += max( 0, (int) $file['size'] );
+					continue;
+				}
+				$attachment_id = ! empty( $file['attachment_id'] ) ? (int) $file['attachment_id'] : 0;
+				$path          = $attachment_id ? get_attached_file( $attachment_id ) : '';
+				if ( $path && file_exists( $path ) ) {
+					$size = @filesize( $path );
+					if ( false !== $size ) {
+						$total += (int) $size;
+					}
+				}
+				continue;
+			}
 
+			$attachment_id = (int) $file;
+			$path          = $attachment_id ? get_attached_file( $attachment_id ) : '';
 			if ( $path && file_exists( $path ) ) {
 				$size = @filesize( $path );
 				if ( false !== $size ) {

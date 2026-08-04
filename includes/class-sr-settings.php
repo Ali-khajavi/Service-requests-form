@@ -27,9 +27,28 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 		const OPTION_FRONTEND_LANGUAGE  = 'srf_frontend_language';
 		const OPTION_ADMIN_LANGUAGE     = 'srf_admin_language';
 
+		const OPTION_STORAGE_PROVIDER   = 'srf_storage_provider';
+		const OPTION_MS_TARGET          = 'srf_ms_target';
+		const OPTION_MS_TENANT_ID       = 'srf_ms_tenant_id';
+		const OPTION_MS_CLIENT_ID       = 'srf_ms_client_id';
+		const OPTION_MS_CLIENT_SECRET   = 'srf_ms_client_secret';
+		const OPTION_MS_SITE_ID         = 'srf_ms_site_id';
+		const OPTION_MS_DRIVE_ID        = 'srf_ms_drive_id';
+		const OPTION_MS_ROOT_FOLDER_ID  = 'srf_ms_root_folder_id';
+		const OPTION_MS_ENABLE_PROJECT_UPLOADS = 'srf_ms_enable_project_uploads';
+		const OPTION_MS_ENABLE_SERVICE_UPLOADS = 'srf_ms_enable_service_uploads';
+		const OPTION_MS_FALLBACK_TO_LOCAL      = 'srf_ms_fallback_to_local';
+		const OPTION_MS_DELETE_ON_DONE         = 'srf_ms_delete_on_done';
+		const OPTION_MS_UPLOAD_CHUNK_BYTES     = 'srf_ms_upload_chunk_bytes';
+		const OPTION_MS_ORPHAN_RETENTION_HOURS = 'srf_ms_orphan_retention_hours';
+		const OPTION_MS_PROJECT_PROCESSING_MAX_BYTES = 'srf_ms_project_processing_max_bytes';
+
 		public static function init() {
 			add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
 			add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
+			add_action( 'admin_init', array( __CLASS__, 'maybe_seed_microsoft_secret_options' ), 1 );
+			add_action( 'admin_post_srf_test_microsoft_connection', array( __CLASS__, 'handle_test_microsoft_connection' ) );
+			add_action( 'admin_post_srf_clear_microsoft_secret', array( __CLASS__, 'handle_clear_microsoft_secret' ) );
 		}
 
 		public static function register_menu() {
@@ -103,6 +122,22 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			register_setting( 'srf_settings_group', self::OPTION_FRONTEND_LANGUAGE, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_language' ), 'default' => 'site' ) );
 			register_setting( 'srf_settings_group', self::OPTION_ADMIN_LANGUAGE, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_language' ), 'default' => 'site' ) );
 
+			register_setting( 'srf_settings_group', self::OPTION_STORAGE_PROVIDER, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_storage_provider' ), 'default' => 'local' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_TARGET, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_ms_target' ), 'default' => 'sharepoint' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_TENANT_ID, array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_CLIENT_ID, array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_CLIENT_SECRET, array( 'type' => 'string', 'sanitize_callback' => array( __CLASS__, 'sanitize_microsoft_secret' ), 'default' => '' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_SITE_ID, array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_DRIVE_ID, array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_ROOT_FOLDER_ID, array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_ENABLE_PROJECT_UPLOADS, array( 'type' => 'boolean', 'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ), 'default' => false ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_ENABLE_SERVICE_UPLOADS, array( 'type' => 'boolean', 'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ), 'default' => false ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_FALLBACK_TO_LOCAL, array( 'type' => 'boolean', 'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ), 'default' => false ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_DELETE_ON_DONE, array( 'type' => 'boolean', 'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ), 'default' => false ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_UPLOAD_CHUNK_BYTES, array( 'type' => 'integer', 'sanitize_callback' => array( __CLASS__, 'sanitize_ms_chunk_bytes' ), 'default' => 10485760 ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_ORPHAN_RETENTION_HOURS, array( 'type' => 'integer', 'sanitize_callback' => array( __CLASS__, 'sanitize_positive_int' ), 'default' => 72 ) );
+			register_setting( 'srf_settings_group', self::OPTION_MS_PROJECT_PROCESSING_MAX_BYTES, array( 'type' => 'integer', 'sanitize_callback' => array( __CLASS__, 'sanitize_ms_processing_limit' ), 'default' => 536870912 ) );
+
 			if ( class_exists( 'SRF_Print_Profiles' ) ) {
 				register_setting( 'srf_settings_group', SRF_Print_Profiles::OPTION_BAMBU_HOURLY_COST, array( 'type' => 'number', 'sanitize_callback' => array( __CLASS__, 'sanitize_non_negative_float' ), 'default' => 8 ) );
 				register_setting( 'srf_settings_group', SRF_Print_Profiles::OPTION_BAMBU_MATERIAL_KG, array( 'type' => 'number', 'sanitize_callback' => array( __CLASS__, 'sanitize_non_negative_float' ), 'default' => 25 ) );
@@ -149,6 +184,130 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 
 			$value = is_scalar( $value ) ? (string) $value : 'site';
 			return in_array( $value, array( 'site', 'en_US', 'de_DE' ), true ) ? $value : 'site';
+		}
+
+		public static function sanitize_storage_provider( $value ) {
+			$value = sanitize_key( (string) $value );
+			return in_array( $value, array( 'local', 'microsoft' ), true ) ? $value : 'local';
+		}
+
+		public static function sanitize_ms_target( $value ) {
+			$value = sanitize_key( (string) $value );
+			return in_array( $value, array( 'sharepoint', 'onedrive_business' ), true ) ? $value : 'sharepoint';
+		}
+
+		public static function sanitize_microsoft_secret( $value ) {
+			$value = is_scalar( $value ) ? trim( (string) $value ) : '';
+			if ( '' === $value ) {
+				$current = (string) get_option( self::OPTION_MS_CLIENT_SECRET, '' );
+				return $current;
+			}
+			return $value;
+		}
+
+		public static function sanitize_ms_chunk_bytes( $value ) {
+			$value = max( 327680, (int) $value );
+			$max = 60 * 1024 * 1024;
+			$value = min( $max - 327680, $value );
+			$remainder = $value % 327680;
+			if ( $remainder ) {
+				$value -= $remainder;
+			}
+			return max( 327680, $value );
+		}
+
+		public static function sanitize_ms_processing_limit( $value ) {
+			return max( 104857600, (int) $value );
+		}
+
+		public static function get_setting_value( $option, $default = '' ) {
+			$constant_map = array(
+				self::OPTION_MS_TENANT_ID      => 'SRF_MS_TENANT_ID',
+				self::OPTION_MS_CLIENT_ID      => 'SRF_MS_CLIENT_ID',
+				self::OPTION_MS_CLIENT_SECRET  => 'SRF_MS_CLIENT_SECRET',
+				self::OPTION_MS_SITE_ID        => 'SRF_MS_SITE_ID',
+				self::OPTION_MS_DRIVE_ID       => 'SRF_MS_DRIVE_ID',
+				self::OPTION_MS_ROOT_FOLDER_ID => 'SRF_MS_ROOT_FOLDER_ID',
+			);
+
+			if ( isset( $constant_map[ $option ] ) && defined( $constant_map[ $option ] ) ) {
+				return (string) constant( $constant_map[ $option ] );
+			}
+
+			$value = get_option( $option, $default );
+			return is_scalar( $value ) ? (string) $value : (string) $default;
+		}
+
+		public static function get_microsoft_client_secret() {
+			return self::get_setting_value( self::OPTION_MS_CLIENT_SECRET, '' );
+		}
+
+		public static function maybe_seed_microsoft_secret_options() {
+			$keys = array(
+				self::OPTION_MS_TENANT_ID,
+				self::OPTION_MS_CLIENT_ID,
+				self::OPTION_MS_CLIENT_SECRET,
+				self::OPTION_MS_SITE_ID,
+				self::OPTION_MS_DRIVE_ID,
+				self::OPTION_MS_ROOT_FOLDER_ID,
+			);
+
+			foreach ( $keys as $key ) {
+				if ( false === get_option( $key, false ) ) {
+					add_option( $key, '', '', false );
+				}
+			}
+		}
+
+		public static function handle_clear_microsoft_secret() {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Forbidden', 'service-requests-form' ), 403 );
+			}
+
+			if ( empty( $_POST['srf_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['srf_nonce'] ) ), 'srf_clear_microsoft_secret' ) ) {
+				wp_die( esc_html__( 'Security check failed.', 'service-requests-form' ), 403 );
+			}
+
+			delete_option( self::OPTION_MS_CLIENT_SECRET );
+			self::maybe_seed_microsoft_secret_options();
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&srf_ms_secret_cleared=1' ) );
+			exit;
+		}
+
+		public static function handle_test_microsoft_connection() {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Forbidden', 'service-requests-form' ), 403 );
+			}
+
+			if ( empty( $_POST['srf_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['srf_nonce'] ) ), 'srf_test_microsoft_connection' ) ) {
+				wp_die( esc_html__( 'Security check failed.', 'service-requests-form' ), 403 );
+			}
+
+			$result = array(
+				'success' => false,
+				'message' => __( 'Microsoft storage is not configured.', 'service-requests-form' ),
+			);
+
+			if ( class_exists( 'SRF_Storage_Manager' ) ) {
+				$test = SRF_Storage_Manager::instance()->test_microsoft_connection();
+				if ( is_wp_error( $test ) ) {
+					$result['message'] = $test->get_error_message();
+				} else {
+					$result['success'] = true;
+					$result['message'] = sprintf(
+						__( 'Microsoft connection test succeeded. Tenant: %1$s. Site: %2$s. Drive: %3$s. Root: %4$s. Probe: %5$s.', 'service-requests-form' ),
+						! empty( $test['tenant'] ) ? sanitize_text_field( (string) $test['tenant'] ) : __( 'ok', 'service-requests-form' ),
+						! empty( $test['site'] ) ? sanitize_text_field( (string) $test['site'] ) : __( 'ok', 'service-requests-form' ),
+						! empty( $test['drive'] ) ? sanitize_text_field( (string) $test['drive'] ) : __( 'ok', 'service-requests-form' ),
+						! empty( $test['root'] ) ? sanitize_text_field( (string) $test['root'] ) : __( 'ok', 'service-requests-form' ),
+						! empty( $test['probe'] ) ? sanitize_text_field( (string) $test['probe'] ) : __( 'ok', 'service-requests-form' )
+					);
+				}
+			}
+
+			set_transient( 'srf_ms_connection_test', $result, 60 );
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&srf_ms_tested=1' ) );
+			exit;
 		}
 
 		public static function sanitize_extensions_csv( $value ) {
@@ -246,6 +405,22 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 			$frontend_language    = self::sanitize_language( get_option( self::OPTION_FRONTEND_LANGUAGE, 'site' ) );
 			$admin_language       = self::sanitize_language( get_option( self::OPTION_ADMIN_LANGUAGE, 'site' ) );
 			$language_choices     = class_exists( 'SRF_Language' ) ? SRF_Language::choices() : array( 'site' => __( 'Use WordPress language', 'service-requests-form' ), 'en_US' => __( 'English', 'service-requests-form' ), 'de_DE' => __( 'German (Deutsch)', 'service-requests-form' ) );
+			$storage_provider     = self::sanitize_storage_provider( get_option( self::OPTION_STORAGE_PROVIDER, 'local' ) );
+			$ms_target            = self::sanitize_ms_target( get_option( self::OPTION_MS_TARGET, 'sharepoint' ) );
+			$ms_tenant_id         = self::get_setting_value( self::OPTION_MS_TENANT_ID, '' );
+			$ms_client_id         = self::get_setting_value( self::OPTION_MS_CLIENT_ID, '' );
+			$ms_site_id           = self::get_setting_value( self::OPTION_MS_SITE_ID, '' );
+			$ms_drive_id          = self::get_setting_value( self::OPTION_MS_DRIVE_ID, '' );
+			$ms_root_folder_id    = self::get_setting_value( self::OPTION_MS_ROOT_FOLDER_ID, '' );
+			$ms_enable_project    = (bool) get_option( self::OPTION_MS_ENABLE_PROJECT_UPLOADS, false );
+			$ms_enable_service    = (bool) get_option( self::OPTION_MS_ENABLE_SERVICE_UPLOADS, false );
+			$ms_fallback          = (bool) get_option( self::OPTION_MS_FALLBACK_TO_LOCAL, false );
+			$ms_delete_on_done    = (bool) get_option( self::OPTION_MS_DELETE_ON_DONE, false );
+			$ms_chunk_bytes       = (int) get_option( self::OPTION_MS_UPLOAD_CHUNK_BYTES, 10485760 );
+			$ms_retention_hours   = (int) get_option( self::OPTION_MS_ORPHAN_RETENTION_HOURS, 72 );
+			$ms_processing_limit  = (int) get_option( self::OPTION_MS_PROJECT_PROCESSING_MAX_BYTES, 536870912 );
+			$ms_secret_present    = '' !== self::get_microsoft_client_secret();
+			$ms_test_result       = get_transient( 'srf_ms_connection_test' );
 			?>
 			<div class="wrap">
 				<h1><?php esc_html_e( 'Service Requests Settings', 'service-requests-form' ); ?></h1>
@@ -293,6 +468,30 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 						</tr>
 					</table>
 					<p class="description"><strong><?php esc_html_e( 'Save changes and reload the page to apply a new language.', 'service-requests-form' ); ?></strong></p>
+
+					<h2><?php esc_html_e( 'Microsoft cloud storage', 'service-requests-form' ); ?></h2>
+					<p><?php esc_html_e( 'Microsoft storage is optional. Local WordPress uploads remain the default until an administrator deliberately enables cloud mode.', 'service-requests-form' ); ?></p>
+					<table class="form-table" role="presentation">
+						<tr><th scope="row"><label for="srf_storage_provider"><?php esc_html_e( 'Storage provider', 'service-requests-form' ); ?></label></th><td><select id="srf_storage_provider" name="<?php echo esc_attr( self::OPTION_STORAGE_PROVIDER ); ?>"><option value="local" <?php selected( $storage_provider, 'local' ); ?>><?php esc_html_e( 'Local WordPress storage', 'service-requests-form' ); ?></option><option value="microsoft" <?php selected( $storage_provider, 'microsoft' ); ?>><?php esc_html_e( 'Microsoft cloud storage', 'service-requests-form' ); ?></option></select><p class="description"><?php esc_html_e( 'SharePoint is recommended because it is organization-owned instead of tied to a personal OneDrive.', 'service-requests-form' ); ?></p></td></tr>
+						<tr><th scope="row"><label for="srf_ms_target"><?php esc_html_e( 'Microsoft destination', 'service-requests-form' ); ?></label></th><td><select id="srf_ms_target" name="<?php echo esc_attr( self::OPTION_MS_TARGET ); ?>"><option value="sharepoint" <?php selected( $ms_target, 'sharepoint' ); ?>><?php esc_html_e( 'SharePoint document library', 'service-requests-form' ); ?></option><option value="onedrive_business" <?php selected( $ms_target, 'onedrive_business' ); ?>><?php esc_html_e( 'OneDrive for Business', 'service-requests-form' ); ?></option></select></td></tr>
+						<tr><th scope="row"><label for="srf_ms_tenant_id"><?php esc_html_e( 'Tenant ID', 'service-requests-form' ); ?></label></th><td><input type="text" id="srf_ms_tenant_id" class="regular-text" name="<?php echo esc_attr( self::OPTION_MS_TENANT_ID ); ?>" value="<?php echo esc_attr( $ms_tenant_id ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="srf_ms_client_id"><?php esc_html_e( 'Client ID', 'service-requests-form' ); ?></label></th><td><input type="text" id="srf_ms_client_id" class="regular-text" name="<?php echo esc_attr( self::OPTION_MS_CLIENT_ID ); ?>" value="<?php echo esc_attr( $ms_client_id ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="srf_ms_client_secret"><?php esc_html_e( 'Client secret', 'service-requests-form' ); ?></label></th><td><input type="password" id="srf_ms_client_secret" class="regular-text" name="<?php echo esc_attr( self::OPTION_MS_CLIENT_SECRET ); ?>" value="" autocomplete="new-password" /><p class="description"><?php echo esc_html( $ms_secret_present ? __( 'A secret is stored. Leave this field blank to keep it.', 'service-requests-form' ) : __( 'No secret stored yet. wp-config.php constants are preferred.', 'service-requests-form' ) ); ?></p><?php if ( $ms_secret_present ) : ?><button type="submit" form="srf-clear-microsoft-secret-form" class="button button-secondary"><?php esc_html_e( 'Remove stored secret', 'service-requests-form' ); ?></button><?php endif; ?></td></tr>
+						<tr><th scope="row"><label for="srf_ms_site_id"><?php esc_html_e( 'SharePoint Site ID', 'service-requests-form' ); ?></label></th><td><input type="text" id="srf_ms_site_id" class="regular-text" name="<?php echo esc_attr( self::OPTION_MS_SITE_ID ); ?>" value="<?php echo esc_attr( $ms_site_id ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="srf_ms_drive_id"><?php esc_html_e( 'Drive ID', 'service-requests-form' ); ?></label></th><td><input type="text" id="srf_ms_drive_id" class="regular-text" name="<?php echo esc_attr( self::OPTION_MS_DRIVE_ID ); ?>" value="<?php echo esc_attr( $ms_drive_id ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="srf_ms_root_folder_id"><?php esc_html_e( 'Root folder ID', 'service-requests-form' ); ?></label></th><td><input type="text" id="srf_ms_root_folder_id" class="regular-text" name="<?php echo esc_attr( self::OPTION_MS_ROOT_FOLDER_ID ); ?>" value="<?php echo esc_attr( $ms_root_folder_id ); ?>" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Enable for', 'service-requests-form' ); ?></th><td><label><input type="hidden" name="<?php echo esc_attr( self::OPTION_MS_ENABLE_PROJECT_UPLOADS ); ?>" value="0" /><input type="checkbox" name="<?php echo esc_attr( self::OPTION_MS_ENABLE_PROJECT_UPLOADS ); ?>" value="1" <?php checked( $ms_enable_project ); ?> /> <?php esc_html_e( 'Custom project uploads', 'service-requests-form' ); ?></label><br /><label><input type="hidden" name="<?php echo esc_attr( self::OPTION_MS_ENABLE_SERVICE_UPLOADS ); ?>" value="0" /><input type="checkbox" name="<?php echo esc_attr( self::OPTION_MS_ENABLE_SERVICE_UPLOADS ); ?>" value="1" <?php checked( $ms_enable_service ); ?> /> <?php esc_html_e( 'Predefined service-request uploads', 'service-requests-form' ); ?></label></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Fallback', 'service-requests-form' ); ?></th><td><input type="hidden" name="<?php echo esc_attr( self::OPTION_MS_FALLBACK_TO_LOCAL ); ?>" value="0" /><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_MS_FALLBACK_TO_LOCAL ); ?>" value="1" <?php checked( $ms_fallback ); ?> /> <?php esc_html_e( 'Allow explicit fallback to local storage when Microsoft is unavailable.', 'service-requests-form' ); ?></label></td></tr>
+						<tr><th scope="row"><?php esc_html_e( 'Delete on Done', 'service-requests-form' ); ?></th><td><input type="hidden" name="<?php echo esc_attr( self::OPTION_MS_DELETE_ON_DONE ); ?>" value="0" /><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_MS_DELETE_ON_DONE ); ?>" value="1" <?php checked( $ms_delete_on_done ); ?> /> <?php esc_html_e( 'Remove remote files when a request is marked Done.', 'service-requests-form' ); ?></label></td></tr>
+						<tr><th scope="row"><label for="srf_ms_upload_chunk_bytes"><?php esc_html_e( 'Upload chunk size (bytes)', 'service-requests-form' ); ?></label></th><td><input type="number" min="327680" step="327680" id="srf_ms_upload_chunk_bytes" class="small-text" name="<?php echo esc_attr( self::OPTION_MS_UPLOAD_CHUNK_BYTES ); ?>" value="<?php echo esc_attr( $ms_chunk_bytes ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="srf_ms_orphan_retention_hours"><?php esc_html_e( 'Orphan retention (hours)', 'service-requests-form' ); ?></label></th><td><input type="number" min="1" step="1" id="srf_ms_orphan_retention_hours" class="small-text" name="<?php echo esc_attr( self::OPTION_MS_ORPHAN_RETENTION_HOURS ); ?>" value="<?php echo esc_attr( $ms_retention_hours ); ?>" /></td></tr>
+						<tr><th scope="row"><label for="srf_ms_project_processing_max_bytes"><?php esc_html_e( 'Project processing limit (bytes)', 'service-requests-form' ); ?></label></th><td><input type="number" min="104857600" step="1048576" id="srf_ms_project_processing_max_bytes" class="small-text" name="<?php echo esc_attr( self::OPTION_MS_PROJECT_PROCESSING_MAX_BYTES ); ?>" value="<?php echo esc_attr( $ms_processing_limit ); ?>" /><p class="description"><?php esc_html_e( 'Temporary download size for authoritative project pricing. Cloud capacity does not replace parser safety limits.', 'service-requests-form' ); ?></p></td></tr>
+					</table>
+					<div class="notice notice-info inline"><p><?php esc_html_e( 'Preferred setup: put the Microsoft values into wp-config.php constants so they never live in the database.', 'service-requests-form' ); ?></p></div>
+					<p style="margin:8px 0 18px;"><button type="submit" form="srf-test-microsoft-connection-form" class="button button-secondary"><?php esc_html_e( 'Test Microsoft connection', 'service-requests-form' ); ?></button></p>
+					<?php if ( is_array( $ms_test_result ) && ! empty( $ms_test_result['message'] ) ) : ?>
+						<div class="notice <?php echo ! empty( $ms_test_result['success'] ) ? 'notice-success' : 'notice-error'; ?> inline"><p><?php echo esc_html( (string) $ms_test_result['message'] ); ?></p></div>
+					<?php endif; ?>
 
 					<h2><?php esc_html_e( 'Form availability', 'service-requests-form' ); ?></h2>
 					<table class="form-table" role="presentation">
@@ -371,8 +570,16 @@ if ( ! class_exists( 'SR_Settings' ) ) {
 					<h2><?php esc_html_e( 'Data retention', 'service-requests-form' ); ?></h2>
 					<table class="form-table" role="presentation"><tr><th scope="row"><?php esc_html_e( 'Delete plugin data on uninstall', 'service-requests-form' ); ?></th><td><input type="hidden" name="<?php echo esc_attr( self::OPTION_DELETE_ON_UNINSTALL ); ?>" value="0" /><label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_DELETE_ON_UNINSTALL ); ?>" value="1" <?php checked( $delete_on_uninstall ); ?> /> <?php esc_html_e( 'Permanently delete plugin requests, request uploads, services, generated products, quote tables, settings, and plugin user metadata when the plugin is uninstalled. Leave disabled to preserve all data.', 'service-requests-form' ); ?></label></td></tr></table>
 
-					<?php submit_button(); ?>
-				</form>
+				<?php submit_button(); ?>
+			</form>
+			<form id="srf-test-microsoft-connection-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:none;">
+				<input type="hidden" name="action" value="srf_test_microsoft_connection" />
+				<?php wp_nonce_field( 'srf_test_microsoft_connection', 'srf_nonce' ); ?>
+			</form>
+			<form id="srf-clear-microsoft-secret-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:none;">
+				<input type="hidden" name="action" value="srf_clear_microsoft_secret" />
+				<?php wp_nonce_field( 'srf_clear_microsoft_secret', 'srf_nonce' ); ?>
+			</form>
 			</div>
 			<?php
 		}
