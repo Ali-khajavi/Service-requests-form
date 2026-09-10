@@ -1,6 +1,6 @@
 # Service Requests Form
 
-**Version: 0.10.90**  
+**Version: 0.10.95**  
 **User and administrator guide**
 
 Service Requests Form is a WordPress plugin for receiving two kinds of customer work:
@@ -8,7 +8,7 @@ Service Requests Form is a WordPress plugin for receiving two kinds of customer 
 1. **Predefined services** configured by the site administrator and displayed with `[service_request_form]`.
 2. **Custom 3D-print projects** submitted through `[project_request_form]`, including model upload, model preview, printer/material/process selection, a server-verified price, and optional WooCommerce payment.
 
-Version 0.10.90 adds a GPU-accelerated studio viewer to the custom-project workflow. STL and OBJ previews are rendered as solid models with professional lighting, selectable display or filament colours, smooth/flat shading, optional wireframe, a selected-printer build plate and build-volume cage, automatic orientation, and manual 90-degree rotations. Common embedded OBJ vertex colours and binary STL colour extensions can be displayed when present. The existing Canvas 2D renderer remains as a compatibility fallback. This release also preserves the one-row three-card step navigation, independent English/German frontend and administration languages, Bambu Lab starter profiles, server-authoritative pricing, build-volume validation, and WooCommerce payment lifecycle.
+Version 0.10.95 restores the original form sizing behavior and replaces the oversized project-form hero content with one short heading.
 
 Technical implementation details are in [`README-DEVELOPERS.md`](README-DEVELOPERS.md).
 
@@ -26,7 +26,7 @@ Before installing on a production site, back up the database and `wp-content/upl
 ## Installation or update
 
 1. In WordPress, open **Plugins → Add New → Upload Plugin**.
-2. Upload the version 0.10.90 ZIP.
+2. Upload the version 0.10.95 ZIP.
 3. When updating an existing installation, approve replacing the current plugin.
 4. Activate the plugin.
 5. Open **Service and Subscription → Settings** and save the settings once.
@@ -326,6 +326,19 @@ Check PHP `upload_max_filesize`, `post_max_size`, web-server/proxy limits, secur
 ### Production email is missing
 
 Check the configured production-notification email, WordPress administration email, SMTP/mail logs, spam filtering, and the request's email-result metadata. Paid-project email is intentionally delayed until WooCommerce reports payment.
+
+## Version 0.10.95 change summary
+
+- Removes the 0.10.94 CSS size-containment change that caused the form's inner content to collapse in an Elementor column.
+- Replaces the long promotional heading, explanatory paragraph, and trust labels with the short existing “Custom 3D printing” heading.
+- Preserves the original form, step, field, upload, pricing, and checkout layouts.
+
+## Version 0.10.94 change summary
+
+- Makes the project form respond to its actual container width instead of relying only on the browser viewport.
+- Prevents the hero heading from being squeezed into character-by-character wrapping beside the trust panel.
+- Adds a compact heading, trust panel, step navigation, and single-column workflow layout for narrow page-builder columns.
+- Preserves the full-width desktop design and the existing project submission, pricing, upload, and checkout behavior.
 
 ## Version 0.10.90 change summary
 

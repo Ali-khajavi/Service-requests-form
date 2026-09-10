@@ -1618,21 +1618,26 @@
 .srf-project-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1.5rem;
+    gap: 1rem;
     align-items: end;
     margin: calc(clamp(1rem, 2.2vw, 2rem) * -1) calc(clamp(1rem, 2.2vw, 2rem) * -1) 1.5rem;
-    padding: clamp(1.35rem, 3vw, 2.5rem);
+    padding: clamp(1rem, 1.8vw, 1.5rem);
     background: linear-gradient(135deg, #0e3343, #176b87 58%, #2288a5);
     color: #fff;
 }
 
 .srf-project-hero h1 {
+    width: 100%;
+    min-width: 0;
     max-width: 850px;
-    margin: 0.25rem 0 0.65rem;
+    margin: 0;
     color: #fff;
-    font-size: clamp(1.75rem, 3.4vw, 3rem);
-    line-height: 1.08;
-    letter-spacing: -0.025em;
+    font-size: clamp(1.25rem, 2.2vw, 2rem);
+    line-height: 1.16;
+    letter-spacing: 0;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
 }
 
 .srf-project-hero p {

@@ -1,11 +1,11 @@
 # Service Requests Form — Developer Reference
 
-**Plugin version: 0.10.90**  
+**Plugin version: 0.10.95**  
 **Main file: `service-requests-form.php`**  
 **Text domain: `service-requests-form`**  
 **Minimum declared versions: WordPress 6.0, PHP 7.4**
 
-This document describes the source shipped in version 0.10.90. The administrator/customer guide is [`README.md`](README.md).
+This document describes the source shipped in version 0.10.95. The administrator/customer guide is [`README.md`](README.md).
 
 ## Architecture overview
 
@@ -546,6 +546,14 @@ languages/service-requests-form.pot
 PHP strings use the existing `service-requests-form` text domain. Dynamic JavaScript labels are passed through `wp_localize_script()` for `srfProject`, `srfFrontend`, and `srfAdmin`. Keep new customer/admin strings in PHP localization arrays rather than adding untranslated literals to JavaScript.
 
 The project stepper uses a neutral `.srf-project-steps` `div` with `role="navigation"` and the release marker `data-srf-project-stepper="0.10.90"`. `SR_Form_Handler::register_assets()` registers `assets/css/project-stepper-0.10.90.css` after the shared frontend stylesheet, and the project shortcode enqueues it only for the custom-project form. The release-specific stylesheet defines one `flex-flow: row nowrap` container with three `.srf-project-step-slot` wrappers. Each slot uses `flex: 1 1 0`, `flex-basis: 0`, `width: 0`, and `min-width: 0`, while each button fills its slot. Matching inline `!important` declarations in `templates/project-form.php` protect the critical row, slot, and card-width properties when late theme/form-builder CSS changes wrapping, flex basis, width, minimum width, margin, float, or clear. The visual rules use a responsive 8–20 px gap; below 560 px only the secondary descriptions are hidden.
+
+## 0.10.95 responsive-layout correction
+
+Version 0.10.95 removes the CSS inline-size container and container-query rules introduced in 0.10.94 because they interacted badly with the production Elementor column. The template now renders only the existing translated “Custom 3D printing” string as the hero heading. The rest of the form layout and JavaScript remain unchanged from the uploaded baseline.
+
+## 0.10.94 responsive-layout correction
+
+The `.srf-project-wrapper` is a named inline-size container. Container queries in `assets/css/frontend.css` and `assets/css/project-stepper-0.10.90.css` mirror the existing viewport breakpoints so `[project_request_form]` adapts inside narrow page-builder columns on otherwise wide desktop pages. At 480 px and below, the hero uses compact type and spacing while retaining its full localized content and trust indicators.
 
 ## Testing performed for 0.10.90
 

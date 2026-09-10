@@ -79,15 +79,7 @@ $logged_in               = is_user_logged_in();
 			novalidate
 		>
 			<header class="srf-project-hero">
-				<div>
-					<p class="srf-project-hero__eyebrow"><?php esc_html_e( 'Custom 3D printing', 'service-requests-form' ); ?></p>
-					<h1><?php esc_html_e( 'Upload a model, configure the print, and receive an instant estimate', 'service-requests-form' ); ?></h1>
-					<p><?php esc_html_e( 'The browser creates a lightweight preview for STL and OBJ while the final checkout amount is always recalculated from the uploaded files on the server.', 'service-requests-form' ); ?></p>
-				</div>
-				<div class="srf-project-hero__trust">
-					<span><?php esc_html_e( 'Server-verified pricing', 'service-requests-form' ); ?></span>
-					<span><?php esc_html_e( 'Secure WooCommerce checkout', 'service-requests-form' ); ?></span>
-				</div>
+				<h1><?php esc_html_e( 'Custom 3D printing', 'service-requests-form' ); ?></h1>
 			</header>
 
 			<div
